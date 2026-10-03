@@ -2862,7 +2862,16 @@ let _searchIndexDirty = true;
     document.getElementById('articlesPanel').hidden = state.ui.litTab !== 'articles';
     document.getElementById('booksPanel').hidden = state.ui.litTab !== 'books';
   }
-  function switchTab(tab) { if (state.ui.tab === 'literature') saveCurrentPosition(state.ui.litTab); state.ui.tab = tab; savePrefs(); renderTabs(); if (tab === 'notes') { renderNotesList(); renderNoteEditor(); } window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    function switchTab(tab) {
+    if (state.ui.tab === 'literature') saveCurrentPosition(state.ui.litTab);
+    state.ui.tab = tab;
+    savePrefs();
+    renderTabs();
+    if (tab === 'notes') { renderNotesList(); renderNoteEditor(); }
+    if (tab === 'archive') renderArchive();
+    if (tab === 'literature') { SECTIONS.forEach(function (s) { renderMeta(s); renderList(s); applyListVisibility(s); }); }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
   function switchLitTab(t) { if (state.ui.litTab === t) return; saveCurrentPosition(state.ui.litTab); state.ui.litTab = t; savePrefs(); renderTabs(); }
 
   function computeStats() { let goalsTotal = 0, goalsDone = 0, tasksTotal = 0, tasksDone = 0; state.goals.forEach(function (g) { if (!g.isInbox) { goalsTotal++; if (g.archivedAt) goalsDone++; } g.tasks.forEach(function (t) { tasksTotal++; if (t.archivedAt || t.done) tasksDone++; }); }); return { goalsTotal: goalsTotal, goalsDone: goalsDone, tasksTotal: tasksTotal, tasksDone: tasksDone, goalsPct: goalsTotal ? Math.round(goalsDone / goalsTotal * 100) : 0, tasksPct: tasksTotal ? Math.round(tasksDone / tasksTotal * 100) : 0 }; }
@@ -3606,13 +3615,18 @@ let _searchIndexDirty = true;
     showToast('Экспортировано в .ics', 'ok');
   }
 
-   function render() {
+   f   function render() {
     renderTabs(); renderStats(); renderGoals(); renderTasks();
     renderHeatmap();
     applyDensity();
     renderGoalSelect(); renderToggleAllButton();
-    renderArchive();
-    SECTIONS.forEach(function (s) { renderMeta(s); renderList(s); applyListVisibility(s); });
+
+    // Ленивые рендеры: рисуем только активную вкладку
+    if (state.ui.tab === 'archive') renderArchive();
+    if (state.ui.tab === 'literature') {
+      SECTIONS.forEach(function (s) { renderMeta(s); renderList(s); applyListVisibility(s); });
+    }
+
     renderSectionCount(); updateSnippetsBadges();
     renderTagsDatalist(); renderTagFilterSelect();
     if (state.calendarVisible) renderCalendar();
