@@ -1584,13 +1584,13 @@ let _searchIndexDirty = true;
     document.getElementById('editTaskStatus').value = t.status || (t.done ? 'done' : 'todo');
     renderEditSubtasks();
     document.getElementById('editTaskTags').value = (t.tags || []).map(function (x) { return '#' + x; }).join(' ');
-       const sel = document.getElementById('editTaskGoal');
-    const opts = [];
+          const sel = document.getElementById('editTaskGoal');
+    const opts = ['<option value=""' + (g.isInbox ? ' selected' : '') + '>— Без цели —</option>'];
     state.goals.forEach(function (gg) {
       if (gg.archivedAt || gg.isInbox) return;
       opts.push('<option value="' + escapeHtml(gg.id) + '"' + (gg.id === goalId ? ' selected' : '') + '>' + escapeHtml(gg.title) + '</option>');
     });
-    sel.innerHTML = opts.join('') || '<option value="">— Сначала создайте цель —</option>';
+    sel.innerHTML = opts.join('');
     document.getElementById('editTaskModal').hidden = false;
     setTimeout(function () { document.getElementById('editTaskText').focus(); }, 50);
   }
@@ -1624,9 +1624,10 @@ let _searchIndexDirty = true;
     t.status = newStatus;
     t.done = (newStatus === 'done');
 
-        if (newGoalId !== oldGoalId) {
-      if (!newGoalId) { showToast('Выберите цель', 'warn'); return; }
-      const targetGoal = findGoal(newGoalId);
+          if (newGoalId !== oldGoalId) {
+      let targetGoal;
+      if (!newGoalId) targetGoal = ensureInboxGoal();
+      else targetGoal = findGoal(newGoalId);
       if (targetGoal && targetGoal.id !== g.id) {
         g.tasks = g.tasks.filter(function (x) { return x.id !== taskId; });
         targetGoal.tasks.push(t);
@@ -1755,11 +1756,10 @@ let _searchIndexDirty = true;
     if (!parsed.text) { showToast('Пустая задача', 'warn'); return; }
         const goals = state.goals.filter(function (g) { return !g.isInbox && !g.archivedAt; });
     if (!goals.length) { showToast('Сначала создайте цель', 'warn'); return; }
-    let deadline = parsed.deadline;
+       let deadline = parsed.deadline;
     let usedCalDate = false;
     if (!deadline && state.calSelectedDate) { deadline = state.calSelectedDate; usedCalDate = true; }
-    addTask(goals[0].id, { text: parsed.text, priority: parsed.priority, deadline: deadline, tags: parsed.tags });
-    input.value = '';
+    addTask(null, { text: parsed.text, priority: parsed.priority, deadline: deadline, tags: parsed.tags });
     if (usedCalDate) showToast('Задача добавлена на ' + formatDate(deadline), 'ok');
     else showToast('Добавлено: ' + parsed.text, 'ok');
   }
@@ -3002,7 +3002,7 @@ let _searchIndexDirty = true;
     const od = isOverdue(t);
     const soon = isUpcomingSoon(t);
     const meta = [];
-       meta.push('<span class="tag">' + escapeHtml(g.title) + '</span>');
+        if (!g.isInbox) meta.push('<span class="tag">' + escapeHtml(g.title) + '</span>');
     meta.push(PRIORITY_LABEL[t.priority] || '—');
     if (t.status && t.status !== 'todo' && t.status !== 'done') {
       const stLabel = { doing: 'В работе', blocked: 'Блок', done: 'Готово' }[t.status] || '';
@@ -3220,7 +3220,7 @@ let _searchIndexDirty = true;
       const g = findGoal(info.goalId); if (!g) return;
       const t = g.tasks.find(function (x) { return x.id === taskId; }); if (!t) return;
       md += '- [' + (t.done ? 'x' : ' ') + '] ' + t.text;
-      md += '\n  - Цель: ' + g.title;
+            if (!g.isInbox) md += '\n  - Цель: ' + g.title;
       md += '\n  - Приоритет: ' + (PRIORITY_LABEL[t.priority] || '—');
       if (t.deadline) md += '\n  - Дедлайн: ' + formatDate(t.deadline);
       if ((t.tags || []).length) md += '\n  - Теги: ' + t.tags.map(function (x) { return '#' + x; }).join(' ');
@@ -3244,17 +3244,17 @@ let _searchIndexDirty = true;
     state.goals.forEach(function (g) { if (g.archivedAt) return; g.tasks.forEach(function (t) { if (t.archivedAt) at.push({ goal: g, task: t }); }); });
     const tasksEl = document.getElementById('archivedTasksList');
     if (!at.length) tasksEl.innerHTML = '<div class="empty">Архив задач пуст.</div>';
-    else { at.sort(function (a, b) { return b.task.archivedAt - a.task.archivedAt; }); tasksEl.innerHTML = at.map(function (it) { const g = it.goal, t = it.task; const meta = [g.isInbox ? '📥 Быстрая' : escapeHtml(g.title), PRIORITY_LABEL[t.priority] || '—']; return '<article class="archive-item"><div class="archive-head"><div><div class="archive-title">' + escapeHtml(t.text) + '</div><div class="archive-meta">' + meta.join(' · ') + '</div></div><div style="display:flex;gap:4px;"><button type="button" class="icon-btn" data-action="restore-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="Восстановить">↺</button><button type="button" class="icon-btn" data-action="delete-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="Удалить">✕</button></div></div></article>'; }).join(''); }
+    else { at.sort(function (a, b) { return b.task.archivedAt - a.task.archivedAt; }); tasksEl.innerHTML = at.map(function (it) { const g = it.goal, t = it.task; const meta = [];
+if (!g.isInbox) meta.push(escapeHtml(g.title));
+meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-item"><div class="archive-head"><div><div class="archive-title">' + escapeHtml(t.text) + '</div><div class="archive-meta">' + meta.join(' · ') + '</div></div><div style="display:flex;gap:4px;"><button type="button" class="icon-btn" data-action="restore-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="Восстановить">↺</button><button type="button" class="icon-btn" data-action="delete-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="Удалить">✕</button></div></div></article>'; }).join(''); }
     document.getElementById('archiveCount').textContent = ag.length + at.length;
   }
 
-   function renderGoalSelect() {
+     function renderGoalSelect() {
     const sel = document.getElementById('taskGoal');
     const prev = sel.value;
     const goals = state.goals.filter(function (g) { return !g.isInbox && !g.archivedAt; });
-    sel.innerHTML = goals.length
-      ? goals.map(function (g) { return '<option value="' + escapeHtml(g.id) + '">' + escapeHtml(g.title) + '</option>'; }).join('')
-      : '<option value="">— Сначала создайте цель —</option>';
+    sel.innerHTML = '<option value="">— Без цели —</option>' + goals.map(function (g) { return '<option value="' + escapeHtml(g.id) + '">' + escapeHtml(g.title) + '</option>'; }).join('');
     if (prev) { const found = Array.prototype.some.call(sel.options, function (o) { return o.value === prev; }); if (found) sel.value = prev; }
   }
   function renderTemplateSelect() { const sel = document.getElementById('applyTemplateSel'); sel.innerHTML = '<option value="">Применить шаблон…</option>' + state.templates.map(function (t) { return '<option value="' + escapeHtml(t.id) + '">' + escapeHtml(t.text.slice(0, 40)) + '</option>'; }).join(''); }
@@ -3382,7 +3382,7 @@ let _searchIndexDirty = true;
       if (!g.isInbox) searchIndex.push({ type: 'goal', id: g.id, title: g.title, desc: g.description, haystack: (g.title + ' ' + g.description).toLowerCase() });
       g.tasks.forEach(function (t) {
         if (t.archivedAt) return;
-        searchIndex.push({ type: 'task', goalId: g.id, id: t.id, title: t.text, desc: (g.isInbox ? '📥 Быстрая' : g.title) + (t.deadline ? ' · ' + formatDate(t.deadline) : ''), haystack: (t.text + ' ' + (t.tags || []).join(' ') + ' ' + g.title).toLowerCase() });
+           searchIndex.push({ type: 'task', goalId: g.id, id: t.id, title: t.text, desc: (g.isInbox ? '' : g.title) + (t.deadline ? ' · ' + formatDate(t.deadline) : ''), haystack: (t.text + ' ' + (t.tags || []).join(' ') + ' ' + g.title).toLowerCase() });
       });
     });
     state.snippets.forEach(function (s) { searchIndex.push({ type: 'snippet', id: s.id, title: s.text.slice(0, 140), desc: s.fileName || '', haystack: ((s.text || '') + ' ' + (s.note || '') + ' ' + (s.fileName || '') + ' ' + (s.tags || []).join(' ')).toLowerCase() }); });
@@ -3586,7 +3586,7 @@ let _searchIndexDirty = true;
       if (g.deadline && !g.isInbox) addEvent('goal-' + g.id, g.deadline, '🎯 ' + g.title, g.description || '');
       g.tasks.forEach(function (t) {
         if (t.archivedAt || !t.deadline) return;
-        addEvent('task-' + t.id, t.deadline, '✓ ' + t.text, (g.isInbox ? 'Быстрая задача' : 'Цель: ' + g.title));
+             addEvent('task-' + t.id, t.deadline, '✓ ' + t.text, (g.isInbox ? '' : 'Цель: ' + g.title));
       });
     });
     lines.push('END:VCALENDAR');
@@ -3656,10 +3656,9 @@ let _searchIndexDirty = true;
       const taskTextEl = document.getElementById('taskText');
       const text = taskTextEl.value.trim();
       if (!text) { markInvalid(taskTextEl); showToast('Введите текст задачи', 'warn'); return; }
-      let deadline = document.getElementById('taskDeadline').value || '';
+            let deadline = document.getElementById('taskDeadline').value || '';
       if (!deadline && state.calSelectedDate) deadline = state.calSelectedDate;
-            const goalId = document.getElementById('taskGoal').value;
-      if (!goalId) { showToast('Сначала создайте цель', 'warn'); return; }
+      const goalId = document.getElementById('taskGoal').value;
       addTask(goalId, { text: text, priority: document.getElementById('taskPriority').value, deadline: deadline, repeat: document.getElementById('taskRepeat').value ? { type: document.getElementById('taskRepeat').value } : null, tags: parseTags(document.getElementById('taskTags').value) });
       const keep = document.getElementById('taskGoal').value;
       resetTaskForm();
