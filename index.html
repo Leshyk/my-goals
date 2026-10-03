@@ -3615,24 +3615,32 @@ let _searchIndexDirty = true;
     showToast('Экспортировано в .ics', 'ok');
   }
 
-      function render() {
+        // === Отложенный рендер (график, календарь, вкладки) ===
+   let _deferredRenderTimer = null;
+   function scheduleDeferredRender() {
+    clearTimeout(_deferredRenderTimer);
+    _deferredRenderTimer = setTimeout(function () {
+      renderHeatmap();
+      if (state.calendarVisible) renderCalendar();
+      if (state.ui.tab === 'archive') renderArchive();
+      if (state.ui.tab === 'literature') {
+        SECTIONS.forEach(function (s) { renderMeta(s); renderList(s); applyListVisibility(s); });
+      }
+      if (state.ui.tab === 'notes') renderNotesList();
+    }, 0);
+  }
+
+   function render() {
+    // Быстрый рендер — то, что видно сразу
     renderTabs();
     renderTagsDatalist(); renderTagFilterSelect();
     renderStats(); renderGoals(); renderTasks();
-    renderHeatmap();
     applyDensity();
     renderGoalSelect(); renderToggleAllButton();
-
-    // Ленивые рендеры: рисуем только активную вкладку
-    if (state.ui.tab === 'archive') renderArchive();
-    if (state.ui.tab === 'literature') {
-      SECTIONS.forEach(function (s) { renderMeta(s); renderList(s); applyListVisibility(s); });
-    }
-
     renderSectionCount(); updateSnippetsBadges();
-    if (state.calendarVisible) renderCalendar();
-    if (state.ui.tab === 'notes') renderNotesList();
     syncQuickHint();
+    // Тяжёлое — на следующий тик (после того как браузер отпустит главный поток)
+    scheduleDeferredRender();
   }
 
   function bindEvents() {
