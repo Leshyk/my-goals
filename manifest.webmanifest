@@ -1,0 +1,21 @@
+{
+  "name": "Мои цели и задачи",
+  "short_name": "Цели",
+  "description": "Цели, задачи, календарь, литература, заметки, цитаты",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a1420",
+  "theme_color": "#0a1420",
+  "lang": "ru",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
