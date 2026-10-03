@@ -3664,119 +3664,108 @@ let _searchIndexDirty = true;
     const _ats = document.getElementById('applyTemplateSel');
     if (_ats) _ats.addEventListener('change', function (e) { const id = e.target.value; if (id) { applyTemplate(id); e.target.value = ''; } });
 
-        const goalsList = document.getElementById('goalsList');
-    goalsList.addEventListener('click', function (e) {
-      const actionEl = e.target.closest('[data-action]');
-      if (!actionEl) return;
-      const action = actionEl.dataset.action;
-      const goalEl = actionEl.closest('.goal');
-      const goalId = actionEl.dataset.goalId || (goalEl ? goalEl.dataset.goalId : null);
+           // === Единые обработчики для списков задач (и целей, и задач) ===
+    function attachTaskListHandlers(element) {
+      if (!element) return;
+      element.addEventListener('click', function (e) {
+        const actionEl = e.target.closest('[data-action]'); if (!actionEl) return;
+        const action = actionEl.dataset.action;
+        const goalEl = actionEl.closest('.goal');
+        const goalId = actionEl.dataset.goalId || (goalEl ? goalEl.dataset.goalId : null);
+        const taskId = actionEl.dataset.taskId;
 
-      // Подзадачи
-      if (action === 'add-subtask-inline') {
-        const inp = goalsList.querySelector('input[data-subtask-input][data-task-id="' + CSS.escape(actionEl.dataset.taskId) + '"]');
-        if (inp) { const v = (inp.value || '').trim(); if (v) { addSubtask(actionEl.dataset.goalId, actionEl.dataset.taskId, v); inp.value = ''; } }
-        return;
-      }
-      if (action === 'edit-subtask') { editSubtask(actionEl.dataset.goalId, actionEl.dataset.taskId, actionEl.dataset.subId); return; }
-      if (action === 'delete-subtask') { deleteSubtask(actionEl.dataset.goalId, actionEl.dataset.taskId, actionEl.dataset.subId); return; }
+        // Подзадачи
+        if (action === 'add-subtask-inline') {
+          const inp = element.querySelector('input[data-subtask-input][data-task-id="' + CSS.escape(taskId) + '"]');
+          if (inp) { const v = (inp.value || '').trim(); if (v) { addSubtask(actionEl.dataset.goalId, taskId, v); inp.value = ''; } }
+          return;
+        }
+        if (action === 'edit-subtask') { editSubtask(actionEl.dataset.goalId, taskId, actionEl.dataset.subId); return; }
+        if (action === 'delete-subtask') { deleteSubtask(actionEl.dataset.goalId, taskId, actionEl.dataset.subId); return; }
 
-      // Цели и задачи
-      if (action === 'toggle-goal' && goalId) { toggleGoalCollapse(goalId); return; }
-      if (action === 'delete-goal' && goalId) { deleteGoal(goalId); return; }
-      if (action === 'edit-goal' && goalId) { openEditGoal(goalId); return; }
-      if (action === 'archive-goal' && goalId) { archiveGoal(goalId); return; }
-      if (action === 'delete-task' && goalId) { deleteTask(goalId, actionEl.dataset.taskId); return; }
-      if (action === 'archive-task' && goalId) { archiveTask(goalId, actionEl.dataset.taskId); return; }
-      if (action === 'edit-task' && goalId) { openEditTask(goalId, actionEl.dataset.taskId); return; }
-      if (action === 'open-snippet-from-goal') { openSnippetsModal(); state.editingSnippetId = actionEl.dataset.id; renderSnippetsList(); return; }
-      if (action === 'open-note-from-goal') { const nid = actionEl.dataset.id; switchTab('notes'); state.editingNoteId = nid; renderNotesList(); renderNoteEditor(); return; }
-      if (action === 'pin-goal' && goalId) { togglePinGoal(goalId); return; }
-      if (action === 'pin-task' && goalId) { togglePinTask(goalId, actionEl.dataset.taskId); return; }
-      if (action === 'mass-goals-archive') { massActionGoals('archive'); return; }
-      if (action === 'mass-goals-delete') { massActionGoals('delete'); return; }
-    });
-       goalsList.addEventListener('change', function (e) {
-      const el = e.target;
-      if (!el.matches) return;
-      if (el.matches('input[data-action="toggle-subtask"]')) toggleSubtask(el.dataset.goalId, el.dataset.taskId, el.dataset.subId);
-      else if (el.matches('input[type="checkbox"][data-action="toggle-task"]')) toggleTask(el.dataset.goalId, el.dataset.taskId);
-      else if (el.matches('input[data-action="mass-check-goal"]')) toggleMassCheckGoal(el.dataset.goalId);
-    });
-    goalsList.addEventListener('keydown', function (e) {
-      if (e.key !== 'Enter') return;
-      const el = e.target;
-      if (el.matches && el.matches('input[data-subtask-input]')) {
+        // Цели
+        if (action === 'toggle-goal' && goalId) { toggleGoalCollapse(goalId); return; }
+        if (action === 'delete-goal' && goalId) { deleteGoal(goalId); return; }
+        if (action === 'edit-goal' && goalId) { openEditGoal(goalId); return; }
+        if (action === 'archive-goal' && goalId) { archiveGoal(goalId); return; }
+        if (action === 'pin-goal' && goalId) { togglePinGoal(goalId); return; }
+        if (action === 'mass-goals-archive') { massActionGoals('archive'); return; }
+        if (action === 'mass-goals-delete') { massActionGoals('delete'); return; }
+
+        // Задачи
+        if (action === 'delete-task' && goalId) { deleteTask(goalId, taskId); return; }
+        if (action === 'archive-task' && goalId) { archiveTask(goalId, taskId); return; }
+        if (action === 'edit-task' && goalId) { openEditTask(goalId, taskId); return; }
+        if (action === 'pin-task' && goalId) { togglePinTask(goalId, taskId); return; }
+        if (action === 'pomodoro-start-task') {
+          const g = findGoal(goalId);
+          const t = g ? g.tasks.find(function (x) { return x.id === taskId; }) : null;
+          if (t) { document.getElementById('pomodoroWidget').hidden = false; startPomodoro('work', t.id, t.text); }
+          return;
+        }
+        if (action === 'filter-tag-click') {
+          state.tagFilter = state.tagFilter === actionEl.dataset.tag ? '' : actionEl.dataset.tag;
+          if (state.tagFilter && state.calSelectedDate) { state.calSelectedDate = null; renderCalendar(); syncQuickHint(); }
+          savePrefs(); renderTagFilterSelect(); renderTasks(); return;
+        }
+
+        // Связи цели/задачи с другими разделами
+        if (action === 'open-snippet-from-goal') { openSnippetsModal(); state.editingSnippetId = actionEl.dataset.id; renderSnippetsList(); return; }
+        if (action === 'open-note-from-goal') { switchTab('notes'); state.editingNoteId = actionEl.dataset.id; renderNotesList(); renderNoteEditor(); return; }
+
+        // Массовые операции с задачами
+        if (action === 'mass-done') massAction('done');
+        else if (action === 'mass-archive') massAction('archive');
+        else if (action === 'mass-export') massAction('export');
+        else if (action === 'mass-delete') massAction('delete');
+        else if (action === 'clear-date-filter') { e.preventDefault(); clearDateFilter(); return; }
+      });
+
+      element.addEventListener('change', function (e) {
+        const el = e.target;
+        if (!el.matches) return;
+        if (el.matches('input[data-action="toggle-subtask"]')) toggleSubtask(el.dataset.goalId, el.dataset.taskId, el.dataset.subId);
+        else if (el.matches('input[data-action="toggle-task"]')) toggleTask(el.dataset.goalId, el.dataset.taskId);
+        else if (el.matches('input[data-action="mass-check"]')) toggleMassCheck(el.dataset.goalId, el.dataset.taskId);
+        else if (el.matches('input[data-action="mass-check-goal"]')) toggleMassCheckGoal(el.dataset.goalId);
+      });
+
+      element.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') return;
+        const el = e.target;
+        if (el.matches && el.matches('input[data-subtask-input]')) {
+          e.preventDefault();
+          const v = (el.value || '').trim();
+          if (v) { addSubtask(el.dataset.goalId, el.dataset.taskId, v); el.value = ''; }
+        }
+      });
+
+      element.addEventListener('dblclick', function (e) {
+        const t = e.target.closest('.task-text');
+        if (!t) return;
+        const taskEl = t.closest('.task');
+        if (!taskEl) return;
+        const gid = taskEl.dataset.goalId, tid = taskEl.dataset.taskId;
+        if (gid && tid) openEditTask(gid, tid);
+      });
+
+      element.addEventListener('submit', function (e) {
+        const form = e.target.closest('.inline-task-form'); if (!form) return;
         e.preventDefault();
-        const v = (el.value || '').trim();
-        if (v) { addSubtask(el.dataset.goalId, el.dataset.taskId, v); el.value = ''; }
-      }
-    });
-    goalsList.addEventListener('dblclick', function (e) {
-      const t = e.target.closest('.task-text');
-      if (!t) return;
-      const taskEl = t.closest('.task');
-      if (!taskEl) return;
-      const gid = taskEl.dataset.goalId, tid = taskEl.dataset.taskId;
-      if (gid && tid) openEditTask(gid, tid);
-    });
-    goalsList.addEventListener('submit', function (e) { const form = e.target.closest('.inline-task-form'); if (!form) return; e.preventDefault(); const t = form.querySelector('input[type="text"]'); const d = form.querySelector('input[type="date"]'); const text = t.value.trim(); if (!text) return; const goalId = form.dataset.goalId; let deadline = d ? (d.value || '') : ''; if (!deadline && state.calSelectedDate) deadline = state.calSelectedDate; refocusInlineTaskFor = goalId; addTask(goalId, { text: text, priority: 'medium', deadline: deadline }); });
+        const t = form.querySelector('input[type="text"]');
+        const d = form.querySelector('input[type="date"]');
+        const text = t.value.trim(); if (!text) return;
+        const goalId = form.dataset.goalId;
+        let deadline = d ? (d.value || '') : '';
+        if (!deadline && state.calSelectedDate) deadline = state.calSelectedDate;
+        refocusInlineTaskFor = goalId;
+        addTask(goalId, { text: text, priority: 'medium', deadline: deadline });
+      });
+    }
 
-    const tasksList = document.getElementById('tasksList');
-        tasksList.addEventListener('click', function (e) {
-      const actionEl = e.target.closest('[data-action]'); if (!actionEl) return;
-      const action = actionEl.dataset.action;
-      if (action === 'add-subtask-inline') {
-        const inp = tasksList.querySelector('input[data-subtask-input][data-task-id="' + CSS.escape(actionEl.dataset.taskId) + '"]');
-        if (inp) { const v = (inp.value || '').trim(); if (v) { addSubtask(actionEl.dataset.goalId, actionEl.dataset.taskId, v); inp.value = ''; } }
-        return;
-      }
-      if (action === 'edit-subtask') { editSubtask(actionEl.dataset.goalId, actionEl.dataset.taskId, actionEl.dataset.subId); return; }
-      if (action === 'delete-subtask') { deleteSubtask(actionEl.dataset.goalId, actionEl.dataset.taskId, actionEl.dataset.subId); return; }
-      if (action === 'delete-task') { deleteTask(actionEl.dataset.goalId, actionEl.dataset.taskId); return; }
-      if (action === 'archive-task') { archiveTask(actionEl.dataset.goalId, actionEl.dataset.taskId); return; }
-      if (action === 'edit-task') { openEditTask(actionEl.dataset.goalId, actionEl.dataset.taskId); return; }
-      if (action === 'pin-task') { togglePinTask(actionEl.dataset.goalId, actionEl.dataset.taskId); return; }
-      if (action === 'pomodoro-start-task') { const g = findGoal(actionEl.dataset.goalId); const t = g ? g.tasks.find(function (x) { return x.id === actionEl.dataset.taskId; }) : null; if (t) { document.getElementById('pomodoroWidget').hidden = false; startPomodoro('work', t.id, t.text); } return; }
-      if (action === 'filter-tag-click') {
-        state.tagFilter = state.tagFilter === actionEl.dataset.tag ? '' : actionEl.dataset.tag;
-        if (state.tagFilter && state.calSelectedDate) { state.calSelectedDate = null; renderCalendar(); syncQuickHint(); }
-        savePrefs(); renderTagFilterSelect(); renderTasks(); return;
-      }
-      if (action === 'mass-done') massAction('done');
-      else if (action === 'mass-archive') massAction('archive');
-      else if (action === 'mass-export') massAction('export');
-      else if (action === 'mass-delete') massAction('delete');
-    });
-    tasksList.addEventListener('change', function (e) {
-      const el = e.target;
-      if (!el.matches) return;
-      if (el.matches('input[data-action="toggle-subtask"]')) toggleSubtask(el.dataset.goalId, el.dataset.taskId, el.dataset.subId);
-      else if (el.matches('input[data-action="toggle-task"]')) toggleTask(el.dataset.goalId, el.dataset.taskId);
-      else if (el.matches('input[data-action="mass-check"]')) toggleMassCheck(el.dataset.goalId, el.dataset.taskId);
-    });
-    tasksList.addEventListener('keydown', function (e) {
-      if (e.key !== 'Enter') return;
-      const el = e.target;
-      if (el.matches && el.matches('input[data-subtask-input]')) {
-        e.preventDefault();
-        const v = (el.value || '').trim();
-        if (v) { addSubtask(el.dataset.goalId, el.dataset.taskId, v); el.value = ''; }
-      }
-    });
-    tasksList.addEventListener('dblclick', function (e) {
-      const t = e.target.closest('.task-text');
-      if (!t) return;
-      const taskEl = t.closest('.task');
-      if (!taskEl) return;
-      const gid = taskEl.dataset.goalId, tid = taskEl.dataset.taskId;
-      if (gid && tid) openEditTask(gid, tid);
-    });
-
-    document.getElementById('tasksColumn').addEventListener('click', function (e) {
-      const el = e.target.closest('[data-action="clear-date-filter"]'); if (!el) return;
-      e.preventDefault(); clearDateFilter();
-    });
+    attachTaskListHandlers(document.getElementById('goalsList'));
+    attachTaskListHandlers(document.getElementById('tasksList'));
+    attachTaskListHandlers(document.getElementById('tasksColumn'));
 
     document.getElementById('massModeToggle').addEventListener('click', toggleMassMode);
     const mgt = document.getElementById('massModeGoalsToggle');
