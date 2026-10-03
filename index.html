@@ -59,7 +59,7 @@
     --overdue-glow: rgba(207, 34, 46, 0.3);
   }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: var(--text); padding: 10px 14px 16px; line-height: 1.5; background-image: linear-gradient(var(--bg-overlay), var(--bg-overlay)), url('forest-background.png'); background-size: cover; background-position: center; background-attachment: fixed; min-height: 100vh; }
+    body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: var(--text); padding: 10px 14px 16px; line-height: 1.5; min-height: 100vh; }
   .container { max-width: 1600px; margin: 0 auto; }
   h1, h2 { margin: 0 0 8px; } h1 { font-size: 22px; } h2 { font-size: 15px; }
   small, .muted { color: var(--muted); }
@@ -458,13 +458,7 @@
   .snippet-note { font-size: 12px; color: var(--muted); background: rgba(245,197,24,.06); border-left: 3px solid var(--gold); padding: 4px 10px; }
   .snippet-text { font-size: 13px; background: var(--bar-bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; word-break: break-word; max-height: 240px; overflow-y: auto; line-height: 1.55; }
   .snippet-edit-area { display: grid; gap: 6px; }
-
-  .templates-list { display: grid; gap: 6px; }
-  .template-item { background: var(--card-alt); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-  .template-item .info { min-width: 0; flex: 1 1 auto; }
-  .template-item .title { font-size: 13px; font-weight: 600; }
-  .template-item .sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
-
+  
   /* === УЛУЧШЕНИЯ === */
   @media (max-width: 700px) {
     .cal-cell { min-height: 54px; padding: 5px 6px; }
@@ -1082,16 +1076,6 @@ body.density-compact .subtask { padding: 2px 5px; }
       <input type="search" class="search-input-big" id="globalSearchInput" placeholder="Введите запрос..." autocomplete="off" />
       <div id="globalSearchResults" style="margin-top:14px;"><div class="modal-empty">Введите минимум 2 символа</div></div>
     </div>
-  </div>
-</div>
-
-<div class="modal-backdrop" id="templatesModal" hidden>
-  <div class="modal modal-sm">
-    <header class="modal-head">
-      <div class="modal-title">📋 Шаблоны</div>
-      <button type="button" class="secondary" data-action="close-templates">✕</button>
-    </header>
-    <div class="modal-body" id="templatesBody"><div class="modal-empty">Пока нет шаблонов</div></div>
   </div>
 </div>
 
@@ -3614,11 +3598,11 @@ let _searchIndexDirty = true;
     showToast('Экспортировано в .ics', 'ok');
   }
 
-  function render() {
+   function render() {
     renderTabs(); renderStats(); renderGoals(); renderTasks();
     renderHeatmap();
     applyDensity();
-    renderGoalSelect(); renderTemplateSelect(); renderToggleAllButton();
+    renderGoalSelect(); renderToggleAllButton();
     renderArchive();
     SECTIONS.forEach(function (s) { renderMeta(s); renderList(s); applyListVisibility(s); });
     renderSectionCount(); updateSnippetsBadges();
