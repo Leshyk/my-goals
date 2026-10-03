@@ -5,7 +5,7 @@
   'use strict';
 
   const CLIENT_ID = '358788438808-j3duf0p7pfec636k6oscv0dtv14ffacu.apps.googleusercontent.com'; 
-  const SCOPE = 'https://www.googleapis.com/auth/drive.file';
+ const SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file';
   const FILE_NAME = 'pgt_v25_sync_data.json';
 
   let tokenClient = null;
