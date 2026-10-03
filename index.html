@@ -4068,7 +4068,27 @@ document.getElementById('manualBackupBtn').addEventListener('click', async funct
     });
     window.addEventListener('beforeunload', function () { if (runtime.articles.selected) saveCurrentPosition('articles'); if (runtime.books.selected) saveCurrentPosition('books'); if (window.speechSynthesis) window.speechSynthesis.cancel(); });
         window.addEventListener('storage', function (e) { if ([DATA_KEY, PREFS_KEY, SNIPPETS_KEY, NOTES_KEY, TEMPLATES_KEY].indexOf(e.key) !== -1) { loadState(); _searchIndexDirty = true; applyTheme(); applyColors(); syncToolbarInputs(); applyCalendarVisibility(); render(); } });
-          // === Автосинхронизация ===
+         
+		// === Часы реального времени в шапке ===
+    
+function tickLiveClock() {
+      const el = document.getElementById('liveClock');
+      if (!el) return;
+      const d = new Date();
+      el.textContent = '🕐 ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
+    }
+    tickLiveClock();
+    setInterval(tickLiveClock, 1000);
+
+    setInterval(checkNotifications, 5 * 60 * 1000);
+	    setInterval(checkBackup, 30 * 60 * 1000);
+    setInterval(function () {
+      try { renderStats(); renderTasks(); if (state.calendarVisible) renderCalendar(); renderGoals(); }
+      catch (e) {}
+        }, 60 * 60 * 1000);
+  }
+
+  // === Автосинхронизация (снаружи bindEvents, доступна для saveData) ===
   let _autoSyncTimer = null;
   let _autoSyncInFlight = false;
 
@@ -4099,25 +4119,7 @@ document.getElementById('manualBackupBtn').addEventListener('click', async funct
   }
 
   window.__pgtAutoSyncDone = function (ok) { _autoSyncInFlight = false; };
-		// === Часы реального времени в шапке ===
-    
-function tickLiveClock() {
-      const el = document.getElementById('liveClock');
-      if (!el) return;
-      const d = new Date();
-      el.textContent = '🕐 ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
-    }
-    tickLiveClock();
-    setInterval(tickLiveClock, 1000);
-
-    setInterval(checkNotifications, 5 * 60 * 1000);
-	    setInterval(checkBackup, 30 * 60 * 1000);
-    setInterval(function () {
-      try { renderStats(); renderTasks(); if (state.calendarVisible) renderCalendar(); renderGoals(); }
-      catch (e) {}
-    }, 60 * 60 * 1000);
-  }
-
+  
    loadState();
   applyTheme();
   applyColors();
