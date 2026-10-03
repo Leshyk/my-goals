@@ -59,7 +59,9 @@
     --overdue-glow: rgba(207, 34, 46, 0.3);
   }
   * { box-sizing: border-box; }
-    body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: var(--text); padding: 10px 14px 16px; line-height: 1.5; min-height: 100vh; }
+  [hidden] { display: none !important; }
+       body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: var(--text); padding: 10px 14px 16px; line-height: 1.5; min-height: 100vh; background: #0a1420; }
+    :root[data-theme="light"] body { background: #eef1f5; }
   .container { max-width: 1600px; margin: 0 auto; }
   h1, h2 { margin: 0 0 8px; } h1 { font-size: 22px; } h2 { font-size: 15px; }
   small, .muted { color: var(--muted); }
