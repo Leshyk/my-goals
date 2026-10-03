@@ -3615,8 +3615,10 @@ let _searchIndexDirty = true;
     showToast('Экспортировано в .ics', 'ok');
   }
 
-   f   function render() {
-    renderTabs(); renderStats(); renderGoals(); renderTasks();
+      function render() {
+    renderTabs();
+    renderTagsDatalist(); renderTagFilterSelect();
+    renderStats(); renderGoals(); renderTasks();
     renderHeatmap();
     applyDensity();
     renderGoalSelect(); renderToggleAllButton();
@@ -3628,7 +3630,6 @@ let _searchIndexDirty = true;
     }
 
     renderSectionCount(); updateSnippetsBadges();
-    renderTagsDatalist(); renderTagFilterSelect();
     if (state.calendarVisible) renderCalendar();
     if (state.ui.tab === 'notes') renderNotesList();
     syncQuickHint();
