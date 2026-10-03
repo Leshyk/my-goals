@@ -118,7 +118,7 @@
   .active-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-bottom: 16px; align-items: start; }
   @media (max-width: 900px) { .active-layout { grid-template-columns: minmax(0, 1fr); } }
 
-  .forms-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-bottom: 12px; }
+.forms-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-bottom: 12px; align-items: start; }
   @media (max-width: 900px) { .forms-wrap { grid-template-columns: minmax(0, 1fr); } }
   .form-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; box-shadow: var(--shadow); }
   .form-card h3 { margin: 0 0 8px; font-size: 13px; font-weight: 700; color: var(--text); }
@@ -170,8 +170,16 @@
   .cal-dow { text-align: center; font-size: 9px; color: var(--muted); font-weight: 700; text-transform: uppercase; padding: 4px 0; }
   .cal-cell { background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 3px 4px; min-height: 42px; display: flex; flex-direction: column; cursor: pointer; position: relative; overflow: hidden; }
   .cal-cell:hover { border-color: var(--accent); background: var(--bar-bg); }
-  .cal-cell.today { background: var(--highlight-bg); border-color: var(--accent); }
+    .cal-cell.today { background: var(--highlight-bg); border-color: var(--accent); }
   .cal-cell.selected { background: rgba(88,166,255,.22); border-color: var(--accent); }
+  .cal-cell.has-items { background: rgba(88,166,255,.12); }
+  .cal-cell.has-items:hover { background: rgba(88,166,255,.2); }
+  .cal-cell.has-items.today { background: rgba(88,166,255,.22); }
+  .cal-cell.has-items.selected { background: rgba(88,166,255,.34); }
+  .cal-cell.has-overdue-items { background: rgba(255,123,114,.14); }
+  .cal-cell.has-overdue-items:hover { background: rgba(255,123,114,.22); }
+  .cal-cell.has-overdue-items.today { background: rgba(255,123,114,.24); }
+  .cal-cell.has-overdue-items.selected { background: rgba(255,123,114,.34); }
   .cal-cell.empty { cursor: default; visibility: hidden; }
   .cal-daynum { font-size: 10px; font-weight: 700; color: var(--muted); }
   .cal-cell.today .cal-daynum, .cal-cell.selected .cal-daynum { color: var(--accent); }
@@ -590,7 +598,6 @@ body.density-compact .subtask { padding: 2px 5px; }
        <span class="sync-dot" id="syncDot" title="Не синхронизировано"></span>
       <button type="button" class="header-btn" id="syncBtn" title="Синхронизировать" hidden>☁️ Синхро</button>
       <button type="button" class="header-btn" id="globalSearchBtn" title="Поиск (Ctrl+/)">🔍 Поиск</button>
-      <button type="button" class="header-btn" id="pomodoroBtn" title="Помодоро">🍅 Помодоро</button>
       <button type="button" class="header-btn active" id="calToggle" title="Календарь (Ctrl+K)">📅 Календарь</button>
       <button type="button" class="header-btn" id="settingsBtn">⚙ Настройки</button>
     </div>
@@ -1010,15 +1017,7 @@ body.density-compact .subtask { padding: 2px 5px; }
       <button type="button" class="secondary" data-action="close-settings">✕</button>
     </header>
     <div class="modal-body">
-      <div class="settings-section">
-        <h3>Тема</h3>
-        <div class="theme-switch">
-          <button type="button" data-theme-opt="dark">🌙 Тёмная</button>
-          <button type="button" data-theme-opt="light">☀️ Светлая</button>
-          <button type="button" data-theme-opt="auto">🖥 Авто</button>
-        </div>
-      </div>
-      <div class="settings-section">
+           <div class="settings-section">
         <h3>Уведомления</h3>
         <div class="settings-row">
           <div><label>О задачах с дедлайном</label><span class="muted">Проверка раз в 15 минут</span></div>
@@ -1032,12 +1031,7 @@ body.density-compact .subtask { padding: 2px 5px; }
           <div class="color-item"><input type="color" id="colorDone" /><label>Выполнено</label></div>
         </div>
       </div>
-      <div class="settings-section">
-        <h3>Помодоро</h3>
-        <div class="settings-row"><label>Работа, мин</label><input type="number" id="pomodoroWorkMin" min="1" max="120" value="25" style="width:80px;" /></div>
-        <div class="settings-row"><label>Отдых, мин</label><input type="number" id="pomodoroRestMin" min="1" max="60" value="5" style="width:80px;" /></div>
-      </div>
-      <div class="settings-section">
+            <div class="settings-section">
         <h3>Резервные копии (авто)</h3>
         <div class="muted" style="font-size:11px; margin-bottom:8px;">Автоматически сохраняется раз в день. Хранится 7 последних.</div>
         <div class="backup-list" id="backupList"></div>
@@ -1124,25 +1118,12 @@ body.density-compact .subtask { padding: 2px 5px; }
         <div class="kbd-row"><span>Новая цель</span><kbd>G</kbd></div>
         <div class="kbd-row"><span>Поиск</span><kbd>Ctrl + /</kbd></div>
         <div class="kbd-row"><span>Календарь</span><kbd>Ctrl + K</kbd></div>
-        <div class="kbd-row"><span>Помодоро</span><kbd>P</kbd></div>
         <div class="kbd-row"><span>Отменить действие</span><kbd>Ctrl + Z</kbd></div>
         <div class="kbd-row"><span>Сохранить в edit-модале</span><kbd>Ctrl + Enter</kbd></div>
         <div class="kbd-row"><span>Закрыть модал</span><kbd>Esc</kbd></div>
         <div class="kbd-row"><span>Шпаргалка</span><kbd>?</kbd></div>
       </div>
     </div>
-  </div>
-</div>
-
-<div class="pomodoro-widget" id="pomodoroWidget" hidden>
-  <div>
-    <div class="pomodoro-mode" id="pomodoroMode">РАБОТА</div>
-    <div class="pomodoro-time" id="pomodoroTime">25:00</div>
-  </div>
-  <div class="pomodoro-info"><div class="pomodoro-task" id="pomodoroTask">— без задачи —</div></div>
-  <div class="pomodoro-actions">
-    <button type="button" class="secondary" data-action="pomodoro-toggle" id="pomodoroToggleBtn">⏸</button>
-    <button type="button" class="secondary" data-action="pomodoro-close">✕</button>
   </div>
 </div>
 
@@ -1603,14 +1584,13 @@ let _searchIndexDirty = true;
     document.getElementById('editTaskStatus').value = t.status || (t.done ? 'done' : 'todo');
     renderEditSubtasks();
     document.getElementById('editTaskTags').value = (t.tags || []).map(function (x) { return '#' + x; }).join(' ');
-    const sel = document.getElementById('editTaskGoal');
-    const opts = ['<option value="">— Быстрая (без цели) —</option>'];
+       const sel = document.getElementById('editTaskGoal');
+    const opts = [];
     state.goals.forEach(function (gg) {
-      if (gg.archivedAt) return;
-      if (gg.isInbox) opts.push('<option value="' + escapeHtml(gg.id) + '"' + (gg.id === goalId ? ' selected' : '') + '>📥 Быстрые задачи</option>');
-      else opts.push('<option value="' + escapeHtml(gg.id) + '"' + (gg.id === goalId ? ' selected' : '') + '>' + escapeHtml(gg.title) + '</option>');
+      if (gg.archivedAt || gg.isInbox) return;
+      opts.push('<option value="' + escapeHtml(gg.id) + '"' + (gg.id === goalId ? ' selected' : '') + '>' + escapeHtml(gg.title) + '</option>');
     });
-    sel.innerHTML = opts.join('');
+    sel.innerHTML = opts.join('') || '<option value="">— Сначала создайте цель —</option>';
     document.getElementById('editTaskModal').hidden = false;
     setTimeout(function () { document.getElementById('editTaskText').focus(); }, 50);
   }
@@ -1644,10 +1624,9 @@ let _searchIndexDirty = true;
     t.status = newStatus;
     t.done = (newStatus === 'done');
 
-    if (newGoalId !== oldGoalId) {
-      let targetGoal;
-      if (!newGoalId) targetGoal = ensureInboxGoal();
-      else targetGoal = findGoal(newGoalId);
+        if (newGoalId !== oldGoalId) {
+      if (!newGoalId) { showToast('Выберите цель', 'warn'); return; }
+      const targetGoal = findGoal(newGoalId);
       if (targetGoal && targetGoal.id !== g.id) {
         g.tasks = g.tasks.filter(function (x) { return x.id !== taskId; });
         targetGoal.tasks.push(t);
@@ -1774,10 +1753,12 @@ let _searchIndexDirty = true;
     const raw = input.value.trim(); if (!raw) return;
     const parsed = parseQuickInput(raw);
     if (!parsed.text) { showToast('Пустая задача', 'warn'); return; }
+        const goals = state.goals.filter(function (g) { return !g.isInbox && !g.archivedAt; });
+    if (!goals.length) { showToast('Сначала создайте цель', 'warn'); return; }
     let deadline = parsed.deadline;
     let usedCalDate = false;
     if (!deadline && state.calSelectedDate) { deadline = state.calSelectedDate; usedCalDate = true; }
-    addTask(null, { text: parsed.text, priority: parsed.priority, deadline: deadline, tags: parsed.tags });
+    addTask(goals[0].id, { text: parsed.text, priority: parsed.priority, deadline: deadline, tags: parsed.tags });
     input.value = '';
     if (usedCalDate) showToast('Задача добавлена на ' + formatDate(deadline), 'ok');
     else showToast('Добавлено: ' + parsed.text, 'ok');
@@ -2273,7 +2254,7 @@ let _searchIndexDirty = true;
     cleanupPdf(section);
     const readerOnly = state.readerOnly[section];
     pane.classList.toggle('reader-only', readerOnly);
-    const headHtml = readerOnly ? '' : '<header class="reader-head"><div class="reader-head-main"><button type="button" class="icon-btn" data-action="close-reader" data-section="' + section + '">←</button><div><div class="reader-title">' + escapeHtml(name) + '</div><div class="reader-sub"><span class="ext">' + escapeHtml(ext) + '</span>' + (meta.size ? '<span>' + formatBytes(meta.size) + '</span>' : '') + '</div></div></div><div class="reader-actions"><button type="button" class="icon-btn pin-btn" data-action="save-snippet" data-section="' + section + '" title="Цитата">📌</button><button type="button" class="icon-btn' + (readerOnly ? ' active' : '') + '" data-action="toggle-reader-only" data-section="' + section + '">📖</button><button type="button" class="icon-btn" data-action="speak-text" data-section="' + section + '">🔊</button><button type="button" class="icon-btn' + (isFav ? ' active' : '') + '" data-action="toggle-fav-current" data-section="' + section + '">' + (isFav ? '★' : '☆') + '</button><button type="button" class="icon-btn" data-action="nav-prev" data-section="' + section + '">‹</button><button type="button" class="icon-btn" data-action="nav-next" data-section="' + section + '">›</button><button type="button" class="icon-btn" data-action="pomodoro-start" data-section="' + section + '">🍅</button><button type="button" class="icon-btn" data-action="download-file" data-section="' + section + '">⬇</button><button type="button" class="icon-btn" data-action="toggle-fullscreen" data-section="' + section + '">⛶</button></div></header>';
+    const headHtml = readerOnly ? '' : '<header class="reader-head"><div class="reader-head-main"><button type="button" class="icon-btn" data-action="close-reader" data-section="' + section + '">←</button><div><div class="reader-title">' + escapeHtml(name) + '</div><div class="reader-sub"><span class="ext">' + escapeHtml(ext) + '</span>' + (meta.size ? '<span>' + formatBytes(meta.size) + '</span>' : '') + '</div></div></div><div class="reader-actions"><button type="button" class="icon-btn pin-btn" data-action="save-snippet" data-section="' + section + '" title="Цитата">📌</button><button type="button" class="icon-btn' + (readerOnly ? ' active' : '') + '" data-action="toggle-reader-only" data-section="' + section + '">📖</button><button type="button" class="icon-btn" data-action="speak-text" data-section="' + section + '">🔊</button><button type="button" class="icon-btn' + (isFav ? ' active' : '') + '" data-action="toggle-fav-current" data-section="' + section + '">' + (isFav ? '★' : '☆') + '</button><button type="button" class="icon-btn" data-action="nav-prev" data-section="' + section + '">‹</button><button type="button" class="icon-btn" data-action="nav-next" data-section="' + section + '">›</button><button type="button" class="icon-btn" data-action="download-file" data-section="' + section + '">⬇</button><button type="button" class="icon-btn" data-action="toggle-fullscreen" data-section="' + section + '">⛶</button></div></header>';
     let pdfToolbarHtml = '';
     if (ext === 'pdf' && !readerOnly) { const page = (state.pdfPage[section] && state.pdfPage[section][name]) || 1; const zoom = clampZoom(state.pdfZoom[section] || 100); const invert = !!state.pdfInvert[section]; pdfToolbarHtml = '<div class="reader-pdf-toolbar"><span>Стр.</span><input type="number" min="1" step="1" value="' + page + '" data-action="pdf-page" data-section="' + section + '" /><button type="button" class="row-btn" data-action="pdf-zoom-out" data-section="' + section + '">−</button><span style="min-width:42px;text-align:center;color:var(--text);font-weight:600">' + zoom + '%</span><button type="button" class="row-btn" data-action="pdf-zoom-in" data-section="' + section + '">+</button><button type="button" class="row-btn" data-action="pdf-zoom-reset" data-section="' + section + '">↺</button><button type="button" class="row-btn' + (invert ? ' active' : '') + '" data-action="pdf-invert" data-section="' + section + '">🌗</button><span class="sep"></span><span>📌 — цитата</span></div>'; }
     pane.innerHTML = headHtml + pdfToolbarHtml + '<div class="reader-progress"><div class="reader-progress-bar" id="readerProgress_' + section + '" style="width:0%"></div></div><div class="reader-body" id="readerBody_' + section + '"><div class="reader-msg">Загрузка…</div></div>';
@@ -2849,7 +2830,7 @@ let _searchIndexDirty = true;
     document.getElementById('snippetsGroup').value = state.ui.snippetsGroup || 'flat';
     document.getElementById('notesSearchInput').value = state.ui.notesSearch || '';
     SECTIONS.forEach(function (s) { const view = document.getElementById(s === 'articles' ? 'articlesPanel' : 'booksPanel'); if (!view) return; const sel = view.querySelector('[data-action="set-sort"][data-section="' + s + '"]'); if (sel) sel.value = state.litSort[s] || 'name'; const favBtn = view.querySelector('[data-action="toggle-fav-filter"][data-section="' + s + '"]'); if (favBtn) favBtn.classList.toggle('active', !!state.litFavFilter[s]); applyListVisibility(s); });
-    document.getElementById('pomodoroWorkMin').value = state.pomodoroWorkMin; document.getElementById('pomodoroRestMin').value = state.pomodoroRestMin; updateNotifBtn();
+   updateNotifBtn();
     syncQuickHint();
   }
   function renderTabs() {
@@ -3021,8 +3002,7 @@ let _searchIndexDirty = true;
     const od = isOverdue(t);
     const soon = isUpcomingSoon(t);
     const meta = [];
-    if (g.isInbox) meta.push('<span class="tag">📥 Быстрая</span>');
-    else meta.push('<span class="tag">' + escapeHtml(g.title) + '</span>');
+       meta.push('<span class="tag">' + escapeHtml(g.title) + '</span>');
     meta.push(PRIORITY_LABEL[t.priority] || '—');
     if (t.status && t.status !== 'todo' && t.status !== 'done') {
       const stLabel = { doing: 'В работе', blocked: 'Блок', done: 'Готово' }[t.status] || '';
@@ -3048,7 +3028,6 @@ let _searchIndexDirty = true;
       '<div class="task-actions">' +
         '<button type="button" class="icon-btn' + (t.pinned ? ' pinned' : '') + '" data-action="pin-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="Закрепить">📌</button>' +
         '<button type="button" class="icon-btn" data-action="edit-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="Редактировать">✎</button>' +
-        '<button type="button" class="icon-btn" data-action="pomodoro-start-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="Помодоро">🍅</button>' +
         (t.done ? '<button type="button" class="icon-btn" data-action="archive-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="В архив">📦</button>' : '') +
         '<button type="button" class="icon-btn" data-action="delete-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="Удалить">✕</button>' +
       '</div></div>';
@@ -3269,7 +3248,15 @@ let _searchIndexDirty = true;
     document.getElementById('archiveCount').textContent = ag.length + at.length;
   }
 
-  function renderGoalSelect() { const sel = document.getElementById('taskGoal'); const prev = sel.value; const goals = state.goals.filter(function (g) { return !g.isInbox && !g.archivedAt; }); sel.innerHTML = '<option value="">— Быстрая —</option>' + goals.map(function (g) { return '<option value="' + escapeHtml(g.id) + '">' + escapeHtml(g.title) + '</option>'; }).join(''); if (prev) { const found = Array.prototype.some.call(sel.options, function (o) { return o.value === prev; }); if (found) sel.value = prev; } }
+   function renderGoalSelect() {
+    const sel = document.getElementById('taskGoal');
+    const prev = sel.value;
+    const goals = state.goals.filter(function (g) { return !g.isInbox && !g.archivedAt; });
+    sel.innerHTML = goals.length
+      ? goals.map(function (g) { return '<option value="' + escapeHtml(g.id) + '">' + escapeHtml(g.title) + '</option>'; }).join('')
+      : '<option value="">— Сначала создайте цель —</option>';
+    if (prev) { const found = Array.prototype.some.call(sel.options, function (o) { return o.value === prev; }); if (found) sel.value = prev; }
+  }
   function renderTemplateSelect() { const sel = document.getElementById('applyTemplateSel'); sel.innerHTML = '<option value="">Применить шаблон…</option>' + state.templates.map(function (t) { return '<option value="' + escapeHtml(t.id) + '">' + escapeHtml(t.text.slice(0, 40)) + '</option>'; }).join(''); }
   function renderToggleAllButton() {
     const btn = document.getElementById('toggleAllBtn'); if (!btn) return;
@@ -3303,9 +3290,11 @@ let _searchIndexDirty = true;
       const isToday = iso === todayISO;
       const isSelected = state.calSelectedDate === iso;
       const info = byDate[iso] || { goals: 0, tasks: 0, overdue: 0 };
-      const cls = ['cal-cell'];
+            const cls = ['cal-cell'];
       if (isToday) cls.push('today');
       if (isSelected) cls.push('selected');
+      if (info.tasks > 0 || info.goals > 0) cls.push('has-items');
+      if (info.overdue > 0) cls.push('has-overdue-items');
       let dots = '';
       const totalDots = Math.min(info.tasks + info.goals, 6);
       let dotsAdded = 0;
@@ -3642,8 +3631,7 @@ let _searchIndexDirty = true;
   function bindEvents() {
         document.getElementById('settingsBtn').addEventListener('click', function () { document.getElementById('settingsModal').hidden = false; syncToolbarInputs(); renderBackupList(); renderCacheStats(); });
     document.getElementById('globalSearchBtn').addEventListener('click', openGlobalSearch);
-    document.getElementById('pomodoroBtn').addEventListener('click', function () { if (document.getElementById('pomodoroWidget').hidden) openPomodoro(); else closePomodoro(); });
-    document.getElementById('calToggle').addEventListener('click', toggleCalendar);
+        document.getElementById('calToggle').addEventListener('click', toggleCalendar);
 
     document.querySelectorAll('.tab').forEach(function (b) { b.addEventListener('click', function () { switchTab(b.dataset.tab); }); });
     document.querySelectorAll('[data-lit-tab]').forEach(function (b) { b.addEventListener('click', function () { switchLitTab(b.dataset.litTab); }); });
@@ -3670,7 +3658,8 @@ let _searchIndexDirty = true;
       if (!text) { markInvalid(taskTextEl); showToast('Введите текст задачи', 'warn'); return; }
       let deadline = document.getElementById('taskDeadline').value || '';
       if (!deadline && state.calSelectedDate) deadline = state.calSelectedDate;
-      const goalId = document.getElementById('taskGoal').value;
+            const goalId = document.getElementById('taskGoal').value;
+      if (!goalId) { showToast('Сначала создайте цель', 'warn'); return; }
       addTask(goalId, { text: text, priority: document.getElementById('taskPriority').value, deadline: deadline, repeat: document.getElementById('taskRepeat').value ? { type: document.getElementById('taskRepeat').value } : null, tags: parseTags(document.getElementById('taskTags').value) });
       const keep = document.getElementById('taskGoal').value;
       resetTaskForm();
@@ -3716,13 +3705,7 @@ let _searchIndexDirty = true;
         if (action === 'archive-task' && goalId) { archiveTask(goalId, taskId); return; }
         if (action === 'edit-task' && goalId) { openEditTask(goalId, taskId); return; }
         if (action === 'pin-task' && goalId) { togglePinTask(goalId, taskId); return; }
-        if (action === 'pomodoro-start-task') {
-          const g = findGoal(goalId);
-          const t = g ? g.tasks.find(function (x) { return x.id === taskId; }) : null;
-          if (t) { document.getElementById('pomodoroWidget').hidden = false; startPomodoro('work', t.id, t.text); }
-          return;
-        }
-        if (action === 'filter-tag-click') {
+                if (action === 'filter-tag-click') {
           state.tagFilter = state.tagFilter === actionEl.dataset.tag ? '' : actionEl.dataset.tag;
           if (state.tagFilter && state.calSelectedDate) { state.calSelectedDate = null; renderCalendar(); syncQuickHint(); }
           savePrefs(); renderTagFilterSelect(); renderTasks(); return;
@@ -3865,8 +3848,7 @@ let _searchIndexDirty = true;
         else if (action === 'pdf-zoom-out') { state.pdfZoom[sec] = clampZoom((state.pdfZoom[sec] || 100) - 10); savePrefs(); rerenderPdfViewer(sec); }
         else if (action === 'pdf-zoom-reset') { state.pdfZoom[sec] = 100; savePrefs(); rerenderPdfViewer(sec); }
         else if (action === 'pdf-invert') { state.pdfInvert[sec] = !state.pdfInvert[sec]; el.classList.toggle('active', state.pdfInvert[sec]); savePrefs(); togglePdfInvert(sec); }
-        else if (action === 'pomodoro-start') { const name = runtime[sec].selected; document.getElementById('pomodoroWidget').hidden = false; startPomodoro('work', null, name || ''); }
-      });
+              });
       view.addEventListener('input', function (e) { const inp = e.target.closest('[data-action="pdf-page"]'); if (!inp) return; const sec = inp.dataset.section; const name = runtime[sec].selected; if (!name) return; let v = parseInt(inp.value, 10); if (isNaN(v) || v < 1) v = 1; if (!state.pdfPage[sec]) state.pdfPage[sec] = {}; state.pdfPage[sec][name] = v; savePrefs(); });
       view.addEventListener('change', function (e) { const inp = e.target.closest('[data-action="pdf-page"]'); if (!inp) return; const v = parseInt(inp.value, 10); if (!isNaN(v) && v > 0) scrollToPdfPage(inp.dataset.section, v); });
       const search = document.getElementById(section + 'SearchInput');
@@ -3911,9 +3893,7 @@ let _searchIndexDirty = true;
     if (_ssb) _ssb.addEventListener('click', function () { document.getElementById('settingsModal').hidden = true; openSnippetsModal(); });
     document.getElementById('colorTotal').addEventListener('input', function (e) { state.colorTotal = e.target.value; document.documentElement.style.setProperty('--color-total', e.target.value); savePrefs(); });
     document.getElementById('colorDone').addEventListener('input', function (e) { state.colorDone = e.target.value; document.documentElement.style.setProperty('--color-done', e.target.value); savePrefs(); });
-    document.getElementById('pomodoroWorkMin').addEventListener('change', function (e) { state.pomodoroWorkMin = parseInt(e.target.value, 10) || 25; savePrefs(); });
-    document.getElementById('pomodoroRestMin').addEventListener('change', function (e) { state.pomodoroRestMin = parseInt(e.target.value, 10) || 5; savePrefs(); });
-           document.getElementById('cacheAllBtn').addEventListener('click', async function () {
+              document.getElementById('cacheAllBtn').addEventListener('click', async function () {
       let total = 0, failed = 0;
       for (const s of SECTIONS) {
         if (!state.folders[s].files.length) continue;
@@ -4019,8 +3999,7 @@ document.getElementById('manualBackupBtn').addEventListener('click', async funct
     document.getElementById('contentSearchModal').addEventListener('click', function (e) { if (e.target === this) { this.hidden = true; return; } const el = e.target.closest('[data-action]'); if (!el) return; const action = el.dataset.action; if (action === 'close-csearch') this.hidden = true; else if (action === 'open-indexed') { const sec = el.dataset.section; const fname = el.dataset.file; this.hidden = true; switchTab('literature'); state.ui.litTab = sec; savePrefs(); renderTabs(); setTimeout(function () { selectFile(sec, fname); }, 100); } });
     document.getElementById('contentSearchInput').addEventListener('input', debounce(function (e) { performContentSearch(e.target.value, e.target.dataset.section || 'articles'); }, 200));
 
-    document.getElementById('pomodoroWidget').addEventListener('click', function (e) { const el = e.target.closest('[data-action]'); if (!el) return; if (el.dataset.action === 'pomodoro-toggle') pomodoroPauseResume(); else if (el.dataset.action === 'pomodoro-close') closePomodoro(); });
-
+   
     document.getElementById('appCalendar').addEventListener('click', function (e) {
       const navBtn = e.target.closest('[data-action]');
       if (navBtn) {
@@ -4077,7 +4056,6 @@ document.getElementById('manualBackupBtn').addEventListener('click', async funct
       const k = (e.key || '').toLowerCase();
       if (k === 'n') { e.preventDefault(); document.getElementById('taskText').focus(); }
       else if (k === 'g') { e.preventDefault(); document.getElementById('goalTitle').focus(); }
-      else if (k === 'p') { e.preventDefault(); if (document.getElementById('pomodoroWidget').hidden) openPomodoro(); else closePomodoro(); }
       else if (e.key === '?') { e.preventDefault(); openKbdHelp(); }
     });
     window.addEventListener('beforeunload', function () { if (runtime.articles.selected) saveCurrentPosition('articles'); if (runtime.books.selected) saveCurrentPosition('books'); if (window.speechSynthesis) window.speechSynthesis.cancel(); });
