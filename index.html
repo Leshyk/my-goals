@@ -535,21 +535,23 @@
 .task-status.blocked { background: rgba(255,123,114,.15); color: var(--danger); }
 .task-status.done { background: rgba(63,185,80,.15); color: var(--color-total); }
 
-/* === ТЕПЛОВАЯ КАРТА === */
+/* === АКТИВНОСТЬ ПО МЕСЯЦАМ === */
 .heatmap-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow); margin-bottom: 14px; }
 .heatmap-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; flex-wrap: wrap; }
 .heatmap-title { font-size: 12px; font-weight: 700; color: var(--text); }
 .heatmap-stats { font-size: 11px; color: var(--muted); }
-.heatmap-grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 11px); gap: 2px; overflow-x: auto; padding-bottom: 4px; }
-.heatmap-cell { width: 11px; height: 11px; border-radius: 2px; background: var(--bar-bg); border: 1px solid transparent; cursor: pointer; }
-.heatmap-cell[data-level="0"] { background: var(--bar-bg); }
-.heatmap-cell[data-level="1"] { background: rgba(63,185,80,.25); }
-.heatmap-cell[data-level="2"] { background: rgba(63,185,80,.5); }
-.heatmap-cell[data-level="3"] { background: rgba(63,185,80,.75); }
-.heatmap-cell[data-level="4"] { background: rgba(63,185,80,1); }
-.heatmap-cell:hover { border-color: var(--accent); }
-.heatmap-legend { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--muted); margin-top: 6px; justify-content: flex-end; }
-.heatmap-legend .heatmap-cell { width: 10px; height: 10px; cursor: default; }
+.heatmap-bars { display: grid; grid-template-columns: repeat(12, 1fr); gap: 6px; height: 130px; padding: 4px 0 0; }
+.heatmap-bar-wrap { display: flex; flex-direction: column; align-items: center; height: 100%; }
+.heatmap-bar-count { font-size: 10px; color: var(--muted); font-weight: 600; height: 14px; line-height: 14px; flex: 0 0 auto; }
+.heatmap-bar-track { flex: 1 1 auto; width: 100%; display: flex; align-items: flex-end; padding: 2px 0; }
+.heatmap-bar { width: 100%; background: linear-gradient(to top, var(--color-total), var(--color-done)); border-radius: 4px 4px 0 0; min-height: 2px; transition: height .4s ease; cursor: default; }
+.heatmap-bar-wrap:hover .heatmap-bar { filter: brightness(1.2); }
+.heatmap-bar-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .02em; height: 14px; line-height: 14px; flex: 0 0 auto; }
+@media (max-width: 700px) {
+  .heatmap-bars { height: 100px; gap: 3px; }
+  .heatmap-bar-label { font-size: 8px; }
+  .heatmap-bar-count { font-size: 9px; }
+}
 
 /* === ТЕГИ ЦЕЛЕЙ === */
 .goal-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
@@ -624,21 +626,12 @@ body.density-compact .subtask { padding: 2px 5px; }
   <div class="app-shell with-cal" id="appShell">
     <div class="app-main" id="appMain">
       <div id="viewActive">
-        <section class="heatmap-wrap" id="heatmapWrap">
+                <section class="heatmap-wrap" id="heatmapWrap">
           <div class="heatmap-head">
-            <span class="heatmap-title">📊 Активность за год</span>
+            <span class="heatmap-title">📊 Активность по месяцам</span>
             <span class="heatmap-stats" id="heatmapStats"></span>
           </div>
-          <div class="heatmap-grid" id="heatmapGrid"></div>
-          <div class="heatmap-legend">
-            <span>меньше</span>
-            <span class="heatmap-cell" data-level="0"></span>
-            <span class="heatmap-cell" data-level="1"></span>
-            <span class="heatmap-cell" data-level="2"></span>
-            <span class="heatmap-cell" data-level="3"></span>
-            <span class="heatmap-cell" data-level="4"></span>
-            <span>больше</span>
-          </div>
+          <div class="heatmap-bars" id="heatmapGrid"></div>
         </section>
 
         <section class="stats">          <div class="stat">
@@ -3129,57 +3122,47 @@ let _searchIndexDirty = true;
 
   // === ТЕПЛОВАЯ КАРТА ===
     let _heatmapLastSig = '';
-  function renderHeatmap() {
+    function renderHeatmap() {
     const grid = document.getElementById('heatmapGrid');
     const statsEl = document.getElementById('heatmapStats');
     if (!grid) return;
-    // Быстрая проверка — если количество задач и последний archivedAt не изменились, не пересчитываем
+
     let sig = 0, cnt = 0;
     state.goals.forEach(function (g) { g.tasks.forEach(function (t) { if (t.done) { cnt++; sig += (t.archivedAt || t.createdAt || 0) % 100000; } }); });
     const newSig = cnt + '|' + sig;
     if (newSig === _heatmapLastSig) return;
     _heatmapLastSig = newSig;
-    const byDate = {};
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const byMonth = [0,0,0,0,0,0,0,0,0,0,0,0];
+
     state.goals.forEach(function (g) {
       g.tasks.forEach(function (t) {
-        if (!t.done || !t.archivedAt) return;
-        const d = new Date(t.archivedAt);
-        const iso = dateToISO(d);
-        byDate[iso] = (byDate[iso] || 0) + 1;
-      });
-      // учтём и выполненные с датой изменения
-      g.tasks.forEach(function (t) {
         if (!t.done) return;
-        const d = new Date(t.createdAt || Date.now());
-        const iso = dateToISO(d);
-        if (!t.archivedAt) byDate[iso] = (byDate[iso] || 0) + 0.5; // мягкая оценка
+        const ts = t.archivedAt || t.createdAt;
+        if (!ts) return;
+        const d = new Date(ts);
+        if (d.getFullYear() !== year) return;
+        byMonth[d.getMonth()] += 1;
       });
     });
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const start = new Date(today); start.setDate(start.getDate() - 364);
-    // Сдвигаем к понедельнику
-    const dow = (start.getDay() + 6) % 7;
-    start.setDate(start.getDate() - dow);
-    const cells = [];
-    let total = 0, max = 0;
-    const allCounts = [];
-    for (let i = 0; i < 371; i++) {
-      const d = new Date(start); d.setDate(d.getDate() + i);
-      if (d > today) { cells.push('<div class="heatmap-cell" data-level="0" style="visibility:hidden"></div>'); continue; }
-      const iso = dateToISO(d);
-      const count = Math.floor(byDate[iso] || 0);
-      allCounts.push(count);
-      if (count > max) max = count;
-      total += count;
-      let level = 0;
-      if (count > 0) level = 1;
-      if (count >= 3) level = 2;
-      if (count >= 6) level = 3;
-      if (count >= 10) level = 4;
-      cells.push('<div class="heatmap-cell" data-level="' + level + '" data-date="' + iso + '" data-count="' + count + '" title="' + formatDate(iso) + ': ' + count + '"></div>');
-    }
-    grid.innerHTML = cells.join('');
-    if (statsEl) statsEl.textContent = 'Всего задач: ' + total + ' · Макс. в день: ' + max;
+
+    const total = byMonth.reduce(function (a, b) { return a + b; }, 0);
+    const max = Math.max.apply(null, byMonth.concat([1]));
+    const MONTH_SHORT = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+
+    const html = byMonth.map(function (count, i) {
+      const pct = max > 0 ? Math.max(count > 0 ? 4 : 0, (count / max) * 100) : 0;
+      return '<div class="heatmap-bar-wrap" title="' + MONTH_SHORT[i] + ' ' + year + ': ' + count + '">' +
+        '<span class="heatmap-bar-count">' + (count || '') + '</span>' +
+        '<div class="heatmap-bar-track"><div class="heatmap-bar" style="height:' + pct + '%"></div></div>' +
+        '<span class="heatmap-bar-label">' + MONTH_SHORT[i] + '</span>' +
+      '</div>';
+    }).join('');
+
+    grid.innerHTML = html;
+    if (statsEl) statsEl.textContent = 'За ' + year + ' год: ' + total + ' задач · Макс. в месяц: ' + max;
   }
 
   // === ШПАРГАЛКА ГОРЯЧИХ КЛАВИШ ===
