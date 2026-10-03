@@ -1504,12 +1504,10 @@ let _searchIndexDirty = true;
 
   function addGoal(f) { const goal = { id: uid(), title: f.title, description: f.description || '', priority: f.priority, deadline: f.deadline, isInbox: false, archivedAt: null, createdAt: Date.now(), pinned: false, journal: [], tasks: [] }; state.goals.push(goal); saveData(); render(); pushUndo(function () { state.goals = state.goals.filter(function (x) { return x.id !== goal.id; }); saveData(); render(); }, 'создание цели'); }
   function updateGoal(id, f) { const g = findGoal(id); if (!g) return; const prev = { title: g.title, description: g.description, priority: g.priority, deadline: g.deadline }; Object.assign(g, f); saveData(); render(); pushUndo(function () { Object.assign(g, prev); saveData(); render(); }, 'изменение'); }
-  function deleteGoal(id) {
+    function deleteGoal(id) {
     const g = findGoal(id); if (!g) return;
     const snapshot = JSON.parse(JSON.stringify(g));
     const idx = state.goals.indexOf(g);
-    const msg = g.tasks.length ? 'Удалить «' + g.title + '» и ' + g.tasks.length + ' задач?' : 'Удалить «' + g.title + '»?';
-    if (!confirm(msg)) return;
     state.goals.splice(idx, 1);
     delete state.collapsed[id];
     saveData(); savePrefs(); render();
@@ -3148,7 +3146,7 @@ let _searchIndexDirty = true;
     const MONTH_SHORT = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
 
         const html = byMonth.map(function (count, i) {
-      const pct = max > 0 ? Math.max(count > 0 ? 4 : 0, (count / max) * 100) : 0;
+            const pct = max > 0 ? Math.max(8, (count / max) * 100) : 8;
       return '<div class="heatmap-bar-wrap" title="' + MONTH_SHORT[i] + ': ' + count + '">' +
         '<div class="heatmap-bar-track"><div class="heatmap-bar" style="height:' + pct + '%"></div></div>' +
         '<span class="heatmap-bar-label">' + MONTH_SHORT[i] + '</span>' +
@@ -3992,9 +3990,7 @@ document.getElementById('manualBackupBtn').addEventListener('click', async funct
     });
     document.getElementById('globalSearchInput').addEventListener('input', debounce(function (e) { performGlobalSearch(e.target.value); }, 180));
 
-    document.getElementById('templatesModal').addEventListener('click', function (e) { if (e.target === this) { this.hidden = true; return; } const el = e.target.closest('[data-action]'); if (!el) return; const action = el.dataset.action; if (action === 'close-templates') this.hidden = true; else if (action === 'apply-template') { applyTemplate(el.dataset.id); this.hidden = true; } else if (action === 'delete-template') deleteTemplate(el.dataset.id); });
-
-    document.getElementById('snippetsModal').addEventListener('click', function (e) {
+       document.getElementById('snippetsModal').addEventListener('click', function (e) {
       if (e.target === this) { closeSnippetsModal(); return; }
       const el = e.target.closest('[data-action]'); if (!el) return;
       const action = el.dataset.action; const id = el.dataset.id;
