@@ -67,6 +67,7 @@
   .app-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
   .app-header-left { min-width: 0; flex: 1 1 auto; }
   .app-header-right { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .live-clock { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; padding: 4px 10px; border-radius: 6px; background: var(--bar-bg); font-family: ui-monospace, monospace; letter-spacing: .03em; }
   .save-indicator { font-size: 11px; color: var(--color-total); opacity: 0; transition: opacity .3s ease; padding: 4px 10px; border-radius: 6px; background: rgba(63, 185, 80, 0.12); border: 1px solid var(--color-total); }
   .save-indicator.show { opacity: 1; }
     .sync-status {
@@ -570,6 +571,7 @@ body.density-compact .subtask { padding: 2px 5px; }
       <small>Цели, календарь, литература, заметки, цитаты.</small>
     </div>
         <div class="app-header-right">
+      <span class="live-clock" id="liveClock"></span>
       <span class="save-indicator" id="saveIndicator">✓ Сохранено</span>
       <span class="sync-status" id="syncStatus"></span>
       <button type="button" class="header-btn" id="googleSignInBtn" title="Войти в Google">🔐 Войти</button>
@@ -677,9 +679,7 @@ body.density-compact .subtask { padding: 2px 5px; }
                 <option value="weekly">Раз в неделю</option>
                 <option value="monthly">Раз в месяц</option>
               </select>
-              <input type="text" id="taskTags" placeholder="#теги" list="allTagsList" />
-              <button type="button" class="secondary" id="saveTemplateBtn" title="Сохранить как шаблон">💾</button>
-              <select id="applyTemplateSel" title="Применить шаблон"><option value="">Применить шаблон…</option></select>
+               <input type="text" id="taskTags" placeholder="#теги" list="allTagsList" />
             </div>
           </form>
         </div>
@@ -749,7 +749,6 @@ body.density-compact .subtask { padding: 2px 5px; }
       <div id="viewLiterature" hidden>
         <div class="lit-subtabs">
           <button type="button" class="lit-subtab active" data-lit-tab="articles">📁 Статьи</button>
-          <button type="button" class="lit-subtab" data-lit-tab="books">📚 Книги</button>
         </div>
         <div class="lit-help">
           Выделите текст → <b>📌</b> для цитаты. <b>🔎</b> — индексировать. <b>📖</b> — режим чтения.
@@ -1058,14 +1057,7 @@ body.density-compact .subtask { padding: 2px 5px; }
           <label class="file-label" style="padding:8px 12px; font-size:13px;">📦 Импорт ZIP<input type="file" id="importZipInput" accept=".zip,application/zip" hidden /></label>
         </div>
       </div>
-      <div class="settings-section">
-        <h3>Данные</h3>
-        <div class="settings-row">
-          <button type="button" class="secondary" id="settingsTemplatesBtn">📋 Шаблоны</button>
-          <button type="button" class="secondary" id="settingsSnippetsBtn">📄 Цитаты</button>
-        </div>
-      </div>
-    </div>
+          </div>
   </div>
 </div>
 
@@ -3671,8 +3663,10 @@ let _searchIndexDirty = true;
       document.getElementById('taskText').focus();
       showToast('Задача добавлена', 'ok');
     });
-    document.getElementById('saveTemplateBtn').addEventListener('click', saveCurrentAsTemplate);
-    document.getElementById('applyTemplateSel').addEventListener('change', function (e) { const id = e.target.value; if (id) { applyTemplate(id); e.target.value = ''; } });
+        const _stb = document.getElementById('saveTemplateBtn');
+    if (_stb) _stb.addEventListener('click', saveCurrentAsTemplate);
+    const _ats = document.getElementById('applyTemplateSel');
+    if (_ats) _ats.addEventListener('change', function (e) { const id = e.target.value; if (id) { applyTemplate(id); e.target.value = ''; } });
 
         const goalsList = document.getElementById('goalsList');
     goalsList.addEventListener('click', function (e) {
@@ -3908,8 +3902,10 @@ let _searchIndexDirty = true;
     });
     document.querySelectorAll('[data-theme-opt]').forEach(function (b) { b.addEventListener('click', function () { setTheme(b.dataset.themeOpt); }); });
     document.getElementById('notifToggle').addEventListener('click', function () { if (state.notificationsEnabled) { state.notificationsEnabled = false; savePrefs(); showToast('Уведомления выключены', 'warn'); updateNotifBtn(); } else requestNotifications(); });
-    document.getElementById('settingsTemplatesBtn').addEventListener('click', openTemplatesModal);
-    document.getElementById('settingsSnippetsBtn').addEventListener('click', function () { document.getElementById('settingsModal').hidden = true; openSnippetsModal(); });
+        const _stmb = document.getElementById('settingsTemplatesBtn');
+    if (_stmb) _stmb.addEventListener('click', openTemplatesModal);
+    const _ssb = document.getElementById('settingsSnippetsBtn');
+    if (_ssb) _ssb.addEventListener('click', function () { document.getElementById('settingsModal').hidden = true; openSnippetsModal(); });
     document.getElementById('colorTotal').addEventListener('input', function (e) { state.colorTotal = e.target.value; document.documentElement.style.setProperty('--color-total', e.target.value); savePrefs(); });
     document.getElementById('colorDone').addEventListener('input', function (e) { state.colorDone = e.target.value; document.documentElement.style.setProperty('--color-done', e.target.value); savePrefs(); });
     document.getElementById('pomodoroWorkMin').addEventListener('change', function (e) { state.pomodoroWorkMin = parseInt(e.target.value, 10) || 25; savePrefs(); });
@@ -4085,8 +4081,18 @@ document.getElementById('manualBackupBtn').addEventListener('click', async funct
     });
     window.addEventListener('beforeunload', function () { if (runtime.articles.selected) saveCurrentPosition('articles'); if (runtime.books.selected) saveCurrentPosition('books'); if (window.speechSynthesis) window.speechSynthesis.cancel(); });
         window.addEventListener('storage', function (e) { if ([DATA_KEY, PREFS_KEY, SNIPPETS_KEY, NOTES_KEY, TEMPLATES_KEY].indexOf(e.key) !== -1) { loadState(); _searchIndexDirty = true; applyTheme(); applyColors(); syncToolbarInputs(); applyCalendarVisibility(); render(); } });
+        // === Часы реального времени в шапке ===
+    function tickLiveClock() {
+      const el = document.getElementById('liveClock');
+      if (!el) return;
+      const d = new Date();
+      el.textContent = '🕐 ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
+    }
+    tickLiveClock();
+    setInterval(tickLiveClock, 1000);
+
     setInterval(checkNotifications, 5 * 60 * 1000);
-    setInterval(checkBackup, 30 * 60 * 1000);
+	    setInterval(checkBackup, 30 * 60 * 1000);
     setInterval(function () {
       try { renderStats(); renderTasks(); if (state.calendarVisible) renderCalendar(); renderGoals(); }
       catch (e) {}
