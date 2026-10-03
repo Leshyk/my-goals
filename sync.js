@@ -1,24 +1,61 @@
-// === Синхронизация с Google Drive ===
-// Приложение само подгружает данные из localStorage и отправляет в облако.
+// === Синхронизация с Google Drive (с автовходом) ===
+// Приложение запоминает вход и само продлевает доступ.
 
 (function () {
   'use strict';
 
-  const CLIENT_ID = '358788438808-j3duf0p7pfec636k6oscv0dtv14ffacu.apps.googleusercontent.com'; 
- const SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file';
+  const CLIENT_ID = '358788438808-j3duf0p7pfec636k6oscv0dtv14ffacu.apps.googleusercontent.com';
+  const SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file';
   const FILE_NAME = 'pgt_v25_sync_data.json';
+  const TOKEN_KEY = 'pgt_v25_google_token'; // здесь браузер хранит «пропуск» от Google
 
   let tokenClient = null;
   let accessToken = null;
   let busy = false;
 
+  // --- Сохранение «пропуска» между перезагрузками ---
+  function saveToken(token, expiresInSec) {
+    try {
+      // вычитаем 2 минуты про запас, чтобы не поймать «истёк в самый момент»
+      const expiresAt = Date.now() + Math.max(0, (expiresInSec - 120)) * 1000;
+      localStorage.setItem(TOKEN_KEY, JSON.stringify({ token: token, expiresAt: expiresAt }));
+    } catch (e) {}
+  }
+  function loadToken() {
+    try {
+      const raw = localStorage.getItem(TOKEN_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (!data || !data.token || !data.expiresAt) return null;
+      if (Date.now() >= data.expiresAt) return null; // истёк
+      return data.token;
+    } catch (e) { return null; }
+  }
+  function clearToken() {
+    try { localStorage.removeItem(TOKEN_KEY); } catch (e) {}
+  }
+
+  // --- Кнопки и статус ---
   function setStatus(text, cls) {
     const el = document.getElementById('syncStatus');
     if (!el) return;
     el.textContent = text || '';
     el.className = 'sync-status ' + (cls || '');
   }
+  function showSignedInUI() {
+    const btnIn = document.getElementById('googleSignInBtn');
+    const btnSync = document.getElementById('syncBtn');
+    if (btnIn) btnIn.hidden = true;
+    if (btnSync) btnSync.hidden = false;
+  }
+  function showSignedOutUI() {
+    const btnIn = document.getElementById('googleSignInBtn');
+    const btnSync = document.getElementById('syncBtn');
+    if (btnIn) btnIn.hidden = false;
+    if (btnSync) btnSync.hidden = true;
+  }
 
+  // --- Авторизация Google ---
   function initAuth() {
     if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) return false;
     tokenClient = google.accounts.oauth2.initTokenClient({
@@ -27,25 +64,44 @@
       callback: function (resp) {
         if (resp && resp.access_token) {
           accessToken = resp.access_token;
-          document.getElementById('googleSignInBtn').hidden = true;
-          document.getElementById('syncBtn').hidden = false;
+          saveToken(resp.access_token, parseInt(resp.expires_in, 10) || 3600);
+          showSignedInUI();
           setStatus('☁️ Готово', 'ok');
           setTimeout(function () { setStatus(''); }, 2000);
         } else {
           setStatus('✗ Вход не удался', 'error');
         }
       },
+      error_callback: function (err) {
+        // При «тихом» обновлении, если не удалось — просто показываем кнопку входа
+        console.warn('[auth]', err);
+        showSignedOutUI();
+        setStatus('');
+      },
     });
     return true;
   }
 
-  function signIn() {
+  function signInUser() {
     if (!tokenClient) {
       if (!initAuth()) { setStatus('Google не загружен', 'error'); return; }
     }
+    // Явный вход — показываем окно согласия
     tokenClient.requestAccessToken({ prompt: 'consent' });
   }
 
+  function trySilentSignIn() {
+    if (!tokenClient) return;
+    // prompt: '' — тихий режим. Если вход уже был раньше — токен придёт без окон.
+    // Если нет — Google молча откажет, кнопка «Войти» останется на месте.
+    try {
+      tokenClient.requestAccessToken({ prompt: '' });
+    } catch (e) {
+      showSignedOutUI();
+    }
+  }
+
+  // --- Google Drive: поиск, загрузка, сбор данных ---
   async function findFile() {
     const r = await fetch(
       "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='" + FILE_NAME + "'",
@@ -98,7 +154,8 @@
 
   async function sync() {
     if (busy) return;
-    if (!accessToken) { setStatus('Сначала войдите', 'error'); return; }
+    if (!accessToken) accessToken = loadToken();
+    if (!accessToken) { setStatus('Сначала войдите', 'error'); showSignedOutUI(); return; }
     busy = true;
     setStatus('⏳ Синхронизация…', 'syncing');
     try {
@@ -109,24 +166,44 @@
       setTimeout(function () { setStatus('☁️ Готово', 'ok'); }, 2500);
     } catch (e) {
       console.error('[sync]', e);
-      setStatus('✗ Ошибка', 'error');
+      if (String(e.message).indexOf('401') !== -1) {
+        // Токен протух — стираем и просим войти заново
+        clearToken();
+        accessToken = null;
+        showSignedOutUI();
+        setStatus('Нужно войти заново', 'error');
+      } else {
+        setStatus('✗ Ошибка', 'error');
+      }
     } finally {
       busy = false;
     }
   }
 
+  // --- Запуск ---
   function bind() {
     const signBtn = document.getElementById('googleSignInBtn');
     const syncBtn = document.getElementById('syncBtn');
-    if (signBtn) signBtn.addEventListener('click', signIn);
+    if (signBtn) signBtn.addEventListener('click', signInUser);
     if (syncBtn) syncBtn.addEventListener('click', sync);
 
-    // Google API может грузиться с задержкой — ждём её
+    // 1. Сначала — восстановить сохранённый «пропуск», если он ещё жив
+    const saved = loadToken();
+    if (saved) {
+      accessToken = saved;
+      showSignedInUI();
+      setStatus('☁️ Готово', 'ok');
+    } else {
+      showSignedOutUI();
+    }
+
+    // 2. Дождаться загрузки Google API и тихо обновить токен, если нужно
     let tries = 0;
     const t = setInterval(function () {
       if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
         clearInterval(t);
         initAuth();
+        if (!accessToken) trySilentSignIn();
       }
       if (++tries > 40) clearInterval(t);
     }, 250);
