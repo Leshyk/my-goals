@@ -47,12 +47,14 @@
     const btnSync = document.getElementById('syncBtn');
     if (btnIn) btnIn.hidden = true;
     if (btnSync) btnSync.hidden = false;
+	  if (window.__pgtSetSyncDot) window.__pgtSetSyncDot('ok');
   }
   function showSignedOutUI() {
     const btnIn = document.getElementById('googleSignInBtn');
     const btnSync = document.getElementById('syncBtn');
     if (btnIn) btnIn.hidden = false;
     if (btnSync) btnSync.hidden = true;
+	 if (window.__pgtSetSyncDot) window.__pgtSetSyncDot('auth');
   }
 
   // --- Авторизация Google ---
@@ -152,31 +154,45 @@
     };
   }
 
-  async function sync() {
-    if (busy) return;
+    async function sync(silent) {
+    if (busy) { if (silent && window.__pgtAutoSyncDone) window.__pgtAutoSyncDone(false); return; }
     if (!accessToken) accessToken = loadToken();
-    if (!accessToken) { setStatus('Сначала войдите', 'error'); showSignedOutUI(); return; }
+    if (!accessToken) {
+      if (!silent) { setStatus('Сначала войдите', 'error'); showSignedOutUI(); }
+      if (silent && window.__pgtSetSyncDot) window.__pgtSetSyncDot('auth');
+      if (silent && window.__pgtAutoSyncDone) window.__pgtAutoSyncDone(false);
+      return;
+    }
     busy = true;
-    setStatus('⏳ Синхронизация…', 'syncing');
+    if (!silent) setStatus('⏳ Синхронизация…', 'syncing');
+    if (silent && window.__pgtSetSyncDot) window.__pgtSetSyncDot('active');
     try {
       const content = JSON.stringify(collectData(), null, 2);
       const existing = await findFile();
       await upload(existing ? existing.id : null, content);
-      setStatus('✓ Готово', 'ok');
-      setTimeout(function () { setStatus('☁️ Готово', 'ok'); }, 2500);
+      if (silent) {
+        if (window.__pgtSetSyncDot) window.__pgtSetSyncDot('ok');
+      } else {
+        setStatus('✓ Готово', 'ok');
+        setTimeout(function () { setStatus('☁️ Готово', 'ok'); }, 2500);
+      }
     } catch (e) {
       console.error('[sync]', e);
       if (String(e.message).indexOf('401') !== -1) {
-        // Токен протух — стираем и просим войти заново
         clearToken();
         accessToken = null;
-        showSignedOutUI();
-        setStatus('Нужно войти заново', 'error');
+        if (!silent) { showSignedOutUI(); setStatus('Нужно войти заново', 'error'); }
+        if (silent && window.__pgtSetSyncDot) window.__pgtSetSyncDot('auth');
       } else {
-        setStatus('✗ Ошибка', 'error');
+        if (silent) {
+          if (window.__pgtSetSyncDot) window.__pgtSetSyncDot('error');
+        } else {
+          setStatus('✗ Ошибка', 'error');
+        }
       }
     } finally {
       busy = false;
+      if (silent && window.__pgtAutoSyncDone) window.__pgtAutoSyncDone(true);
     }
   }
 
@@ -208,6 +224,31 @@
       if (++tries > 40) clearInterval(t);
     }, 250);
   }
+
+    // === Автосинхронизация (тихий режим) ===
+  window.__pgtAutoSync = function () {
+    if (busy) { if (window.__pgtAutoSyncDone) window.__pgtAutoSyncDone(false); return; }
+    if (!accessToken) accessToken = loadToken();
+    if (!accessToken) {
+      if (window.__pgtSetSyncDot) window.__pgtSetSyncDot('auth');
+      if (window.__pgtAutoSyncDone) window.__pgtAutoSyncDone(false);
+      return;
+    }
+    if (navigator.onLine === false) {
+      if (window.__pgtSetSyncDot) window.__pgtSetSyncDot('error');
+      if (window.__pgtAutoSyncDone) window.__pgtAutoSyncDone(false);
+      return;
+    }
+    if (window.__pgtSetSyncDot) window.__pgtSetSyncDot('active');
+    sync(true); // silent = true
+  };
+
+  window.addEventListener('online', function () {
+    if (accessToken && window.__pgtSetSyncDot) window.__pgtSetSyncDot('ok');
+  });
+  window.addEventListener('offline', function () {
+    if (window.__pgtSetSyncDot) window.__pgtSetSyncDot('error');
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', bind);

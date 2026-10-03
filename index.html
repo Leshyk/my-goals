@@ -83,7 +83,23 @@
   }
   .sync-status.syncing { color: var(--accent); }
   .sync-status.ok { color: var(--color-total); }
-  .sync-status.error { color: var(--danger); }
+    .sync-status.error { color: var(--danger); }
+  .sync-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    opacity: 0.4;
+    margin: 0 4px;
+    transition: background .2s, opacity .2s;
+    flex: 0 0 auto;
+  }
+  .sync-dot.active { background: var(--accent); opacity: 1; animation: syncPulse 1s infinite; }
+  .sync-dot.ok { background: var(--color-total); opacity: 1; animation: none; }
+  .sync-dot.error { background: var(--danger); opacity: 1; animation: none; }
+  .sync-dot.auth { background: var(--gold); opacity: 1; animation: none; }
+  @keyframes syncPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
   .header-btn { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
   .header-btn:hover { border-color: var(--accent); }
   .header-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
@@ -575,6 +591,7 @@ body.density-compact .subtask { padding: 2px 5px; }
       <span class="save-indicator" id="saveIndicator">✓ Сохранено</span>
       <span class="sync-status" id="syncStatus"></span>
       <button type="button" class="header-btn" id="googleSignInBtn" title="Войти в Google">🔐 Войти</button>
+       <span class="sync-dot" id="syncDot" title="Не синхронизировано"></span>
       <button type="button" class="header-btn" id="syncBtn" title="Синхронизировать" hidden>☁️ Синхро</button>
       <button type="button" class="header-btn" id="globalSearchBtn" title="Поиск (Ctrl+/)">🔍 Поиск</button>
       <button type="button" class="header-btn" id="pomodoroBtn" title="Помодоро">🍅 Помодоро</button>
@@ -1405,6 +1422,7 @@ let _searchIndexDirty = true;
       try { localStorage.setItem(DATA_KEY, JSON.stringify({ goals: state.goals, folders: state.folders })); flashSaved(); } catch (e) {}
       if (typeof bcBroadcast === 'function') bcBroadcast('data-changed', {});
       _searchIndexDirty = true;
+	   scheduleAutoSync();
     }, 250);
   }
   function savePrefs() {
@@ -1412,6 +1430,7 @@ let _searchIndexDirty = true;
     _savePrefsTimer = setTimeout(function () {
       try { localStorage.setItem(PREFS_KEY, JSON.stringify({ collapsed: state.collapsed, colorTotal: state.colorTotal, colorDone: state.colorDone, calendarVisible: state.calendarVisible, notificationsEnabled: state.notificationsEnabled, pomodoroWorkMin: state.pomodoroWorkMin, pomodoroRestMin: state.pomodoroRestMin, tasksGrouping: state.tasksGrouping, tagFilter: state.tagFilter, allCollapsedSnapshot: state.allCollapsedSnapshot, notesFilter: state.notesFilter, density: state.density, ui: state.ui, favorites: state.favorites, readingPos: state.readingPos, pdfPage: state.pdfPage, pdfZoom: state.pdfZoom, pdfInvert: state.pdfInvert, litSort: state.litSort, litFavFilter: state.litFavFilter, listHidden: state.listHidden })); } catch (e) {}
       if (typeof bcBroadcast === 'function') bcBroadcast('prefs-changed', {});
+	  scheduleAutoSync();
     }, 250);
   }
     function saveSnippets() {
@@ -1420,6 +1439,7 @@ let _searchIndexDirty = true;
       try { localStorage.setItem(SNIPPETS_KEY, JSON.stringify(state.snippets)); flashSaved(); } catch (e) { showToast('Переполнено хранилище', 'error'); }
       if (typeof bcBroadcast === 'function') bcBroadcast('data-changed', {});
       _searchIndexDirty = true;
+	  scheduleAutoSync();
     }, 250);
   }
     function saveNotes() {
@@ -1428,6 +1448,7 @@ let _searchIndexDirty = true;
       try { localStorage.setItem(NOTES_KEY, JSON.stringify(state.notes)); flashSaved(); } catch (e) { showToast('Переполнено хранилище', 'error'); }
       if (typeof bcBroadcast === 'function') bcBroadcast('data-changed', {});
       _searchIndexDirty = true;
+	  scheduleAutoSync();
     }, 250);
   }
 
@@ -4081,8 +4102,40 @@ document.getElementById('manualBackupBtn').addEventListener('click', async funct
     });
     window.addEventListener('beforeunload', function () { if (runtime.articles.selected) saveCurrentPosition('articles'); if (runtime.books.selected) saveCurrentPosition('books'); if (window.speechSynthesis) window.speechSynthesis.cancel(); });
         window.addEventListener('storage', function (e) { if ([DATA_KEY, PREFS_KEY, SNIPPETS_KEY, NOTES_KEY, TEMPLATES_KEY].indexOf(e.key) !== -1) { loadState(); _searchIndexDirty = true; applyTheme(); applyColors(); syncToolbarInputs(); applyCalendarVisibility(); render(); } });
-        // === Часы реального времени в шапке ===
-    function tickLiveClock() {
+          // === Автосинхронизация ===
+  let _autoSyncTimer = null;
+  let _autoSyncInFlight = false;
+
+  function setSyncDot(state) {
+    const el = document.getElementById('syncDot');
+    if (!el) return;
+    el.className = 'sync-dot' + (state ? ' ' + state : '');
+    const titles = {
+      '': 'Не синхронизировано',
+      active: 'Синхронизация…',
+      ok: 'Синхронизировано',
+      error: 'Ошибка — нет связи',
+      auth: 'Войдите в Google'
+    };
+    el.title = titles[state] || '';
+  }
+
+  window.__pgtSetSyncDot = setSyncDot;
+
+  function scheduleAutoSync() {
+    clearTimeout(_autoSyncTimer);
+    _autoSyncTimer = setTimeout(function () {
+      if (_autoSyncInFlight) { scheduleAutoSync(); return; }
+      if (typeof window.__pgtAutoSync !== 'function') return;
+      _autoSyncInFlight = true;
+      try { window.__pgtAutoSync(); } catch (e) { console.warn('[autoSync]', e); _autoSyncInFlight = false; }
+    }, 3000);
+  }
+
+  window.__pgtAutoSyncDone = function (ok) { _autoSyncInFlight = false; };
+		// === Часы реального времени в шапке ===
+    
+function tickLiveClock() {
       const el = document.getElementById('liveClock');
       if (!el) return;
       const d = new Date();
