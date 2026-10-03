@@ -1461,8 +1461,9 @@ let _searchIndexDirty = true;
       repeat: (t.repeat && typeof t.repeat === 'object' && ['daily','weekdays','weekly','monthly'].indexOf(t.repeat.type) !== -1) ? { type: t.repeat.type } : null,
       tags: normalizeTags(t.tags),
       pinned: !!t.pinned,
-      archivedAt: typeof t.archivedAt === 'number' ? t.archivedAt : null,
+            archivedAt: typeof t.archivedAt === 'number' ? t.archivedAt : null,
       createdAt: typeof t.createdAt === 'number' ? t.createdAt : Date.now(),
+      doneAt: typeof t.doneAt === 'number' ? t.doneAt : null,
       subtasks: Array.isArray(t.subtasks) ? t.subtasks.map(function (s) {
         if (!s || typeof s !== 'object') return null;
         return { id: typeof s.id === 'string' && s.id ? s.id : uid(), text: String(s.text || '').slice(0, 500), done: !!s.done, createdAt: typeof s.createdAt === 'number' ? s.createdAt : Date.now() };
@@ -1534,11 +1535,12 @@ let _searchIndexDirty = true;
     });
     saveData(); render();
   }
-  function toggleTask(goalId, taskId) {
+    function toggleTask(goalId, taskId) {
     const g = findGoal(goalId); if (!g) return;
     const t = g.tasks.find(function (x) { return x.id === taskId; }); if (!t) return;
         const wasDone = t.done;
     t.done = !t.done;
+    t.doneAt = t.done ? Date.now() : null;
     t.status = t.done ? 'done' : (t.status === 'done' ? 'todo' : t.status);
     if (t.done && !wasDone && t.repeat) { const next = cloneRepeatedTask(t); if (next) { g.tasks.push(next); showToast('Создана следующая', 'ok'); } }
     saveData();
@@ -3111,8 +3113,11 @@ let _searchIndexDirty = true;
     const statsEl = document.getElementById('heatmapStats');
     if (!grid) return;
 
-    let sig = 0, cnt = 0;
-    state.goals.forEach(function (g) { g.tasks.forEach(function (t) { if (t.done) { cnt++; sig += (t.archivedAt || t.createdAt || 0) % 100000; } }); });
+        let sig = 0, cnt = 0;
+    state.goals.forEach(function (g) {
+      if (g.archivedAt && !g.isInbox) { cnt++; sig += (g.archivedAt % 100000); }
+      g.tasks.forEach(function (t) { if (t.done) { cnt++; sig += (t.doneAt || t.archivedAt || t.createdAt || 0) % 100000; } });
+    });
     const newSig = cnt + '|' + sig;
     if (newSig === _heatmapLastSig) return;
     _heatmapLastSig = newSig;
@@ -3122,14 +3127,20 @@ let _searchIndexDirty = true;
     const byMonth = [0,0,0,0,0,0,0,0,0,0,0,0];
 
     state.goals.forEach(function (g) {
+      // Выполненные задачи
       g.tasks.forEach(function (t) {
         if (!t.done) return;
-        const ts = t.archivedAt || t.createdAt;
+        const ts = t.doneAt || t.archivedAt || t.createdAt;
         if (!ts) return;
         const d = new Date(ts);
         if (d.getFullYear() !== year) return;
         byMonth[d.getMonth()] += 1;
       });
+      // Завершённые цели (кроме «Быстрых задач»)
+      if (g.archivedAt && !g.isInbox) {
+        const d = new Date(g.archivedAt);
+        if (d.getFullYear() === year) byMonth[d.getMonth()] += 1;
+      }
     });
 
     const total = byMonth.reduce(function (a, b) { return a + b; }, 0);
