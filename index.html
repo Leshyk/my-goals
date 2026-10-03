@@ -3333,12 +3333,10 @@ let _searchIndexDirty = true;
 
   function toggleMassMode() { state.massMode = !state.massMode; if (!state.massMode) state.massSelected = {}; document.getElementById('massModeToggle').textContent = state.massMode ? '☒ Отменить' : '☑ Выбрать'; document.getElementById('massModeToggle').classList.toggle('active', state.massMode); renderTasks(); }
   function toggleMassCheck(goalId, taskId) { if (state.massSelected[taskId]) delete state.massSelected[taskId]; else state.massSelected[taskId] = { goalId: goalId }; renderTasks(); }
-  function massAction(action) {
+    function massAction(action) {
     const ids = Object.keys(state.massSelected);
     if (!ids.length) return;
     if (action === 'export') { exportSelectedTasks(); return; }
-    if (action === 'delete' && !confirm('Удалить ' + ids.length + ' задач?')) return;
-    if (action === 'archive' && !confirm('Отправить ' + ids.length + ' задач в архив?')) return;
     const snapshot = [];
     ids.forEach(function (taskId) { const info = state.massSelected[taskId]; const g = findGoal(info.goalId); if (!g) return; const t = g.tasks.find(function (x) { return x.id === taskId; }); if (!t) return; snapshot.push({ goalId: info.goalId, task: JSON.parse(JSON.stringify(t)) }); if (action === 'delete') g.tasks = g.tasks.filter(function (x) { return x.id !== taskId; }); else if (action === 'archive') { t.archivedAt = Date.now(); if (!t.done) t.done = true; } else if (action === 'done') t.done = true; });
     saveData(); state.massSelected = {}; render();
@@ -3416,11 +3414,9 @@ let _searchIndexDirty = true;
     else state.massSelectedGoals[goalId] = true;
     renderGoals();
   }
-  function massActionGoals(action) {
+    function massActionGoals(action) {
     const ids = Object.keys(state.massSelectedGoals);
     if (!ids.length) return;
-    const verb = action === 'delete' ? 'Удалить' : 'Отправить в архив';
-    if (!confirm(verb + ' ' + ids.length + ' цел' + (ids.length === 1 ? 'ь' : (ids.length < 5 ? 'и' : 'ей')) + '?')) return;
     const snapshot = ids.map(function (id) { const g = findGoal(id); return g ? JSON.parse(JSON.stringify(g)) : null; }).filter(Boolean);
     ids.forEach(function (id) {
       const g = findGoal(id); if (!g) return;
