@@ -672,7 +672,7 @@ body.density-compact .subtask { padding: 2px 5px; }
   <nav class="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="active" aria-selected="true"><span class="tab-icon">📋</span><span class="tab-label">Активные</span></button>
     <button class="tab" role="tab" data-tab="archive" aria-selected="false"><span class="tab-icon">📦</span><span class="tab-label">Архив</span><span class="tab-count" id="archiveCount">0</span></button>
-    <button class="tab" role="tab" data-tab="literature" aria-selected="false"><span class="tab-icon">📚</span><span class="tab-icon">☁️</span><span class="tab-label">Хранилище</span><span class="tab-count" id="literatureCount">0</span></button>
+    <button class="tab" role="tab" data-tab="literature" aria-selected="false"><span class="tab-icon">☁️</span><span class="tab-label">Хранилище</span><span class="tab-count" id="literatureCount">0</span></button>
     <button class="tab" role="tab" data-tab="notes" aria-selected="false"><span class="tab-icon">📝</span><span class="tab-label">Заметки</span><span class="tab-count" id="notesCount">0</span></button>
   </nav>
 
@@ -2683,6 +2683,7 @@ async function extractMarkdownHtml(file) {
     const icon = section === 'books' ? '📚' : '📖';
     const word = section === 'books' ? 'книгу' : 'статью';
     pane.innerHTML = '<div class="reader-empty"><span class="reader-empty-icon">' + icon + '</span>Выберите ' + word + ' слева или загрузите файл в облако кнопкой «➕».<br><br><b>☁️ в облаке</b> — скачается при открытии · <b>💾 + ☁️</b> — есть локально.<br><br>📌 — цитата · 📖 — режим чтения · <kbd>←</kbd> <kbd>→</kbd> — навигация.</div>';
+   }  
   function saveCurrentPosition(section) { const name = runtime[section].selected; if (!name) return; const bodyEl = document.getElementById('readerBody_' + section); if (!bodyEl) return; const meta = state.folders[section].files.find(function (f) { return f.name === name; }) || {}; const ext = meta.ext || getExt(name); if (ext === 'pdf') return; state.readingPos[section][name] = bodyEl.scrollTop || 0; savePrefs(); }
   function restorePosition(section, name) { const bodyEl = document.getElementById('readerBody_' + section); if (!bodyEl) return; const pos = (state.readingPos[section] || {})[name]; if (typeof pos === 'number' && pos > 0) requestAnimationFrame(function () { bodyEl.scrollTop = pos; }); }
   function cleanupPdf(section) { const rt = runtime[section]; if (rt.pdfObserver) { try { rt.pdfObserver.disconnect(); } catch (e) {} rt.pdfObserver = null; } rt.pdfPages = []; rt.pdfDoc = null; }
