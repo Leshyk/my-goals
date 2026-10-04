@@ -39,8 +39,25 @@ self.addEventListener('fetch', function (event) {
   const url = new URL(req.url);
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
-  // Свой сайт: сначала кэш, в фоне — обновление
   if (url.origin === self.location.origin) {
+    // HTML — network-first: всегда свежая версия страницы, кэш только для офлайна
+    const isHtml = req.destination === 'document' ||
+                   url.pathname === '/' ||
+                   url.pathname.endsWith('/') ||
+                   url.pathname.endsWith('.html');
+    if (isHtml) {
+      event.respondWith(
+        fetch(req).then(function (res) {
+          if (res && res.status === 200 && res.type === 'basic') {
+            const clone = res.clone();
+            caches.open(CACHE_VERSION).then(function (c) { c.put(req, clone); });
+          }
+          return res;
+        }).catch(function () { return caches.match(req); })
+      );
+      return;
+    }
+    // Остальное (иконки, манифест) — cache-first, это статика, она редко меняется
     event.respondWith(
       caches.match(req).then(function (cached) {
         const networkPromise = fetch(req).then(function (res) {
@@ -56,7 +73,7 @@ self.addEventListener('fetch', function (event) {
     return;
   }
 
-  // Внешние CDN-библиотеки: сначала кэш, в фоне — обновление
+  // Внешние CDN — cache-first, как было
   event.respondWith(
     caches.open(RUNTIME_CACHE).then(function (cache) {
       return cache.match(req).then(function (cached) {

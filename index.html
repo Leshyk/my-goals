@@ -20,7 +20,6 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/docx-preview@0.3.2/dist/docx-preview.min.js"></script>
-<script type="module" src="./emf-converter.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -2635,26 +2634,7 @@ let _searchIndexDirty = true;
     if (progress) bodyEl.addEventListener('scroll', function () { const total = bodyEl.scrollHeight - bodyEl.clientHeight; if (total <= 0) { progress.style.width = '100%'; return; } progress.style.width = Math.min(100, Math.max(0, (bodyEl.scrollTop / total) * 100)) + '%'; }, { passive: true });
     try {
       if (ext === 'pdf') await renderPdfViewer(section, file, name);
-      else if (ext === 'docx') {
-  bodyEl.classList.add('reader-docx');
-  bodyEl.innerHTML = '<div class="reader-msg">Загрузка…</div>';
-  try {
-    if (!window.docx || !window.docx.renderAsync) throw new Error('no docx-preview');
-    bodyEl.innerHTML = '';
-    await window.docx.renderAsync(file, bodyEl, null, { className: 'docx', inWrapper: true, breakPages: true, experimental: true, useBase64URL: true, renderHeaders: true });
-    restorePosition(section, name);
-    if (window.convertEmfImages) window.convertEmfImages(bodyEl);
-  } catch (e) {
-    bodyEl.classList.remove('reader-docx');
-    bodyEl.classList.add('reader-html');
-    const buf = await file.arrayBuffer();
-    const opts = { convertImage: window.mammoth.images.imgElement(function (image) { return image.read('base64').then(function (b64) { return { src: 'data:' + (image.contentType || 'image/png') + ';base64,' + b64 }; }); }) };
-    const result = await window.mammoth.convertToHtml({ arrayBuffer: buf }, opts);
-    bodyEl.innerHTML = result.value || '';
-    restorePosition(section, name);
-    if (window.convertEmfImages) window.convertEmfImages(bodyEl);
-  }
-}
+      else if (ext === 'docx') { bodyEl.classList.add('reader-docx'); bodyEl.innerHTML = '<div class="reader-msg">Загрузка…</div>'; try { if (!window.docx || !window.docx.renderAsync) throw new Error('no docx-preview'); bodyEl.innerHTML = ''; await window.docx.renderAsync(file, bodyEl, null, { className: 'docx', inWrapper: true, breakPages: true, experimental: true, useBase64URL: true, renderHeaders: true }); restorePosition(section, name); } catch (e) { bodyEl.classList.remove('reader-docx'); bodyEl.classList.add('reader-html'); const buf = await file.arrayBuffer(); const opts = { convertImage: window.mammoth.images.imgElement(function (image) { return image.read('base64').then(function (b64) { return { src: 'data:' + (image.contentType || 'image/png') + ';base64,' + b64 }; }); }) }; const result = await window.mammoth.convertToHtml({ arrayBuffer: buf }, opts); bodyEl.innerHTML = result.value || ''; restorePosition(section, name); } }
       else if (ext === 'md' || ext === 'markdown') { bodyEl.classList.add('reader-html'); bodyEl.innerHTML = await extractMarkdownHtml(file); restorePosition(section, name); }
       else if (ext === 'txt') { bodyEl.classList.add('reader-text'); bodyEl.innerHTML = escapeHtmlWithLinks(await readAsText(file)); restorePosition(section, name); }
     } catch (e) { bodyEl.innerHTML = '<div class="reader-msg error">Ошибка: ' + escapeHtml(e.message || e) + '</div>'; }
