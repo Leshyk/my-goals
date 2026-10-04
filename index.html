@@ -2010,7 +2010,7 @@ let _searchIndexDirty = true;
   const PIN_HASH_KEY = 'pgt_v25_pin_hash';
   const PIN_SALT_KEY = 'pgt_v25_pin_salt';
   const PIN_UNLOCK_FLAG = 'pgt_v25_unlocked';
-    const PIN_LEN_KEY = 'pgt_v25_pin_len';
+  const PIN_LEN_KEY = 'pgt_v25_pin_len';
   const PIN_ATTEMPTS_KEY = 'pgt_v25_pin_attempts';
   const PIN_LOCK_UNTIL_KEY = 'pgt_v25_pin_lock_until';
   const PIN_LOCK_LEVEL_KEY = 'pgt_v25_pin_lock_level';
@@ -2040,6 +2040,7 @@ let _searchIndexDirty = true;
   function getPinSalt() { try { return localStorage.getItem(PIN_SALT_KEY); } catch (e) { return null; } }
   function hasPin() { return !!(getPinHash() && getPinSalt()); }
     function getPinLength() { try { return parseInt(localStorage.getItem(PIN_LEN_KEY), 10) || 0; } catch (e) { return 0; } }
+  function setPinLength(n) { try { localStorage.setItem(PIN_LEN_KEY, String(n)); } catch (e) {} }
   function getPinAttempts() { try { return parseInt(localStorage.getItem(PIN_ATTEMPTS_KEY), 10) || 0; } catch (e) { return 0; } }
   function setPinAttempts(n) { try { localStorage.setItem(PIN_ATTEMPTS_KEY, String(n)); } catch (e) {} }
   function getLockUntil() { try { return parseInt(localStorage.getItem(PIN_LOCK_UNTIL_KEY), 10) || 0; } catch (e) { return 0; } }
@@ -2146,14 +2147,6 @@ let _searchIndexDirty = true;
     renderPinStatus();
     showToast('PIN установлен', 'ok');
   }
-  function lockApp() {
-    const lock = document.getElementById('lockScreen');
-    if (!lock) return;
-    document.getElementById('lockPinInput').value = '';
-    document.getElementById('lockError').textContent = '';
-    lock.hidden = false;
-    setTimeout(function () { const inp = document.getElementById('lockPinInput'); if (inp) inp.focus(); }, 50);
-  }
     let _lockCountdownTimer = null;
   function lockApp() {
     const lock = document.getElementById('lockScreen');
@@ -2185,8 +2178,8 @@ let _searchIndexDirty = true;
       lockInput.disabled = true;
       lockBtn.disabled = true;
       lockBtn.textContent = 'Заблокировано';
-      lockTitle.textContent = 'Доступ ограничен';
-      lockIcon.textContent = '⏳';
+      if (lockTitle) lockTitle.textContent = 'Доступ ограничен';
+      if (lockIcon) lockIcon.textContent = '⏳';
       lockErr.textContent = '';
       if (lockSub) lockSub.textContent = level === 2 ? 'Последняя серия попыток' : 'Повторите ввод позже';
       const updateCountdown = function () {
@@ -2197,8 +2190,8 @@ let _searchIndexDirty = true;
           lockInput.disabled = false;
           lockBtn.disabled = false;
           lockBtn.textContent = 'Разблокировать';
-          lockTitle.textContent = 'Введите PIN-код';
-          lockIcon.textContent = '🔒';
+          if (lockTitle) lockTitle.textContent = 'Введите PIN-код';
+          if (lockIcon) lockIcon.textContent = '🔒';
           lockInput.value = '';
           lockInput.focus();
           if (getLockLevel() === 2) {
@@ -2221,8 +2214,8 @@ let _searchIndexDirty = true;
       lockInput.disabled = false;
       lockBtn.disabled = false;
       lockBtn.textContent = 'Разблокировать';
-      lockTitle.textContent = 'Введите PIN-код';
-      lockIcon.textContent = '🔒';
+      if (lockTitle) lockTitle.textContent = 'Введите PIN-код';
+      if (lockIcon) lockIcon.textContent = '🔒';
       if (level === 2) {
         if (lockSub) lockSub.textContent = 'Последняя серия попыток';
         lockAtt.textContent = '⚠️ После 3 неверных вводов ВСЕ данные будут удалены безвозвратно.';
@@ -2243,6 +2236,7 @@ let _searchIndexDirty = true;
     if (!pin) { errEl.textContent = 'Введите PIN'; return; }
     if (!isPinValid(pin)) { errEl.textContent = 'PIN должен содержать от 4 до 8 цифр'; return; }
     if (await verifyPin(pin)) {
+      if (!getPinLength()) setPinLength(pin.length);
       markSessionUnlocked();
       resetLockCounters();
       unlockApp();
@@ -4319,12 +4313,17 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
     if (_lockBtn) _lockBtn.addEventListener('click', tryUnlock);
         const _lockInput = document.getElementById('lockPinInput');
     if (_lockInput) {
+      let _autoUnlockTimer = null;
       _lockInput.addEventListener('input', function () {
         const inp = this;
         inp.value = inp.value.replace(/\D/g, '');
+        if (isCurrentlyLocked()) return;
         const expectedLen = getPinLength();
-        if (expectedLen > 0 && inp.value.length === expectedLen && !isCurrentlyLocked()) {
-          tryUnlock();
+        if (expectedLen > 0) {
+          if (inp.value.length === expectedLen) tryUnlock();
+        } else if (inp.value.length >= 4) {
+          clearTimeout(_autoUnlockTimer);
+          _autoUnlockTimer = setTimeout(function () { tryUnlock(); }, 400);
         }
       });
       _lockInput.addEventListener('keydown', function (e) {
