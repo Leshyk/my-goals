@@ -1,8 +1,8 @@
 // Service Worker — Мои цели и задачи
-// Чтобы «выпустить обновление» — поменяй CACHE_VERSION (например, pgt-v25-2)
+// Чтобы «выпустить обновление» — поменяй CACHE_VERSION (например, pgt-v25-32)
 
-const CACHE_VERSION = 'pgt-v25-31';
-const RUNTIME_CACHE = 'pgt-runtime-v25-31';
+const CACHE_VERSION = 'pgt-v25-32';
+const RUNTIME_CACHE = 'pgt-runtime-v25-32';
 
 const PRECACHE = [
   './',
@@ -39,6 +39,13 @@ self.addEventListener('fetch', function (event) {
   const url = new URL(req.url);
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
+  // === API-запросы (погода и т.п.) — НЕ трогаем, пусть браузер сам ===
+  if (url.hostname === 'api.open-meteo.com' ||
+      url.hostname === 'geocoding-api.open-meteo.com' ||
+      url.hostname === 'api.open-meteo.com') {
+    return;
+  }
+
   if (url.origin === self.location.origin) {
     // HTML — network-first: всегда свежая версия страницы, кэш только для офлайна
     const isHtml = req.destination === 'document' ||
@@ -53,35 +60,46 @@ self.addEventListener('fetch', function (event) {
             caches.open(CACHE_VERSION).then(function (c) { c.put(req, clone); });
           }
           return res;
-        }).catch(function () { return caches.match(req); })
+        }).catch(function () {
+          return caches.match(req).then(function (c) {
+            return c || new Response('Офлайн', { status: 503, statusText: 'Offline' });
+          });
+        })
       );
       return;
     }
     // Остальное (иконки, манифест) — cache-first, это статика, она редко меняется
     event.respondWith(
       caches.match(req).then(function (cached) {
-        const networkPromise = fetch(req).then(function (res) {
+        if (cached) return cached;
+        return fetch(req).then(function (res) {
           if (res && res.status === 200 && res.type === 'basic') {
             const clone = res.clone();
             caches.open(CACHE_VERSION).then(function (c) { c.put(req, clone); });
           }
           return res;
-        }).catch(function () { return cached; });
-        return cached || networkPromise;
+        }).catch(function () {
+          return new Response('Офлайн', { status: 503, statusText: 'Offline' });
+        });
       })
     );
     return;
   }
 
-  // Внешние CDN — cache-first, как было
+  // Внешние CDN (pdf.js, mammoth, marked, katex, jsdelivr, cdnjs...) — cache-first
   event.respondWith(
     caches.open(RUNTIME_CACHE).then(function (cache) {
       return cache.match(req).then(function (cached) {
-        const networkPromise = fetch(req).then(function (res) {
-          if (res && res.status === 200) cache.put(req, res.clone());
+        if (cached) return cached;
+        return fetch(req).then(function (res) {
+          // Кэшируем только «чистые» ответы 200 с basic/cors типом
+          if (res && res.status === 200 && (res.type === 'basic' || res.type === 'cors')) {
+            try { cache.put(req, res.clone()); } catch (e) {}
+          }
           return res;
-        }).catch(function () { return cached; });
-        return cached || networkPromise;
+        }).catch(function () {
+          return new Response('Офлайн', { status: 503, statusText: 'Offline' });
+        });
       });
     })
   );
