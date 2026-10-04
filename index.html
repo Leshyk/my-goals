@@ -616,6 +616,10 @@ body.density-compact .subtask { padding: 2px 5px; }
   .lock-btn:hover { filter: brightness(1.1); }
   .lock-link { background: transparent; border: 0; color: var(--muted); font-size: 12px; margin-top: 12px; cursor: pointer; font-family: inherit; text-decoration: underline; }
   .lock-link:hover { color: var(--accent); }
+    .lock-attempts { font-size: 12px; color: var(--muted); min-height: 18px; margin-bottom: 12px; }
+  .lock-attempts.warn { color: var(--gold); font-weight: 600; }
+  .lock-attempts.danger { color: var(--danger); font-weight: 700; }
+  .lock-attempts.countdown { color: var(--danger); font-size: 14px; font-weight: 700; }
 </style>
 </head>
 <body>
@@ -1055,7 +1059,7 @@ body.density-compact .subtask { padding: 2px 5px; }
       <button type="button" class="secondary" data-action="close-settings">✕</button>
     </header>
     <div class="modal-body">
-           <div class="settings-section">
+                <div class="settings-section">
         <h3>Уведомления</h3>
         <div class="settings-row">
           <div><label>О задачах с дедлайном</label><span class="muted">Проверка раз в 15 минут</span></div>
@@ -1063,7 +1067,6 @@ body.density-compact .subtask { padding: 2px 5px; }
         </div>
       </div>
       <div class="settings-section">
-	        <div class="settings-section">
         <h3>🔒 Защита PIN-кодом</h3>
         <div class="muted" style="font-size:11px; margin-bottom:8px;">PIN спрашивается при каждом новом открытии приложения. Данные остаются локально в браузере, PIN никуда не отправляется.</div>
         <div id="pinStatusRow" style="font-size:12px; margin-bottom:8px;">—</div>
@@ -1074,6 +1077,7 @@ body.density-compact .subtask { padding: 2px 5px; }
           <button type="button" class="danger" id="pinRemoveBtn" hidden>Убрать PIN</button>
         </div>
       </div>
+      <div class="settings-section">
         <h3>Цвета статистики</h3>
         <div class="color-grid">
           <div class="color-item"><input type="color" id="colorTotal" /><label>Всего</label></div>
@@ -1213,11 +1217,12 @@ body.density-compact .subtask { padding: 2px 5px; }
 <!-- Экран блокировки -->
 <div class="lock-screen" id="lockScreen" hidden>
   <div class="lock-card">
-    <div class="lock-icon">🔒</div>
-    <div class="lock-title">Введите PIN-код</div>
-    <div class="lock-sub">Доступ к приложению защищён</div>
+    <div class="lock-icon" id="lockIcon">🔒</div>
+    <div class="lock-title" id="lockTitle">Введите PIN-код</div>
+    <div class="lock-sub" id="lockSub">Доступ к приложению защищён</div>
     <input type="password" id="lockPinInput" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="••••" class="lock-input" autocomplete="off" />
     <div class="lock-error" id="lockError"></div>
+    <div class="lock-attempts" id="lockAttempts"></div>
     <button type="button" id="lockSubmitBtn" class="lock-btn">Разблокировать</button>
     <button type="button" id="lockResetBtn" class="lock-link">Забыли PIN?</button>
   </div>
@@ -2005,6 +2010,10 @@ let _searchIndexDirty = true;
   const PIN_HASH_KEY = 'pgt_v25_pin_hash';
   const PIN_SALT_KEY = 'pgt_v25_pin_salt';
   const PIN_UNLOCK_FLAG = 'pgt_v25_unlocked';
+    const PIN_LEN_KEY = 'pgt_v25_pin_len';
+  const PIN_ATTEMPTS_KEY = 'pgt_v25_pin_attempts';
+  const PIN_LOCK_UNTIL_KEY = 'pgt_v25_pin_lock_until';
+  const PIN_LOCK_LEVEL_KEY = 'pgt_v25_pin_lock_level';
   const MIN_PIN_LEN = 4;
   const MAX_PIN_LEN = 8;
   const SIMPLE_PINS = ['1234','12345','123456','1234567','12345678','4321','54321','0123','0000','1111','2222','3333','4444','5555','6666','7777','8888','9999'];
@@ -2030,19 +2039,44 @@ let _searchIndexDirty = true;
   function getPinHash() { try { return localStorage.getItem(PIN_HASH_KEY); } catch (e) { return null; } }
   function getPinSalt() { try { return localStorage.getItem(PIN_SALT_KEY); } catch (e) { return null; } }
   function hasPin() { return !!(getPinHash() && getPinSalt()); }
+    function getPinLength() { try { return parseInt(localStorage.getItem(PIN_LEN_KEY), 10) || 0; } catch (e) { return 0; } }
+  function getPinAttempts() { try { return parseInt(localStorage.getItem(PIN_ATTEMPTS_KEY), 10) || 0; } catch (e) { return 0; } }
+  function setPinAttempts(n) { try { localStorage.setItem(PIN_ATTEMPTS_KEY, String(n)); } catch (e) {} }
+  function getLockUntil() { try { return parseInt(localStorage.getItem(PIN_LOCK_UNTIL_KEY), 10) || 0; } catch (e) { return 0; } }
+  function setLockUntil(ts) { try { localStorage.setItem(PIN_LOCK_UNTIL_KEY, String(ts)); } catch (e) {} }
+  function getLockLevel() { try { return parseInt(localStorage.getItem(PIN_LOCK_LEVEL_KEY), 10) || 0; } catch (e) { return 0; } }
+  function setLockLevel(n) { try { localStorage.setItem(PIN_LOCK_LEVEL_KEY, String(n)); } catch (e) {} }
+  function resetLockCounters() {
+    try {
+      localStorage.removeItem(PIN_ATTEMPTS_KEY);
+      localStorage.removeItem(PIN_LOCK_UNTIL_KEY);
+      localStorage.removeItem(PIN_LOCK_LEVEL_KEY);
+    } catch (e) {}
+  }
+  function isCurrentlyLocked() { return getLockUntil() > Date.now(); }
   function isSessionUnlocked() { try { return sessionStorage.getItem(PIN_UNLOCK_FLAG) === '1'; } catch (e) { return false; } }
   function markSessionUnlocked() { try { sessionStorage.setItem(PIN_UNLOCK_FLAG, '1'); } catch (e) {} }
-  async function setPin(pin) {
+    async function setPin(pin) {
     const salt = randomSalt();
     const hash = await hashPin(pin, salt);
     try {
       localStorage.setItem(PIN_HASH_KEY, hash);
       localStorage.setItem(PIN_SALT_KEY, salt);
+      localStorage.setItem(PIN_LEN_KEY, String(pin.length));
       sessionStorage.setItem(PIN_UNLOCK_FLAG, '1');
+      resetLockCounters();
     } catch (e) {}
   }
-  function removePin() {
-    try { localStorage.removeItem(PIN_HASH_KEY); localStorage.removeItem(PIN_SALT_KEY); sessionStorage.removeItem(PIN_UNLOCK_FLAG); } catch (e) {}
+    function removePin() {
+    try {
+      localStorage.removeItem(PIN_HASH_KEY);
+      localStorage.removeItem(PIN_SALT_KEY);
+      localStorage.removeItem(PIN_LEN_KEY);
+      localStorage.removeItem(PIN_ATTEMPTS_KEY);
+      localStorage.removeItem(PIN_LOCK_UNTIL_KEY);
+      localStorage.removeItem(PIN_LOCK_LEVEL_KEY);
+      sessionStorage.removeItem(PIN_UNLOCK_FLAG);
+    } catch (e) {}
   }
   function isPinValid(pin) { return typeof pin === 'string' && /^\d+$/.test(pin) && pin.length >= MIN_PIN_LEN && pin.length <= MAX_PIN_LEN; }
   async function verifyPin(pin) {
@@ -2120,24 +2154,143 @@ let _searchIndexDirty = true;
     lock.hidden = false;
     setTimeout(function () { const inp = document.getElementById('lockPinInput'); if (inp) inp.focus(); }, 50);
   }
+    let _lockCountdownTimer = null;
+  function lockApp() {
+    const lock = document.getElementById('lockScreen');
+    if (!lock) return;
+    document.getElementById('lockPinInput').value = '';
+    document.getElementById('lockError').textContent = '';
+    lock.hidden = false;
+    updateLockUI();
+    setTimeout(function () { if (!isCurrentlyLocked()) { const inp = document.getElementById('lockPinInput'); if (inp) inp.focus(); } }, 50);
+  }
   function unlockApp() {
     const lock = document.getElementById('lockScreen');
     if (lock) lock.hidden = true;
   }
+  function updateLockUI() {
+    const lockInput = document.getElementById('lockPinInput');
+    const lockBtn = document.getElementById('lockSubmitBtn');
+    const lockErr = document.getElementById('lockError');
+    const lockAtt = document.getElementById('lockAttempts');
+    const lockTitle = document.getElementById('lockTitle');
+    const lockSub = document.getElementById('lockSub');
+    const lockIcon = document.getElementById('lockIcon');
+    if (!lockAtt || !lockInput) return;
+    const until = getLockUntil();
+    const now = Date.now();
+    const level = getLockLevel();
+    if (_lockCountdownTimer) { clearInterval(_lockCountdownTimer); _lockCountdownTimer = null; }
+    if (until > now) {
+      lockInput.disabled = true;
+      lockBtn.disabled = true;
+      lockBtn.textContent = 'Заблокировано';
+      lockTitle.textContent = 'Доступ ограничен';
+      lockIcon.textContent = '⏳';
+      lockErr.textContent = '';
+      if (lockSub) lockSub.textContent = level === 2 ? 'Последняя серия попыток' : 'Повторите ввод позже';
+      const updateCountdown = function () {
+        const left = Math.ceil((getLockUntil() - Date.now()) / 1000);
+        if (left <= 0) {
+          clearInterval(_lockCountdownTimer);
+          _lockCountdownTimer = null;
+          lockInput.disabled = false;
+          lockBtn.disabled = false;
+          lockBtn.textContent = 'Разблокировать';
+          lockTitle.textContent = 'Введите PIN-код';
+          lockIcon.textContent = '🔒';
+          lockInput.value = '';
+          lockInput.focus();
+          if (getLockLevel() === 2) {
+            lockAtt.textContent = '⚠️ Последняя серия попыток. После 3 неверных вводов ВСЕ данные будут удалены.';
+            lockAtt.className = 'lock-attempts danger';
+          } else {
+            lockAtt.textContent = '';
+            lockAtt.className = 'lock-attempts';
+          }
+          return;
+        }
+        const m = Math.floor(left / 60);
+        const s = left % 60;
+        lockAtt.textContent = '🔒 Повторите через ' + (m > 0 ? m + ' мин ' : '') + s + ' сек';
+        lockAtt.className = 'lock-attempts countdown';
+      };
+      updateCountdown();
+      _lockCountdownTimer = setInterval(updateCountdown, 500);
+    } else {
+      lockInput.disabled = false;
+      lockBtn.disabled = false;
+      lockBtn.textContent = 'Разблокировать';
+      lockTitle.textContent = 'Введите PIN-код';
+      lockIcon.textContent = '🔒';
+      if (level === 2) {
+        if (lockSub) lockSub.textContent = 'Последняя серия попыток';
+        lockAtt.textContent = '⚠️ После 3 неверных вводов ВСЕ данные будут удалены безвозвратно.';
+        lockAtt.className = 'lock-attempts danger';
+      } else {
+        if (lockSub) lockSub.textContent = 'Доступ к приложению защищён';
+        lockAtt.textContent = '';
+        lockAtt.className = 'lock-attempts';
+      }
+    }
+  }
   async function tryUnlock() {
+    if (isCurrentlyLocked()) return;
     const input = document.getElementById('lockPinInput');
     const errEl = document.getElementById('lockError');
+    const attEl = document.getElementById('lockAttempts');
     const pin = (input.value || '').trim();
-    if (!isPinValid(pin)) { errEl.textContent = 'Введите PIN (' + MIN_PIN_LEN + '-' + MAX_PIN_LEN + ' цифр)'; return; }
+    if (!pin) { errEl.textContent = 'Введите PIN'; return; }
+    if (!isPinValid(pin)) { errEl.textContent = 'PIN должен содержать от 4 до 8 цифр'; return; }
     if (await verifyPin(pin)) {
       markSessionUnlocked();
+      resetLockCounters();
       unlockApp();
       errEl.textContent = '';
-    } else {
-      errEl.textContent = 'Неверный PIN';
-      input.value = '';
-      input.focus();
+      if (attEl) { attEl.textContent = ''; attEl.className = 'lock-attempts'; }
+      return;
     }
+    const attempts = getPinAttempts() + 1;
+    setPinAttempts(attempts);
+    input.value = '';
+    if (attempts < 3) {
+      errEl.textContent = 'Неверный PIN';
+      if (attEl) {
+        attEl.textContent = 'Осталось попыток: ' + (3 - attempts);
+        attEl.className = 'lock-attempts warn';
+      }
+      input.focus();
+      return;
+    }
+    const level = getLockLevel();
+    if (level === 0) {
+      setLockUntil(Date.now() + 60 * 1000);
+      setLockLevel(1);
+      setPinAttempts(0);
+      errEl.textContent = '';
+      updateLockUI();
+    } else if (level === 1) {
+      setLockUntil(Date.now() + 10 * 60 * 1000);
+      setLockLevel(2);
+      setPinAttempts(0);
+      errEl.textContent = '';
+      updateLockUI();
+    } else {
+      errEl.textContent = '';
+      if (attEl) {
+        attEl.textContent = '⛔ Все данные удалены. Обновите страницу.';
+        attEl.className = 'lock-attempts danger';
+      }
+      wipeAllData();
+    }
+  }
+  function wipeAllData() {
+    try {
+      Object.keys(localStorage).forEach(function (k) { if (k.indexOf('pgt_v25_') === 0) localStorage.removeItem(k); });
+      sessionStorage.clear();
+      try { indexedDB.deleteDatabase(IDB_NAME); } catch (e) {}
+    } catch (e) {}
+    setTimeout(function () { location.reload(); }, 3000);
   }
   function lockNow() {
     if (!hasPin()) return;
@@ -4164,10 +4317,20 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
 
     const _lockBtn = document.getElementById('lockSubmitBtn');
     if (_lockBtn) _lockBtn.addEventListener('click', tryUnlock);
-    const _lockInput = document.getElementById('lockPinInput');
-    if (_lockInput) _lockInput.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); tryUnlock(); }
-    });
+        const _lockInput = document.getElementById('lockPinInput');
+    if (_lockInput) {
+      _lockInput.addEventListener('input', function () {
+        const inp = this;
+        inp.value = inp.value.replace(/\D/g, '');
+        const expectedLen = getPinLength();
+        if (expectedLen > 0 && inp.value.length === expectedLen && !isCurrentlyLocked()) {
+          tryUnlock();
+        }
+      });
+      _lockInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); tryUnlock(); }
+      });
+    }
     const _lockResetBtn = document.getElementById('lockResetBtn');
     if (_lockResetBtn) _lockResetBtn.addEventListener('click', function () {
       if (!confirm('Забыли PIN? Сброс удалит ВСЕ данные приложения: цели, задачи, заметки, настройки. Продолжить?')) return;
