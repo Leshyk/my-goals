@@ -1,8 +1,8 @@
 // Service Worker — Мои цели и задачи
 // Чтобы «выпустить обновление» — поменяй CACHE_VERSION (например, pgt-v25-32)
 
-const CACHE_VERSION = 'pgt-v25-34';
-const RUNTIME_CACHE = 'pgt-runtime-v25-34';
+const CACHE_VERSION = 'pgt-v25-35';
+const RUNTIME_CACHE = 'pgt-runtime-v25-35';
 
 const PRECACHE = [
   './',
@@ -39,14 +39,7 @@ self.addEventListener('fetch', function (event) {
   const url = new URL(req.url);
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
-  // === API-запросы (погода и т.п.) — НЕ трогаем, пусть браузер сам ===
-  if (url.hostname === 'api.open-meteo.com' ||
-      url.hostname === 'geocoding-api.open-meteo.com' ||
-      url.hostname === 'api.open-meteo.com') {
-    return;
-  }
-
-  if (url.origin === self.location.origin) {
+    if (url.origin === self.location.origin) {
     // HTML — network-first: всегда свежая версия страницы, кэш только для офлайна
     const isHtml = req.destination === 'document' ||
                    url.pathname === '/' ||

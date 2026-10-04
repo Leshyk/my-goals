@@ -70,7 +70,6 @@
   .app-header-left { min-width: 0; flex: 1 1 auto; }
   .app-header-right { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   .live-clock { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; padding: 4px 10px; border-radius: 6px; background: var(--bar-bg); font-family: ui-monospace, monospace; letter-spacing: .03em; }
-    .weather-badge { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; padding: 4px 10px; border-radius: 6px; background: var(--bar-bg); font-family: ui-monospace, monospace; letter-spacing: .03em; cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 4px; } .weather-badge:hover { border-color: var(--accent); } .weather-badge.loading { opacity: .5; }
   .save-indicator { font-size: 11px; color: var(--color-total); opacity: 0; transition: opacity .3s ease; padding: 4px 10px; border-radius: 6px; background: rgba(63, 185, 80, 0.12); border: 1px solid var(--color-total); }
   .save-indicator.show { opacity: 1; }
     .sync-status {
@@ -610,6 +609,28 @@ body.density-compact .subtask { padding: 2px 5px; }
   .lock-attempts.warn { color: var(--gold); font-weight: 600; }
   .lock-attempts.danger { color: var(--danger); font-weight: 700; }
   .lock-attempts.countdown { color: var(--danger); font-size: 14px; font-weight: 700; }
+/* === Синхронизация с Google Drive === */
+.lit-item-remote-badge {
+  display: inline-block;
+  font-size: 10px;
+  padding: 0 5px;
+  border-radius: 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.lit-item-remote-badge.cloud { background: rgba(88,166,255,.15); color: var(--accent); }
+.lit-item-remote-badge.local { background: rgba(63,185,80,.15); color: var(--color-total); }
+.lit-item-remote-badge.syncing { background: rgba(245,197,24,.15); color: var(--gold); }
+.lit-item-remote-badge.error { background: rgba(255,123,114,.15); color: var(--danger); }
+.drive-section-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.drive-section-row .value { font-weight: 600; }
 </style>
 </head>
 <body>
@@ -621,8 +642,7 @@ body.density-compact .subtask { padding: 2px 5px; }
     </div>
         <div class="app-header-right">
       <span class="live-clock" id="liveClock"></span>
-	   <span class="weather-badge" id="weatherBadge" title="Погода" hidden></span>
-      <span class="save-indicator" id="saveIndicator">✓ Сохранено</span>
+	  <span class="save-indicator" id="saveIndicator">✓ Сохранено</span>
       <span class="sync-status" id="syncStatus"></span>
       <button type="button" class="header-btn" id="googleSignInBtn" title="Войти в Google">🔐 Войти</button>
        <span class="sync-dot" id="syncDot" title="Не синхронизировано"></span>
@@ -1050,6 +1070,23 @@ body.density-compact .subtask { padding: 2px 5px; }
       <button type="button" class="secondary" data-action="close-settings">✕</button>
     </header>
     <div class="modal-body">
+	<div class="settings-section">
+  <h3>☁️ Google Drive</h3>
+  <div class="muted" style="font-size:11px; margin-bottom:8px;">
+    Файлы статей и книг хранятся в вашем Google Drive в папке <b>«Мои цели и задачи»</b>.
+    Данные (цели, задачи, заметки) синхронизируются автоматически.
+  </div>
+  <div id="driveStatusRow" style="font-size:12px; margin-bottom:8px;">Проверка…</div>
+  <div class="drive-section-row">
+    <span>В облаке: <span class="value" id="driveCloudCount">—</span></span>
+    <span>Локально: <span class="value" id="driveLocalCount">—</span></span>
+  </div>
+  <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
+    <button type="button" class="secondary" id="driveSyncNowBtn">🔄 Синхронизировать сейчас</button>
+    <button type="button" class="secondary" id="driveCacheAllBtn">💾 Скачать всё в кэш</button>
+    <button type="button" class="danger" id="driveSignOutBtn" hidden>🚪 Выйти из Google</button>
+  </div>
+</div>
                 <div class="settings-section">
         <h3>Уведомления</h3>
         <div class="settings-row">
@@ -1487,7 +1524,7 @@ function waitForLib(name, ms) {
             // Debounced сохранения — пишут в localStorage не чаще 250 мс
   let _saveDataTimer = null, _savePrefsTimer = null, _saveSnippetsTimer = null, _saveNotesTimer = null, _saveTemplatesTimer = null;
   let _lastDataHash = '';
-    function saveData() {
+   function saveData() {
     clearTimeout(_saveDataTimer);
     _saveDataTimer = setTimeout(function () {
       try {
@@ -2486,7 +2523,7 @@ async function extractMarkdownHtml(file) {
     if (!state.snippets.length) { showToast('Нет цитат', 'warn'); return; }
     const items = state.snippets.slice().sort(function (a, b) { return a.savedAt - b.savedAt; });
     const stamp = new Date().toISOString().slice(0, 10);
-    let content = ''; let mime = 'text/plain'; let ext = 'txt';
+    let content = ''; let mime = 'text/plain'; let ext = 'txt';{ display: none !important; }
     if (format === 'doc') { const itemsHtml = items.map(function (s, i) { const kind = SECTION_LABEL[s.section] || 'Файл'; const escaped = escapeHtml(s.text).replace(/\n/g, '<br>'); const tags = (s.tags || []).length ? ' · теги: ' + s.tags.map(function (t) { return '#' + t; }).join(' ') : ''; const note = s.note ? '<p style="margin:4pt 0 0 0; color:#845400;"><i>Заметка: ' + escapeHtml(s.note) + '</i></p>' : ''; const page = s.page ? ', стр. ' + s.page : ''; return '<div style="margin:0 0 22pt 0;"><p style="margin:0 0 4pt 0; font-size:10pt; color:#666;">Цитата №' + (i + 1) + ' · ' + escapeHtml(kind) + ' · ' + formatDateTime(s.savedAt) + tags + '</p><p style="margin:0 0 6pt 0; font-size:12pt; font-weight:bold;">Источник: ' + escapeHtml(kind) + ' — ' + escapeHtml(s.fileName || '') + page + '</p><p style="margin:0; font-size:11pt; line-height:1.5;">&nbsp;&nbsp;&nbsp;&nbsp;' + escaped + '</p>' + note + '</div><hr style="border:none;border-top:1px solid #ccc;margin:0 0 22pt 0;">'; }).join(''); content = '\ufeff<html xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><style>@page { size: A4; margin: 2cm 2.5cm; }</style></head><body><h1>Мои цитаты</h1><p style="font-size:10pt;color:#666;">Всего: ' + items.length + ' · ' + formatDateTime(Date.now()) + '</p><hr>' + itemsHtml + '</body></html>'; mime = 'application/msword'; ext = 'doc'; }
     else if (format === 'md') { content = '# Мои цитаты\n\n_Всего: ' + items.length + '_\n\n---\n\n'; content += items.map(function (s, i) { const kind = SECTION_LABEL[s.section] || 'Файл'; const page = s.page ? ', стр. ' + s.page : ''; const tags = (s.tags || []).length ? '\n**Теги:** ' + s.tags.map(function (t) { return '`#' + t + '`'; }).join(' ') : ''; const note = s.note ? '\n\n> 💭 **Заметка:** ' + s.note : ''; const quoted = s.text.split('\n').map(function (l) { return '> ' + l; }).join('\n'); return '## Цитата №' + (i + 1) + '\n\n**Источник:** ' + kind + ' — `' + (s.fileName || '') + '`' + page + '\n**Дата:** ' + formatDateTime(s.savedAt) + tags + '\n\n' + quoted + note + '\n\n---\n'; }).join('\n'); mime = 'text/markdown'; ext = 'md'; }
     else if (format === 'csv') { function csvEsc(v) { const s = String(v == null ? '' : v); if (/[",\n;]/.test(s)) return '"' + s.replace(/"/g, '""') + '"'; return s; } const rows = ['№;Источник;Тип;Файл;Страница;Дата;Теги;Заметка;Текст']; items.forEach(function (s, i) { rows.push([i + 1, s.fileName, SECTION_LABEL[s.section] || '', s.fileName, s.page || '', formatDateTime(s.savedAt), (s.tags || []).join(' '), s.note || '', s.text].map(csvEsc).join(';')); }); content = '\ufeff' + rows.join('\r\n'); mime = 'text/csv'; ext = 'csv'; }
@@ -4552,87 +4589,7 @@ function tickLiveClock() {
       const d = new Date();
       el.textContent = '🕐 ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
     }
-	    // === Погода по геолокации (Open-Meteo) ===
-    const WMO_ICON = { 0:'☀️', 1:'🌤', 2:'⛅', 3:'☁️', 45:'🌫', 48:'🌫', 51:'🌦', 53:'🌦', 55:'🌧', 56:'🌧', 57:'🌧', 61:'🌧', 63:'🌧', 65:'🌧', 66:'🌧', 67:'🌧', 71:'🌨', 73:'🌨', 75:'🌨', 77:'🌨', 80:'🌦', 81:'🌧', 82:'🌧', 85:'🌨', 86:'🌨', 95:'⛈', 96:'⛈', 99:'⛈' };
-    function weatherIcon(code) { return WMO_ICON[code] || '🌡'; }
-
-    async function loadWeather() {
-      const badge = document.getElementById('weatherBadge');
-      if (!badge) return;
-      if (badge.dataset.loaded === '1') return;
-      if (!navigator.geolocation) { badge.hidden = true; return; }
-
-      badge.hidden = false;
-      badge.classList.add('loading');
-      badge.textContent = '🌤 …';
-
-      navigator.geolocation.getCurrentPosition(async function (pos) {
-        const lat = pos.coords.latitude.toFixed(4);
-        const lon = pos.coords.longitude.toFixed(4);
-        try {
-          const apiUrl = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current=temperature_2m,weather_code&timezone=auto';
-const url = 'https://weather-proxy.zloibatushka.workers.dev/?url=' + encodeURIComponent(apiUrl);
-          const r = await fetch(url);
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          const data = await r.json();
-          const cur = data && data.current;
-          if (!cur) throw new Error('no current');
-          const temp = Math.round(cur.temperature_2m);
-          const icon = weatherIcon(cur.weather_code);
-          badge.textContent = icon + ' ' + temp + '°';
-          badge.classList.remove('loading');
-          badge.dataset.loaded = '1';
-          badge.title = 'Погода сейчас: ' + temp + '°C (клик — обновить)';
-          try { localStorage.setItem('pgt_v25_weather', JSON.stringify({ icon: icon, temp: temp, ts: Date.now() })); } catch (e) {}
-                } catch (e) {
-          badge.classList.remove('loading');
-          badge.textContent = '🌤 —';
-          badge.title = 'Не удалось получить погоду: ' + (e && e.message ? e.message : e);
-          console.warn('[weather] fetch failed:', e);
-        }
-      }, function (err) {
-        badge.classList.remove('loading');
-        badge.hidden = true;
-      }, { timeout: 8000, maximumAge: 10 * 60 * 1000 });
-
-      badge.onclick = function () {
-        badge.dataset.loaded = '';
-        try { localStorage.removeItem('pgt_v25_weather'); } catch (e) {}
-        badge.hidden = false;
-        loadWeather();
-      };
-    }
-
-    function showCachedWeather() {
-      const badge = document.getElementById('weatherBadge');
-      if (!badge) return;
-      try {
-        const raw = localStorage.getItem('pgt_v25_weather');
-        if (!raw) return;
-        const w = JSON.parse(raw);
-        if (!w || typeof w.temp !== 'number') return;
-        if (Date.now() - (w.ts || 0) > 2 * 60 * 60 * 1000) return;
-        badge.hidden = false;
-        badge.textContent = (w.icon || '🌤') + ' ' + w.temp + '°';
-        badge.title = 'Погода (кэш): ' + w.temp + '°C';
-      } catch (e) {}
-    }
-
-    // Запуск погоды
-    showCachedWeather();
-    setTimeout(loadWeather, 1500);
-    tickLiveClock();
-    setInterval(tickLiveClock, 1000);
-
-    setInterval(checkNotifications, 5 * 60 * 1000);
-	    setInterval(checkBackup, 30 * 60 * 1000);
-    setInterval(function () {
-      try { renderStats(); renderTasks(); if (state.calendarVisible) renderCalendar(); renderGoals(); }
-      catch (e) {}
-        }, 60 * 60 * 1000);
-  }
-
-  // === Автосинхронизация (снаружи bindEvents, доступна для saveData) ===
+	   // === Автосинхронизация (снаружи bindEvents, доступна для saveData) ===
   let _autoSyncTimer = null;
   let _autoSyncInFlight = false;
 
@@ -4728,6 +4685,262 @@ const url = 'https://weather-proxy.zloibatushka.workers.dev/?url=' + encodeURICo
       });
     }
   })();
+    // ============================================================
+  // МОСТ ДЛЯ GOOGLE DRIVE (sync.js ↔ index.html)
+  // ============================================================
+
+  // Отдаём sync.js доступ к локальному хранилищу
+  window.__pgtRemoteFiles = {
+    // Метаданные локально сохранённых файлов секции (без чтения содержимого)
+    getLocalFileMeta: function (section) {
+      const result = [];
+      const files = state.folders[section].files || [];
+      files.forEach(function (f) {
+        // считаем "локальным" только если файл есть в runtime.fileCache или в OPFS
+        // (проверка storageHas — async, поэтому здесь полагаемся на отсутствие флага remoteOnly)
+        if (!f.remoteOnly) {
+          result.push({ name: f.name, size: f.size || 0, lastModified: f.lastModified || 0 });
+        }
+      });
+      return result;
+    },
+
+    // Прочитать содержимое локального файла
+    readLocalFile: async function (section, name) {
+      try {
+        const f = await resolveFile(section, name);
+        return f || null;
+      } catch (e) { return null; }
+    },
+
+    // Записать скачанный файл в локальное хранилище
+    writeLocalFile: async function (section, name, blob) {
+      const file = new File([blob], name, { type: blob.type || '', lastModified: Date.now() });
+      runtime[section].fileCache.set(name, file);
+      await storageWrite(section, name, file);
+      // снять флаг remoteOnly
+      const existing = state.folders[section].files.find(f => f.name === name);
+      if (existing) {
+        existing.remoteOnly = false;
+        existing.size = file.size;
+        existing.lastModified = file.lastModified;
+      } else {
+        state.folders[section].files.push({
+          name: name, ext: getExt(name), size: file.size,
+          lastModified: file.lastModified, remoteOnly: false
+        });
+      }
+      saveData();
+      renderList(section);
+      renderSectionCount();
+    },
+
+    // Зарегистрировать файл, существующий только в облаке
+    registerRemote: function (section, meta) {
+      const existing = state.folders[section].files.find(f => f.name === meta.name);
+      if (existing) {
+        existing.driveId = meta.driveId;
+        existing.size = meta.size;
+        existing.lastModified = meta.lastModified;
+        // если он есть локально — remoteOnly снимаем
+        if (!existing.remoteOnly && runtime[section].fileCache.has(meta.name)) {
+          existing.remoteOnly = false;
+        }
+      } else {
+        state.folders[section].files.push(meta);
+      }
+      saveData();
+      renderList(section);
+      renderSectionCount();
+    },
+
+    setDriveId: function (section, name, driveId) {
+      const f = state.folders[section].files.find(f => f.name === name);
+      if (f) f.driveId = driveId;
+    },
+
+    removeRemote: function (section, name) {
+      const idx = state.folders[section].files.findIndex(f => f.name === name);
+      if (idx !== -1) {
+        const f = state.folders[section].files[idx];
+        if (f.remoteOnly) {
+          // удалим полностью — он был только в облаке
+          state.folders[section].files.splice(idx, 1);
+        }
+      }
+      saveData();
+      renderList(section);
+      renderSectionCount();
+    }
+  };
+
+  // Позволяем sync.js перечитать состояние после применения облачных данных
+  window.__pgtApplyRemoteData = function () {
+    loadState();
+    _searchIndexDirty = true;
+    applyTheme();
+    applyColors();
+    syncToolbarInputs();
+    applyCalendarVisibility();
+    render();
+  };
+
+  // ---- Правка resolveFile: если файла нет локально, но есть driveId — тянем из облака
+  const _originalResolveFile = resolveFile;
+  resolveFile = async function (section, name) {
+    // 1. Сначала стандартный путь (кэш, OPFS, FileSystemAccess)
+    let file = await _originalResolveFile(section, name);
+    if (file) return file;
+
+    // 2. Файла нет локально — попробуем скачать из Drive
+    const meta = state.folders[section].files.find(f => f.name === name);
+    if (meta && meta.driveId && window.__pgtDrive && window.__pgtDrive.isSignedIn()) {
+      try {
+        if (typeof showToast === 'function') showToast('Скачиваю из облака: ' + name, 'ok');
+        const blob = await window.__pgtDrive.downloadFile(section, name, meta.driveId);
+        return new File([blob], name, { type: blob.type || '', lastModified: Date.now() });
+      } catch (e) {
+        console.warn('[drive-download]', e);
+        if (typeof showToast === 'function') showToast('Не удалось скачать: ' + name, 'error');
+      }
+    }
+    return null;
+  };
+
+  // ---- Правка renderList: добавить значок облака к файлам, которых нет локально
+  const _originalRenderList = renderList;
+  renderList = function (section) {
+    _originalRenderList(section);
+    const listEl = document.getElementById(section + 'List');
+    if (!listEl) return;
+    const items = listEl.querySelectorAll('.lit-item');
+    items.forEach(function (item) {
+      const name = item.dataset.name;
+      const meta = state.folders[section].files.find(f => f.name === name);
+      if (!meta) return;
+      const body = item.querySelector('.lit-item-sub');
+      if (!body) return;
+      // убираем старые значки
+      body.querySelectorAll('.lit-item-remote-badge').forEach(b => b.remove());
+      if (meta.remoteOnly) {
+        const badge = document.createElement('span');
+        badge.className = 'lit-item-remote-badge cloud';
+        badge.textContent = '☁️ в облаке';
+        badge.title = 'Файл только в Drive. Откроется при клике — скачается автоматически.';
+        body.appendChild(badge);
+      } else if (meta.driveId) {
+        const badge = document.createElement('span');
+        badge.className = 'lit-item-remote-badge local';
+        badge.textContent = '💾 + ☁️';
+        badge.title = 'Файл есть и локально, и в Drive.';
+        body.appendChild(badge);
+      }
+    });
+  };
+
+  // ---- Кнопка выхода и обновление панели Drive в настройках
+  async function refreshDriveSettingsUI() {
+    const statusEl = document.getElementById('driveStatusRow');
+    const cloudEl = document.getElementById('driveCloudCount');
+    const localEl = document.getElementById('driveLocalCount');
+    const signOutBtn = document.getElementById('driveSignOutBtn');
+    if (!statusEl) return;
+
+    const signedIn = window.__pgtDrive && window.__pgtDrive.isSignedIn();
+    if (!signedIn) {
+      statusEl.innerHTML = '<b style="color:var(--gold)">Не подключено.</b> Нажмите 🔐 Войти в шапке.';
+      if (signOutBtn) signOutBtn.hidden = true;
+    } else {
+      statusEl.innerHTML = '<b style="color:var(--color-total)">Подключено.</b> Синхронизация активна.';
+      if (signOutBtn) signOutBtn.hidden = false;
+    }
+
+    // Считаем локальные и облачные
+    let localCount = 0, cloudCount = 0;
+    SECTIONS.forEach(function (s) {
+      state.folders[s].files.forEach(function (f) {
+        if (f.remoteOnly) cloudCount++;
+        else localCount++;
+      });
+    });
+    if (cloudEl) cloudEl.textContent = String(cloudCount);
+    if (localEl) localEl.textContent = String(localCount);
+  }
+
+  // Обновлять панель при открытии настроек
+  const _settingsBtn = document.getElementById('settingsBtn');
+  if (_settingsBtn) {
+    _settingsBtn.addEventListener('click', function () {
+      setTimeout(refreshDriveSettingsUI, 100);
+    });
+  }
+
+  // ---- Привязка кнопок Drive в настройках
+  setTimeout(function () {
+    const syncNowBtn = document.getElementById('driveSyncNowBtn');
+    if (syncNowBtn) syncNowBtn.addEventListener('click', async function () {
+      if (!window.__pgtDrive || !window.__pgtDrive.isSignedIn()) {
+        showToast('Сначала войдите в Google', 'warn');
+        return;
+      }
+      this.disabled = true;
+      this.textContent = '⏳ Синхронизация…';
+      try {
+        await window.__pgtDrive.syncNow();
+        await refreshDriveSettingsUI();
+        showToast('Синхронизировано', 'ok');
+      } catch (e) {
+        showToast('Ошибка: ' + e.message, 'error');
+      } finally {
+        this.disabled = false;
+        this.textContent = '🔄 Синхронизировать сейчас';
+      }
+    });
+
+    const cacheAllBtn = document.getElementById('driveCacheAllBtn');
+    if (cacheAllBtn) cacheAllBtn.addEventListener('click', async function () {
+      if (!window.__pgtDrive || !window.__pgtDrive.isSignedIn()) {
+        showToast('Сначала войдите в Google', 'warn');
+        return;
+      }
+      const remoteFiles = [];
+      SECTIONS.forEach(function (s) {
+        state.folders[s].files.forEach(function (f) {
+          if (f.remoteOnly && f.driveId) remoteFiles.push({ section: s, name: f.name, driveId: f.driveId });
+        });
+      });
+      if (!remoteFiles.length) { showToast('Все файлы уже локально', 'ok'); return; }
+      this.disabled = true;
+      let done = 0;
+      for (const rf of remoteFiles) {
+        this.textContent = '⏳ ' + (done + 1) + '/' + remoteFiles.length;
+        try {
+          await window.__pgtDrive.downloadFile(rf.section, rf.name, rf.driveId);
+          done++;
+        } catch (e) { console.warn('[cacheAll]', e); }
+      }
+      this.disabled = false;
+      this.textContent = '💾 Скачать всё в кэш';
+      await refreshDriveSettingsUI();
+      showToast('Скачано: ' + done + ' из ' + remoteFiles.length, 'ok');
+    });
+
+    const signOutBtn = document.getElementById('driveSignOutBtn');
+    if (signOutBtn) signOutBtn.addEventListener('click', function () {
+      if (!confirm('Выйти из Google? Синхронизация остановится. Локальные данные останутся.')) return;
+      if (window.__pgtDrive) window.__pgtDrive.signOut();
+      refreshDriveSettingsUI();
+      showToast('Вы вышли из Google', 'ok');
+    });
+  }, 500);
+
+  // ---- Запоминаем, когда локальные данные последний раз менялись
+  // (чтобы sync.js мог понять, что новее — облако или локально)
+  const _originalSaveData = saveData;
+  saveData = function () {
+    try { localStorage.setItem('pgt_v25_local_saved_at', String(Date.now())); } catch (e) {}
+    return _originalSaveData.apply(this, arguments);
+  };
 })();
 </script>
 </body>
