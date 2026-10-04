@@ -92,18 +92,7 @@
     tokenClient.requestAccessToken({ prompt: 'consent' });
   }
 
-  function trySilentSignIn() {
-    if (!tokenClient) return;
-    // prompt: '' — тихий режим. Если вход уже был раньше — токен придёт без окон.
-    // Если нет — Google молча откажет, кнопка «Войти» останется на месте.
-    try {
-      tokenClient.requestAccessToken({ prompt: '' });
-    } catch (e) {
-      showSignedOutUI();
-    }
-  }
-
-  // --- Google Drive: поиск, загрузка, сбор данных ---
+    // --- Google Drive: поиск, загрузка, сбор данных ---
   async function findFile() {
     const r = await fetch(
       "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='" + FILE_NAME + "'",
@@ -213,17 +202,17 @@
       showSignedOutUI();
     }
 
-    // 2. Дождаться загрузки Google API и тихо обновить токен, если нужно
+        // 2. Дождаться загрузки Google API и проинициализировать OAuth-клиент.
+    // Не делаем тихий вход сам — Chrome блокирует prompt:'' без активного
+    // жеста пользователя. Если токен сохранён — он уже подхвачен выше.
     let tries = 0;
     const t = setInterval(function () {
       if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
         clearInterval(t);
         initAuth();
-        if (!accessToken) trySilentSignIn();
       }
       if (++tries > 40) clearInterval(t);
     }, 250);
-  }
 
     // === Автосинхронизация (тихий режим) ===
   window.__pgtAutoSync = function () {

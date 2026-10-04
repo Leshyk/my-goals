@@ -1417,12 +1417,28 @@ let _searchIndexDirty = true;
   if (window.matchMedia) { try { window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function () { if (state.theme === 'auto') applyTheme(); }); } catch (e) {} }
   function setTheme(t) { state.theme = t; try { localStorage.setItem(THEME_KEY, t); } catch (e) {} applyTheme(); }
 
-  function idbOpen() { return new Promise(function (res, rej) { const req = indexedDB.open(IDB_NAME, 4); req.onupgradeneeded = function () { const db = req.result; if (!db.objectStoreNames.contains(IDB_HANDLES)) db.createObjectStore(IDB_HANDLES); if (!db.objectStoreNames.contains(IDB_INDEX)) db.createObjectStore(IDB_INDEX, { keyPath: 'key' }); if (!db.objectStoreNames.contains(IDB_BACKUPS)) db.createObjectStore(IDB_BACKUPS, { keyPath: 'date' }); if (!db.objectStoreNames.contains(IDB_FILES)) db.createObjectStore(IDB_FILES, { keyPath: 'key' }); }; req.onsuccess = function () { res(req.result); }; req.onerror = function () { rej(req.error); }; }); }
-  async function idbPut(store, key, val) { try { const db = await idbOpen(); await new Promise(function (res, rej) { const tx = db.transaction(store, 'readwrite'); if (key === null) tx.objectStore(store).put(val); else tx.objectStore(store).put(val, key); tx.oncomplete = res; tx.onerror = function () { rej(tx.error); }; }); db.close(); } catch (e) {} }
-  async function idbGet(store, key) { try { const db = await idbOpen(); const v = await new Promise(function (res, rej) { const tx = db.transaction(store, 'readonly'); const r = tx.objectStore(store).get(key); r.onsuccess = function () { res(r.result); }; r.onerror = function () { rej(r.error); }; }); db.close(); return v; } catch (e) { return null; } }
-  async function idbGetAll(store) { try { const db = await idbOpen(); const v = await new Promise(function (res, rej) { const tx = db.transaction(store, 'readonly'); const r = tx.objectStore(store).getAll(); r.onsuccess = function () { res(r.result); }; r.onerror = function () { rej(r.error); }; }); db.close(); return v || []; } catch (e) { return []; } }
-  async function idbDelete(store, key) { try { const db = await idbOpen(); await new Promise(function (res, rej) { const tx = db.transaction(store, 'readwrite'); tx.objectStore(store).delete(key); tx.oncomplete = res; tx.onerror = function () { rej(tx.error); }; }); db.close(); } catch (e) {} }
-  async function idbClear(store) { try { const db = await idbOpen(); await new Promise(function (res, rej) { const tx = db.transaction(store, 'readwrite'); tx.objectStore(store).clear(); tx.oncomplete = res; tx.onerror = function () { rej(tx.error); }; }); db.close(); } catch (e) {} }
+    let _idbPromise = null;
+  function idbOpen() {
+    if (_idbPromise) return _idbPromise;
+    _idbPromise = new Promise(function (res, rej) {
+      const req = indexedDB.open(IDB_NAME, 4);
+      req.onupgradeneeded = function () {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(IDB_HANDLES)) db.createObjectStore(IDB_HANDLES);
+        if (!db.objectStoreNames.contains(IDB_INDEX)) db.createObjectStore(IDB_INDEX, { keyPath: 'key' });
+        if (!db.objectStoreNames.contains(IDB_BACKUPS)) db.createObjectStore(IDB_BACKUPS, { keyPath: 'date' });
+        if (!db.objectStoreNames.contains(IDB_FILES)) db.createObjectStore(IDB_FILES, { keyPath: 'key' });
+      };
+      req.onsuccess = function () { res(req.result); };
+      req.onerror = function () { _idbPromise = null; rej(req.error); };
+    });
+    return _idbPromise;
+  }
+    async function idbPut(store, key, val) { try { const db = await idbOpen(); await new Promise(function (res, rej) { const tx = db.transaction(store, 'readwrite'); if (key === null) tx.objectStore(store).put(val); else tx.objectStore(store).put(val, key); tx.oncomplete = res; tx.onerror = function () { rej(tx.error); }; }); } catch (e) {} }
+    async function idbGet(store, key) { try { const db = await idbOpen(); const v = await new Promise(function (res, rej) { const tx = db.transaction(store, 'readonly'); const r = tx.objectStore(store).get(key); r.onsuccess = function () { res(r.result); }; r.onerror = function () { rej(r.error); }; }); return v; } catch (e) { return null; } }
+    async function idbGetAll(store) { try { const db = await idbOpen(); const v = await new Promise(function (res, rej) { const tx = db.transaction(store, 'readonly'); const r = tx.objectStore(store).getAll(); r.onsuccess = function () { res(r.result); }; r.onerror = function () { rej(r.error); }; }); return v || []; } catch (e) { return []; } }
+    async function idbDelete(store, key) { try { const db = await idbOpen(); await new Promise(function (res, rej) { const tx = db.transaction(store, 'readwrite'); tx.objectStore(store).delete(key); tx.oncomplete = res; tx.onerror = function () { rej(tx.error); }; }); } catch (e) {} }
+  async function idbClear(store) { try { const db = await idbOpen(); await new Promise(function (res, rej) { const tx = db.transaction(store, 'readwrite'); tx.objectStore(store).clear(); tx.oncomplete = res; tx.onerror = function () { rej(tx.error); }; }); } catch (e) {} }
 
   function loadState() {
     try { const raw = localStorage.getItem(THEME_KEY); if (raw === 'light' || raw === 'dark' || raw === 'auto') state.theme = raw; } catch (e) {}
@@ -1470,21 +1486,34 @@ let _searchIndexDirty = true;
     try { const raw = localStorage.getItem(TEMPLATES_KEY) || localStorage.getItem('pgt_v24_templates'); if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) state.templates = arr.filter(function (t) { return t && typeof t === 'object' && typeof t.text === 'string'; }); } } catch (e) {}
   }
 
-      // Debounced сохранения — пишут в localStorage не чаще 250 мс
+            // Debounced сохранения — пишут в localStorage не чаще 250 мс
   let _saveDataTimer = null, _savePrefsTimer = null, _saveSnippetsTimer = null, _saveNotesTimer = null, _saveTemplatesTimer = null;
+  let _lastDataHash = '';
     function saveData() {
     clearTimeout(_saveDataTimer);
     _saveDataTimer = setTimeout(function () {
-      try { localStorage.setItem(DATA_KEY, JSON.stringify({ goals: state.goals, folders: state.folders })); flashSaved(); } catch (e) {}
+      try {
+        const json = JSON.stringify({ goals: state.goals, folders: state.folders });
+        if (json === _lastDataHash) return;   // ничего не поменялось — выходим
+        _lastDataHash = json;
+        localStorage.setItem(DATA_KEY, json);
+        flashSaved();
+      } catch (e) {}
       if (typeof bcBroadcast === 'function') bcBroadcast('data-changed', {});
       _searchIndexDirty = true;
 	   scheduleAutoSync();
     }, 250);
   }
+   let _lastPrefsHash = '';
   function savePrefs() {
     clearTimeout(_savePrefsTimer);
     _savePrefsTimer = setTimeout(function () {
-      try { localStorage.setItem(PREFS_KEY, JSON.stringify({ collapsed: state.collapsed, colorTotal: state.colorTotal, colorDone: state.colorDone, calendarVisible: state.calendarVisible, notificationsEnabled: state.notificationsEnabled, pomodoroWorkMin: state.pomodoroWorkMin, pomodoroRestMin: state.pomodoroRestMin, tasksGrouping: state.tasksGrouping, tagFilter: state.tagFilter, allCollapsedSnapshot: state.allCollapsedSnapshot, notesFilter: state.notesFilter, density: state.density, ui: state.ui, favorites: state.favorites, readingPos: state.readingPos, pdfPage: state.pdfPage, pdfZoom: state.pdfZoom, pdfInvert: state.pdfInvert, litSort: state.litSort, litFavFilter: state.litFavFilter, listHidden: state.listHidden })); } catch (e) {}
+      try {
+        const json = JSON.stringify({ collapsed: state.collapsed, colorTotal: state.colorTotal, colorDone: state.colorDone, calendarVisible: state.calendarVisible, notificationsEnabled: state.notificationsEnabled, pomodoroWorkMin: state.pomodoroWorkMin, pomodoroRestMin: state.pomodoroRestMin, tasksGrouping: state.tasksGrouping, tagFilter: state.tagFilter, allCollapsedSnapshot: state.allCollapsedSnapshot, notesFilter: state.notesFilter, density: state.density, ui: state.ui, favorites: state.favorites, readingPos: state.readingPos, pdfPage: state.pdfPage, pdfZoom: state.pdfZoom, pdfInvert: state.pdfInvert, litSort: state.litSort, litFavFilter: state.litFavFilter, listHidden: state.listHidden });
+        if (json === _lastPrefsHash) return;
+        _lastPrefsHash = json;
+        localStorage.setItem(PREFS_KEY, json);
+      } catch (e) {}
       if (typeof bcBroadcast === 'function') bcBroadcast('prefs-changed', {});
 	  scheduleAutoSync();
     }, 250);
