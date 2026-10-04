@@ -20,8 +20,8 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/docx-preview@0.3.2/dist/docx-preview.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
@@ -70,6 +70,7 @@
   .app-header-left { min-width: 0; flex: 1 1 auto; }
   .app-header-right { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   .live-clock { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; padding: 4px 10px; border-radius: 6px; background: var(--bar-bg); font-family: ui-monospace, monospace; letter-spacing: .03em; }
+    .weather-badge { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; padding: 4px 10px; border-radius: 6px; background: var(--bar-bg); font-family: ui-monospace, monospace; letter-spacing: .03em; cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 4px; } .weather-badge:hover { border-color: var(--accent); } .weather-badge.loading { opacity: .5; }
   .save-indicator { font-size: 11px; color: var(--color-total); opacity: 0; transition: opacity .3s ease; padding: 4px 10px; border-radius: 6px; background: rgba(63, 185, 80, 0.12); border: 1px solid var(--color-total); }
   .save-indicator.show { opacity: 1; }
     .sync-status {
@@ -620,6 +621,7 @@ body.density-compact .subtask { padding: 2px 5px; }
     </div>
         <div class="app-header-right">
       <span class="live-clock" id="liveClock"></span>
+	  <span class="weather-badge" id="weatherBadge" title="Погода" hidden></span>
       <span class="save-indicator" id="saveIndicator">✓ Сохранено</span>
       <span class="sync-status" id="syncStatus"></span>
       <button type="button" class="header-btn" id="googleSignInBtn" title="Войти в Google">🔐 Войти</button>
@@ -1385,6 +1387,18 @@ let _searchIndexDirty = true;
     };
   }
 
+// Ждём, пока defer-скрипт догрузится. Если уже есть — вернём сразу.
+function waitForLib(name, ms) {
+  ms = ms || 8000;
+  return new Promise(function (res, rej) {
+    if (window[name]) return res(window[name]);
+    var t0 = Date.now();
+    var iv = setInterval(function () {
+      if (window[name]) { clearInterval(iv); res(window[name]); }
+      else if (Date.now() - t0 > ms) { clearInterval(iv); rej(new Error(name + ' not loaded')); }
+    }, 50);
+  });
+}
   let saveIndicatorTimer = null;
   function flashSaved() {
     const el = document.getElementById('saveIndicator');
@@ -1876,8 +1890,18 @@ let _searchIndexDirty = true;
   }
 
   function readAsText(file) { return new Promise(function (res, rej) { const r = new FileReader(); r.onload = function () { res(String(r.result || '')); }; r.onerror = function () { rej(r.error || new Error('FileReader')); }; r.readAsText(file); }); }
-  async function extractDocxText(file) { if (!window.mammoth) return ''; try { const buf = await file.arrayBuffer(); const r = await window.mammoth.extractRawText({ arrayBuffer: buf }); return r.value || ''; } catch (e) { return ''; } }
-  async function extractMarkdownHtml(file) { const text = await readAsText(file); if (window.marked && typeof window.marked.parse === 'function') { try { return window.marked.parse(text); } catch (e) {} } return '<pre style="white-space:pre-wrap">' + escapeHtml(text) + '</pre>'; }
+async function extractDocxText(file) {
+  try { await waitForLib('mammoth'); } catch (e) { return ''; }
+  try { const buf = await file.arrayBuffer(); const r = await window.mammoth.extractRawText({ arrayBuffer: buf }); return r.value || ''; } catch (e) { return ''; }
+}
+async function extractMarkdownHtml(file) {
+  const text = await readAsText(file);
+  try { await waitForLib('marked'); } catch (e) {}
+  if (window.marked && typeof window.marked.parse === 'function') {
+    try { return window.marked.parse(text); } catch (e) {}
+  }
+  return '<pre style="white-space:pre-wrap">' + escapeHtml(text) + '</pre>';
+}
   async function extractTextFromFile(file) {
     const ext = getExt(file.name);
     if (ext === 'txt' || ext === 'md' || ext === 'markdown') return await readAsText(file);
@@ -2513,12 +2537,16 @@ let _searchIndexDirty = true;
       '<div style="font-size:10px;color:var(--muted);text-align:right;">Создано: ' + formatDateTime(n.createdAt) + ' · Обновлено: ' + formatDateTime(n.updatedAt) + '</div>';
     const body = document.getElementById('noteBodyInput'); body.value = n.body || '';
     const title = document.getElementById('noteTitleInput'); const tags = document.getElementById('noteTagsInput'); const preview = document.getElementById('notePreview'); const goalSel = document.getElementById('noteGoalSelect');
-    function renderPreview() {
+        function renderPreview() {
       const html = window.marked ? window.marked.parse(body.value || '') : escapeHtml(body.value);
       preview.innerHTML = sanitizeHtml(html);
       renderKatex(preview);
     }
     renderPreview();
+    // Если marked ещё не догрузился — дождёмся и перерисуем превью один раз
+    if (!window.marked) {
+      waitForLib('marked').then(function () { renderPreview(); }).catch(function () {});
+    }
     let saveTimer = null;
     function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(function () { updateNote(n.id, { title: title.value.trim() || 'Без названия', body: body.value, tags: parseTags(tags.value), goalId: goalSel.value || null }); renderNotesList(); renderGoals(); }, 500); }
     title.addEventListener('input', scheduleSave);
@@ -2634,7 +2662,7 @@ let _searchIndexDirty = true;
     if (progress) bodyEl.addEventListener('scroll', function () { const total = bodyEl.scrollHeight - bodyEl.clientHeight; if (total <= 0) { progress.style.width = '100%'; return; } progress.style.width = Math.min(100, Math.max(0, (bodyEl.scrollTop / total) * 100)) + '%'; }, { passive: true });
     try {
       if (ext === 'pdf') await renderPdfViewer(section, file, name);
-      else if (ext === 'docx') { bodyEl.classList.add('reader-docx'); bodyEl.innerHTML = '<div class="reader-msg">Загрузка…</div>'; try { if (!window.docx || !window.docx.renderAsync) throw new Error('no docx-preview'); bodyEl.innerHTML = ''; await window.docx.renderAsync(file, bodyEl, null, { className: 'docx', inWrapper: true, breakPages: true, experimental: true, useBase64URL: true, renderHeaders: true }); restorePosition(section, name); } catch (e) { bodyEl.classList.remove('reader-docx'); bodyEl.classList.add('reader-html'); const buf = await file.arrayBuffer(); const opts = { convertImage: window.mammoth.images.imgElement(function (image) { return image.read('base64').then(function (b64) { return { src: 'data:' + (image.contentType || 'image/png') + ';base64,' + b64 }; }); }) }; const result = await window.mammoth.convertToHtml({ arrayBuffer: buf }, opts); bodyEl.innerHTML = result.value || ''; restorePosition(section, name); } }
+catch (e) { bodyEl.classList.remove('reader-docx'); bodyEl.classList.add('reader-html'); try { await waitForLib('mammoth'); } catch (e2) { bodyEl.innerHTML = '<div class="reader-msg error">Mammoth не загрузился</div>'; return; } const buf = await file.arrayBuffer(); const opts = { convertImage: window.mammoth.images.imgElement(function (image) { return image.read('base64').then(function (b64) { return { src: 'data:' + (image.contentType || 'image/png') + ';base64,' + b64 }; }); }) }; const result = await window.mammoth.convertToHtml({ arrayBuffer: buf }, opts); bodyEl.innerHTML = result.value || ''; restorePosition(section, name); }
       else if (ext === 'md' || ext === 'markdown') { bodyEl.classList.add('reader-html'); bodyEl.innerHTML = await extractMarkdownHtml(file); restorePosition(section, name); }
       else if (ext === 'txt') { bodyEl.classList.add('reader-text'); bodyEl.innerHTML = escapeHtmlWithLinks(await readAsText(file)); restorePosition(section, name); }
     } catch (e) { bodyEl.innerHTML = '<div class="reader-msg error">Ошибка: ' + escapeHtml(e.message || e) + '</div>'; }
@@ -4506,6 +4534,75 @@ function tickLiveClock() {
       const d = new Date();
       el.textContent = '🕐 ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
     }
+	    // === Погода по геолокации (Open-Meteo) ===
+    const WMO_ICON = { 0:'☀️', 1:'🌤', 2:'⛅', 3:'☁️', 45:'🌫', 48:'🌫', 51:'🌦', 53:'🌦', 55:'🌧', 56:'🌧', 57:'🌧', 61:'🌧', 63:'🌧', 65:'🌧', 66:'🌧', 67:'🌧', 71:'🌨', 73:'🌨', 75:'🌨', 77:'🌨', 80:'🌦', 81:'🌧', 82:'🌧', 85:'🌨', 86:'🌨', 95:'⛈', 96:'⛈', 99:'⛈' };
+    function weatherIcon(code) { return WMO_ICON[code] || '🌡'; }
+
+    async function loadWeather() {
+      const badge = document.getElementById('weatherBadge');
+      if (!badge) return;
+      // Уже загружено в этой сессии — не дёргаем повторно
+      if (badge.dataset.loaded === '1') return;
+
+      if (!navigator.geolocation) { badge.hidden = true; return; }
+
+      badge.hidden = false;
+      badge.classList.add('loading');
+      badge.textContent = '🌤 …';
+
+      navigator.geolocation.getCurrentPosition(async function (pos) {
+        const lat = pos.coords.latitude.toFixed(4);
+        const lon = pos.coords.longitude.toFixed(4);
+        try {
+          const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current=temperature_2m,weather_code&timezone=auto';
+          const r = await fetch(url);
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          const data = await r.json();
+          const cur = data && data.current;
+          if (!cur) throw new Error('no current');
+          const temp = Math.round(cur.temperature_2m);
+          const icon = weatherIcon(cur.weather_code);
+          badge.textContent = icon + ' ' + temp + '°';
+          badge.classList.remove('loading');
+          badge.dataset.loaded = '1';
+          badge.title = 'Погода сейчас: ' + temp + '°C (клик — обновить)';
+          // Кэшируем в localStorage, чтобы показывать сразу при следующем открытии
+          try { localStorage.setItem('pgt_v25_weather', JSON.stringify({ icon: icon, temp: temp, ts: Date.now() })); } catch (e) {}
+        } catch (e) {
+          badge.classList.remove('loading');
+          badge.textContent = '🌤 —';
+          badge.title = 'Не удалось получить погоду';
+        }
+      }, function (err) {
+        // Отказ в геолокации — прячем бейдж
+        badge.classList.remove('loading');
+        badge.hidden = true;
+      }, { timeout: 8000, maximumAge: 10 * 60 * 1000 });
+
+      // Клик — принудительное обновление
+      badge.onclick = function () {
+        badge.dataset.loaded = '';
+        try { localStorage.removeItem('pgt_v25_weather'); } catch (e) {}
+        badge.hidden = false;
+        loadWeather();
+      };
+    }
+
+    function showCachedWeather() {
+      const badge = document.getElementById('weatherBadge');
+      if (!badge) return;
+      try {
+        const raw = localStorage.getItem('pgt_v25_weather');
+        if (!raw) return;
+        const w = JSON.parse(raw);
+        if (!w || typeof w.temp !== 'number') return;
+        // Показываем кэш, если он не старше 2 часов
+        if (Date.now() - (w.ts || 0) > 2 * 60 * 60 * 1000) return;
+        badge.hidden = false;
+        badge.textContent = (w.icon || '🌤') + ' ' + w.temp + '°';
+        badge.title = 'Погода (кэш): ' + w.temp + '°C';
+      } catch (e) {}
+    }
     tickLiveClock();
     setInterval(tickLiveClock, 1000);
 
@@ -4612,7 +4709,10 @@ function tickLiveClock() {
         });
       });
     }
-  })();
+    })();
+  // === Погода: показать кэш сразу, обновить в фоне ===
+  showCachedWeather();
+  setTimeout(loadWeather, 1500);
 })();
 </script>
 </body>
