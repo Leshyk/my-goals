@@ -453,11 +453,9 @@
           } else { reject(new Error('no token')); }
         };
         try { tokenClient.requestAccessToken({ prompt: 'none' }); } catch (e) { reject(e); }
-      });
+     });
     },
-	      });
-    },
-      listRemote: async function (section) {
+    listRemote: async function (section) {
       if (!accessToken) accessToken = loadToken();
       if (!accessToken) throw new Error('Нет доступа. Войдите в Google.');
       await ensureAppFolders();
@@ -474,8 +472,6 @@
         };
       });
     },
-       signIn: signInUser,
-    signOut: function () {
     signIn: signInUser,
     signOut: function () {
       if (accessToken && window.google && google.accounts && google.accounts.oauth2) {
