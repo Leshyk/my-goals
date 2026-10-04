@@ -19,10 +19,11 @@
 <title>Мои цели и задачи</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/docx-preview@0.3.2/dist/docx-preview.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/docx-preview@0.3.2/dist/docx-preview.min.js"></script>
+<script type="module" src="./emf-converter.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
@@ -105,9 +106,7 @@
   .header-btn { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
   .header-btn:hover { border-color: var(--accent); }
   .header-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .header-btn.pomodoro-active { background: var(--danger); color: #fff; border-color: var(--danger); animation: pulse-red 1.5s infinite; }
-  @keyframes pulse-red { 0%,100% { box-shadow: 0 0 0 0 rgba(255,123,114,.6); } 50% { box-shadow: 0 0 0 6px rgba(255,123,114,0); } }
-
+   
   .app-shell { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; margin-top: 12px; }
   .app-shell.with-cal { grid-template-columns: minmax(0, 1fr) var(--cal-width); }
   .app-calendar { display: none; position: sticky; top: 10px; max-height: calc(100vh - 20px); overflow-y: auto; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; box-shadow: var(--shadow); }
@@ -422,15 +421,6 @@
   .search-result-title { font-size: 13px; font-weight: 600; color: var(--text); }
   .search-result-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
   .search-result mark { background: rgba(88,166,255,.4); color: inherit; padding: 0 2px; border-radius: 2px; }
-
-  .pomodoro-widget { position: fixed; bottom: 20px; left: 20px; z-index: 1500; background: var(--card); border: 2px solid var(--danger); border-radius: 14px; padding: 14px 18px; box-shadow: 0 10px 40px rgba(0,0,0,.6); display: flex; align-items: center; gap: 14px; min-width: 280px; }
-  .pomodoro-widget[hidden] { display: none; }
-  .pomodoro-time { font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); }
-  .pomodoro-info { flex: 1 1 auto; min-width: 0; }
-  .pomodoro-info .pomodoro-task { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .pomodoro-info .pomodoro-mode { font-size: 11px; color: var(--danger); font-weight: 700; text-transform: uppercase; }
-  .pomodoro-actions { display: flex; flex-direction: column; gap: 4px; }
-  .pomodoro-actions button { padding: 4px 8px; font-size: 11px; }
 
   .toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column-reverse; gap: 8px; z-index: 3000; pointer-events: none; max-width: 400px; }
   .toast { background: var(--toast-bg); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 10px; font-size: 13px; box-shadow: 0 12px 32px rgba(0,0,0,.6); transform: translateX(20px); opacity: 0; transition: transform .25s, opacity .25s; display: flex; align-items: center; gap: 10px; pointer-events: auto; }
@@ -1276,9 +1266,7 @@ const OPFS_ROOT = 'pgt_files';
     massMode: false, massSelected: {}, tasksGrouping: 'none', tagFilter: '',
 notesFilter: 'all',
     density: 'normal',
-    pomodoroWorkMin: 25, pomodoroRestMin: 5,
-    pomodoro: { active: false, mode: 'work', startTime: 0, paused: false, remaining: 0, taskId: null, taskText: '' },
-    ui: { search: '', filter: 'all', sort: 'deadline', tab: 'active', litTab: 'articles', litSearch: { articles: '', books: '' }, snippetsSearch: '', snippetsSort: 'new', snippetsTagFilter: '', snippetsGroup: 'flat', notesSearch: '' }
+     ui: { search: '', filter: 'all', sort: 'deadline', tab: 'active', litTab: 'articles', litSearch: { articles: '', books: '' }, snippetsSearch: '', snippetsSort: 'new', snippetsTagFilter: '', snippetsGroup: 'flat', notesSearch: '' }
   };
 
   const runtime = {
@@ -1290,7 +1278,6 @@ notesFilter: 'all',
   let refocusInlineTaskFor = null;
   const undoStack = [];
 let _searchIndexDirty = true;
-  let pomodoroTimer = null;
   let searchIndex = [];
   const fsSupported = typeof window.showDirectoryPicker === 'function';
 
@@ -1460,8 +1447,6 @@ let _searchIndexDirty = true;
           if (typeof p.colorDone === 'string') state.colorDone = p.colorDone;
           if (typeof p.calendarVisible === 'boolean') state.calendarVisible = p.calendarVisible;
           if (typeof p.notificationsEnabled === 'boolean') state.notificationsEnabled = p.notificationsEnabled;
-          if (typeof p.pomodoroWorkMin === 'number') state.pomodoroWorkMin = p.pomodoroWorkMin;
-          if (typeof p.pomodoroRestMin === 'number') state.pomodoroRestMin = p.pomodoroRestMin;
           if (typeof p.tasksGrouping === 'string') state.tasksGrouping = p.tasksGrouping;
           if (typeof p.tagFilter === 'string') state.tagFilter = p.tagFilter;
           if (typeof p.allCollapsedSnapshot === 'boolean') state.allCollapsedSnapshot = p.allCollapsedSnapshot;
@@ -1509,7 +1494,7 @@ let _searchIndexDirty = true;
     clearTimeout(_savePrefsTimer);
     _savePrefsTimer = setTimeout(function () {
       try {
-        const json = JSON.stringify({ collapsed: state.collapsed, colorTotal: state.colorTotal, colorDone: state.colorDone, calendarVisible: state.calendarVisible, notificationsEnabled: state.notificationsEnabled, pomodoroWorkMin: state.pomodoroWorkMin, pomodoroRestMin: state.pomodoroRestMin, tasksGrouping: state.tasksGrouping, tagFilter: state.tagFilter, allCollapsedSnapshot: state.allCollapsedSnapshot, notesFilter: state.notesFilter, density: state.density, ui: state.ui, favorites: state.favorites, readingPos: state.readingPos, pdfPage: state.pdfPage, pdfZoom: state.pdfZoom, pdfInvert: state.pdfInvert, litSort: state.litSort, litFavFilter: state.litFavFilter, listHidden: state.listHidden });
+        const json = JSON.stringify({ collapsed: state.collapsed, colorTotal: state.colorTotal, colorDone: state.colorDone, calendarVisible: state.calendarVisible, notificationsEnabled: state.notificationsEnabled, tasksGrouping: state.tasksGrouping, tagFilter: state.tagFilter, allCollapsedSnapshot: state.allCollapsedSnapshot, notesFilter: state.notesFilter, density: state.density, ui: state.ui, favorites: state.favorites, readingPos: state.readingPos, pdfPage: state.pdfPage, pdfZoom: state.pdfZoom, pdfInvert: state.pdfInvert, litSort: state.litSort, litFavFilter: state.litFavFilter, listHidden: state.listHidden });
         if (json === _lastPrefsHash) return;
         _lastPrefsHash = json;
         localStorage.setItem(PREFS_KEY, json);
@@ -2002,38 +1987,7 @@ let _searchIndexDirty = true;
     } catch (e) {}
   }
 
-  function openPomodoro() { document.getElementById('pomodoroWidget').hidden = false; startPomodoro('work'); }
-  function closePomodoro() { document.getElementById('pomodoroWidget').hidden = true; stopPomodoro(); }
-  function startPomodoro(mode, taskId, taskText) {
-    state.pomodoro.active = true; state.pomodoro.mode = mode || 'work'; state.pomodoro.startTime = Date.now(); state.pomodoro.paused = false; state.pomodoro.remaining = (state.pomodoro.mode === 'work' ? state.pomodoroWorkMin : state.pomodoroRestMin) * 60 * 1000;
-    if (taskId) { state.pomodoro.taskId = taskId; state.pomodoro.taskText = taskText || ''; }
-    updatePomodoroUI();
-    if (pomodoroTimer) clearInterval(pomodoroTimer);
-    pomodoroTimer = setInterval(tickPomodoro, 500);
-    document.getElementById('pomodoroBtn').classList.add('pomodoro-active');
-  }
-  function stopPomodoro() { state.pomodoro.active = false; if (pomodoroTimer) { clearInterval(pomodoroTimer); pomodoroTimer = null; } document.getElementById('pomodoroBtn').classList.remove('pomodoro-active'); }
-  function tickPomodoro() {
-    if (!state.pomodoro.active || state.pomodoro.paused) return;
-    const elapsed = Date.now() - state.pomodoro.startTime;
-    const remain = state.pomodoro.remaining - elapsed;
-    if (remain <= 0) { const wasWork = state.pomodoro.mode === 'work'; try { if (state.notificationsEnabled && 'Notification' in window && Notification.permission === 'granted') new Notification(wasWork ? '🍅 Работа завершена!' : '☕ Отдых завершён!', { body: wasWork ? 'Пора отдохнуть' : 'Пора работать' }); } catch (e) {} showToast(wasWork ? '🍅 Работа завершена! Пора отдохнуть' : '☕ Отдых завершён!', 'ok', null, null, 6000); startPomodoro(wasWork ? 'rest' : 'work'); }
-    else updatePomodoroUI();
-  }
-  function updatePomodoroUI() {
-    const el = document.getElementById('pomodoroWidget'); if (!el || el.hidden) return;
-    const mode = state.pomodoro.mode;
-    document.getElementById('pomodoroMode').textContent = mode === 'work' ? 'РАБОТА' : 'ОТДЫХ';
-    let remain = state.pomodoro.remaining;
-    if (state.pomodoro.active && !state.pomodoro.paused) remain = Math.max(0, remain - (Date.now() - state.pomodoro.startTime));
-    const total = Math.ceil(remain / 1000);
-    document.getElementById('pomodoroTime').textContent = String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
-    document.getElementById('pomodoroTask').textContent = state.pomodoro.taskText || '— без задачи —';
-    document.getElementById('pomodoroToggleBtn').textContent = state.pomodoro.paused ? '▶' : '⏸';
-  }
-  function pomodoroPauseResume() { if (state.pomodoro.paused) { state.pomodoro.paused = false; state.pomodoro.startTime = Date.now(); } else { const elapsed = Date.now() - state.pomodoro.startTime; state.pomodoro.remaining = Math.max(0, state.pomodoro.remaining - elapsed); state.pomodoro.paused = true; } updatePomodoroUI(); }
-
-  function requestNotifications() { if (!('Notification' in window)) { showToast('Уведомления не поддерживаются', 'error'); return; } Notification.requestPermission().then(function (perm) { if (perm === 'granted') { state.notificationsEnabled = true; savePrefs(); showToast('Уведомления включены', 'ok'); updateNotifBtn(); } else showToast('Разрешение не предоставлено', 'warn'); }); }
+   function requestNotifications() { if (!('Notification' in window)) { showToast('Уведомления не поддерживаются', 'error'); return; } Notification.requestPermission().then(function (perm) { if (perm === 'granted') { state.notificationsEnabled = true; savePrefs(); showToast('Уведомления включены', 'ok'); updateNotifBtn(); } else showToast('Разрешение не предоставлено', 'warn'); }); }
   function updateNotifBtn() { const btn = document.getElementById('notifToggle'); if (!btn) return; btn.textContent = state.notificationsEnabled ? 'Выключить' : 'Включить'; }
     // === PIN-ЗАЩИТА ===
   const PIN_HASH_KEY = 'pgt_v25_pin_hash';
@@ -2681,7 +2635,28 @@ let _searchIndexDirty = true;
     if (progress) bodyEl.addEventListener('scroll', function () { const total = bodyEl.scrollHeight - bodyEl.clientHeight; if (total <= 0) { progress.style.width = '100%'; return; } progress.style.width = Math.min(100, Math.max(0, (bodyEl.scrollTop / total) * 100)) + '%'; }, { passive: true });
     try {
       if (ext === 'pdf') await renderPdfViewer(section, file, name);
-      else if (ext === 'docx') { bodyEl.classList.add('reader-docx'); bodyEl.innerHTML = '<div class="reader-msg">Загрузка…</div>'; try { if (!window.docx || !window.docx.renderAsync) throw new Error('no docx-preview'); bodyEl.innerHTML = ''; await window.docx.renderAsync(file, bodyEl, null, { className: 'docx', inWrapper: true, breakPages: true, experimental: true, useBase64URL: true, renderHeaders: true }); restorePosition(section, name); } catch (e) { bodyEl.classList.remove('reader-docx'); bodyEl.classList.add('reader-html'); const buf = await file.arrayBuffer(); const opts = { convertImage: window.mammoth.images.imgElement(function (image) { return image.read('base64').then(function (b64) { return { src: 'data:' + (image.contentType || 'image/png') + ';base64,' + b64 }; }); }) }; const result = await window.mammoth.convertToHtml({ arrayBuffer: buf }, opts); bodyEl.innerHTML = result.value || ''; restorePosition(section, name); } }
+      else if (ext === 'docx') {
+  bodyEl.classList.add('reader-docx');
+  bodyEl.innerHTML = '<div class="reader-msg">Загрузка…</div>';
+  try {
+    if (!window.docx || !window.docx.renderAsync) throw new Error('no docx-preview');
+    bodyEl.innerHTML = '';
+    await window.docx.renderAsync(file, bodyEl, null, { className: 'docx', inWrapper: true, breakPages: true, experimental: true, useBase64URL: true, renderHeaders: true });
+    restorePosition(section, name);
+     // Конвертируем EMF/WMF, если они есть
+          if (window.convertEmfImages) {
+            window.convertEmfImages(bodyEl);
+          } catch (e) {
+    bodyEl.classList.remove('reader-docx');
+    bodyEl.classList.add('reader-html');
+    const buf = await file.arrayBuffer();
+    const opts = { convertImage: window.mammoth.images.imgElement(function (image) { return image.read('base64').then(function (b64) { return { src: 'data:' + (image.contentType || 'image/png') + ';base64,' + b64 }; }); }) };
+    const result = await window.mammoth.convertToHtml({ arrayBuffer: buf }, opts);
+    bodyEl.innerHTML = result.value || '';
+    restorePosition(section, name);
+    if (window.convertEmfImages) window.convertEmfImages(bodyEl);
+  }
+}
       else if (ext === 'md' || ext === 'markdown') { bodyEl.classList.add('reader-html'); bodyEl.innerHTML = await extractMarkdownHtml(file); restorePosition(section, name); }
       else if (ext === 'txt') { bodyEl.classList.add('reader-text'); bodyEl.innerHTML = escapeHtmlWithLinks(await readAsText(file)); restorePosition(section, name); }
     } catch (e) { bodyEl.innerHTML = '<div class="reader-msg error">Ошибка: ' + escapeHtml(e.message || e) + '</div>'; }
@@ -4017,10 +3992,11 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
   }
 
         // === Отложенный рендер (график, календарь, вкладки) ===
-   let _deferredRenderTimer = null;
+      let _deferredRenderTimer = null;
    function scheduleDeferredRender() {
-    clearTimeout(_deferredRenderTimer);
-    _deferredRenderTimer = setTimeout(function () {
+    if (_deferredRenderTimer) cancelAnimationFrame(_deferredRenderTimer);
+    _deferredRenderTimer = requestAnimationFrame(function () {
+      _deferredRenderTimer = null;
       renderHeatmap();
       if (state.calendarVisible) renderCalendar();
       if (state.ui.tab === 'archive') renderArchive();
@@ -4028,7 +4004,7 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
         SECTIONS.forEach(function (s) { renderMeta(s); renderList(s); applyListVisibility(s); });
       }
       if (state.ui.tab === 'notes') renderNotesList();
-    }, 0);
+    });
   }
 
    function render() {
