@@ -4571,7 +4571,7 @@ function tickLiveClock() {
         const lon = pos.coords.longitude.toFixed(4);
         try {
           const apiUrl = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current=temperature_2m,weather_code&timezone=auto';
-const url = 'https://corsproxy.io/?' + encodeURIComponent(apiUrl);
+const url = 'https://weather-proxy.zloibatushka.workers.dev/?url=' + encodeURIComponent(apiUrl);
           const r = await fetch(url);
           if (!r.ok) throw new Error('HTTP ' + r.status);
           const data = await r.json();
