@@ -4583,10 +4583,11 @@ function tickLiveClock() {
           badge.dataset.loaded = '1';
           badge.title = 'Погода сейчас: ' + temp + '°C (клик — обновить)';
           try { localStorage.setItem('pgt_v25_weather', JSON.stringify({ icon: icon, temp: temp, ts: Date.now() })); } catch (e) {}
-        } catch (e) {
+         } catch (e) {
           badge.classList.remove('loading');
-          badge.textContent = '🌤 —';
-          badge.title = 'Не удалось получить погоду';
+          badge.textContent = '🌤 ' + (e && e.message ? e.message.slice(0, 12) : 'err');
+          badge.title = 'Ошибка: ' + (e && e.message ? e.message : e) + ' | URL: ' + url;
+          console.warn('[weather] fetch failed:', e);
         }
       }, function (err) {
         badge.classList.remove('loading');
