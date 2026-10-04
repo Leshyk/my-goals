@@ -4580,7 +4580,7 @@ document.getElementById('manualBackupBtn').addEventListener('click', async funct
     });
     window.addEventListener('beforeunload', function () { if (runtime.articles.selected) saveCurrentPosition('articles'); if (runtime.books.selected) saveCurrentPosition('books'); if (window.speechSynthesis) window.speechSynthesis.cancel(); });
         window.addEventListener('storage', function (e) { if ([DATA_KEY, PREFS_KEY, SNIPPETS_KEY, NOTES_KEY, TEMPLATES_KEY].indexOf(e.key) !== -1) { loadState(); _searchIndexDirty = true; applyTheme(); applyColors(); syncToolbarInputs(); applyCalendarVisibility(); render(); } });
-         
+     }     
 		// === Часы реального времени в шапке ===
     
 function tickLiveClock() {
