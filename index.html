@@ -2643,10 +2643,8 @@ let _searchIndexDirty = true;
     bodyEl.innerHTML = '';
     await window.docx.renderAsync(file, bodyEl, null, { className: 'docx', inWrapper: true, breakPages: true, experimental: true, useBase64URL: true, renderHeaders: true });
     restorePosition(section, name);
-     // Конвертируем EMF/WMF, если они есть
-          if (window.convertEmfImages) {
-            window.convertEmfImages(bodyEl);
-          } catch (e) {
+    if (window.convertEmfImages) window.convertEmfImages(bodyEl);
+  } catch (e) {
     bodyEl.classList.remove('reader-docx');
     bodyEl.classList.add('reader-html');
     const buf = await file.arrayBuffer();
