@@ -137,12 +137,31 @@
   .quick-hint .cal-day-hint { color: var(--accent); font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
   .quick-hint .cal-day-hint[hidden] { display: none; }
 
-  .tabs { display: flex; gap: 6px; margin: 10px 0 12px; flex-wrap: wrap; }
-  .tab { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 8px; }
+  /* Обёртка: вертикальные табы слева + основной контент справа */
+  .main-layout { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: start; margin: 10px 0 0; }
+  .tabs { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 8px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); position: sticky; top: 10px; z-index: 50; align-self: start; }
+  .tab { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 8px; justify-content: flex-start; white-space: nowrap; text-align: left; width: 100%; position: relative; }
   .tab:hover { color: var(--text); border-color: var(--accent); }
   .tab[aria-selected="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .tab-count { background: rgba(0,0,0,0.28); color: #fff; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 700; line-height: 1.6; min-width: 20px; text-align: center; }
+  .tab-icon { flex: 0 0 auto; font-size: 15px; line-height: 1; }
+  .tab-label { flex: 1 1 auto; min-width: 0; }
+  .tab-count { background: rgba(0,0,0,0.28); color: #fff; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 700; line-height: 1.6; min-width: 20px; text-align: center; flex: 0 0 auto; }
+  .tab[aria-selected="true"] .tab-count { background: rgba(255,255,255,0.25); }
 
+  /* На узких экранах — только иконки, счётчики как бейджи в углу */
+  @media (max-width: 700px) {
+    .tab-label { display: none; }
+    .tab { padding: 10px; justify-content: center; }
+    .tab-icon { font-size: 17px; }
+    .tab-count { position: absolute; top: -5px; right: -5px; padding: 0 5px; font-size: 9px; min-width: 16px; line-height: 1.4; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+  }
+  @media (max-width: 500px) {
+    .main-layout { gap: 8px; }
+    .tabs { padding: 5px; gap: 5px; top: 6px; }
+    .tab { padding: 8px; border-radius: 6px; }
+    .tab-icon { font-size: 16px; }
+  }
+  
   .stats { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; box-shadow: var(--shadow); margin-bottom: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   @media (max-width: 600px) { .stats { grid-template-columns: 1fr; } }
   .stat { background: var(--bar-bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; }
@@ -617,11 +636,12 @@ body.density-compact .subtask { padding: 2px 5px; }
     </div>
   </div>
 
+   <div class="main-layout">
   <nav class="tabs" role="tablist">
-    <button class="tab" role="tab" data-tab="active" aria-selected="true">📋 Активные</button>
-    <button class="tab" role="tab" data-tab="archive" aria-selected="false">📦 Архив <span class="tab-count" id="archiveCount">0</span></button>
-    <button class="tab" role="tab" data-tab="literature" aria-selected="false">📚 Литература <span class="tab-count" id="literatureCount">0</span></button>
-    <button class="tab" role="tab" data-tab="notes" aria-selected="false">📝 Заметки <span class="tab-count" id="notesCount">0</span></button>
+    <button class="tab" role="tab" data-tab="active" aria-selected="true"><span class="tab-icon">📋</span><span class="tab-label">Активные</span></button>
+    <button class="tab" role="tab" data-tab="archive" aria-selected="false"><span class="tab-icon">📦</span><span class="tab-label">Архив</span><span class="tab-count" id="archiveCount">0</span></button>
+    <button class="tab" role="tab" data-tab="literature" aria-selected="false"><span class="tab-icon">📚</span><span class="tab-label">Литература</span><span class="tab-count" id="literatureCount">0</span></button>
+    <button class="tab" role="tab" data-tab="notes" aria-selected="false"><span class="tab-icon">📝</span><span class="tab-label">Заметки</span><span class="tab-count" id="notesCount">0</span></button>
   </nav>
 
   <div class="app-shell with-cal" id="appShell">
@@ -860,10 +880,11 @@ body.density-compact .subtask { padding: 2px 5px; }
           <button type="button" data-action="cal-next" title="Следующий">→</button>
         </div>
       </div>
-      <div class="cal-grid" id="calGrid"></div>
+            <div class="cal-grid" id="calGrid"></div>
       <div class="cal-info" id="calInfo"></div>
     </aside>
   </div>
+  </div><!-- /main-layout -->
 
   <footer>
     <div class="footer-actions">
