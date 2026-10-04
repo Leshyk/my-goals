@@ -4570,7 +4570,8 @@ function tickLiveClock() {
         const lat = pos.coords.latitude.toFixed(4);
         const lon = pos.coords.longitude.toFixed(4);
         try {
-          const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current=temperature_2m,weather_code&timezone=auto';
+          const apiUrl = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current=temperature_2m,weather_code&timezone=auto';
+const url = 'https://corsproxy.io/?' + encodeURIComponent(apiUrl);
           const r = await fetch(url);
           if (!r.ok) throw new Error('HTTP ' + r.status);
           const data = await r.json();
@@ -4583,10 +4584,10 @@ function tickLiveClock() {
           badge.dataset.loaded = '1';
           badge.title = 'Погода сейчас: ' + temp + '°C (клик — обновить)';
           try { localStorage.setItem('pgt_v25_weather', JSON.stringify({ icon: icon, temp: temp, ts: Date.now() })); } catch (e) {}
-         } catch (e) {
+                } catch (e) {
           badge.classList.remove('loading');
-          badge.textContent = '🌤 ' + (e && e.message ? e.message.slice(0, 12) : 'err');
-          badge.title = 'Ошибка: ' + (e && e.message ? e.message : e) + ' | URL: ' + url;
+          badge.textContent = '🌤 —';
+          badge.title = 'Не удалось получить погоду: ' + (e && e.message ? e.message : e);
           console.warn('[weather] fetch failed:', e);
         }
       }, function (err) {
