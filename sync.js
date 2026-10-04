@@ -88,6 +88,7 @@
         if (resp && resp.access_token) {
           accessToken = resp.access_token;
           saveToken(resp.access_token, parseInt(resp.expires_in, 10) || 3600);
+		  try { localStorage.setItem('pgt_v25_had_login', '1'); } catch (e) {}
           showSignedInUI();
           setStatus('☁️ Готово', 'ok');
           setTimeout(function () { setStatus(''); }, 2000);
@@ -433,6 +434,27 @@
   // ---------- Публичный интерфейс для index.html ----------
   window.__pgtDrive = {
     isSignedIn: () => !!accessToken,
+	    hasLoggedInBefore: function () {
+      try { return localStorage.getItem('pgt_v25_had_login') === '1'; } catch (e) { return false; }
+    },
+    trySilentReauth: function () {
+      if (!tokenClient) initAuth();
+      if (!tokenClient) return Promise.reject(new Error('GIS не загружен'));
+      return new Promise(function (resolve, reject) {
+        const prev = tokenClient.callback;
+        tokenClient.callback = function (resp) {
+          tokenClient.callback = prev;
+          if (resp && resp.access_token) {
+            accessToken = resp.access_token;
+            saveToken(resp.access_token, parseInt(resp.expires_in, 10) || 3600);
+            showSignedInUI();
+            try { localStorage.setItem('pgt_v25_had_login', '1'); } catch (e) {}
+            resolve(true);
+          } else { reject(new Error('no token')); }
+        };
+        try { tokenClient.requestAccessToken({ prompt: 'none' }); } catch (e) { reject(e); }
+      });
+    },
     signIn: signInUser,
     signOut: function () {
       if (accessToken && window.google && google.accounts && google.accounts.oauth2) {
@@ -486,6 +508,7 @@
     const saved = loadToken();
     if (saved) {
       accessToken = saved;
+	  try { localStorage.setItem('pgt_v25_had_login', '1'); } catch (e) {}
       showSignedInUI();
       setStatus('☁️ Готово', 'ok');
       // доготовим папки в фоне

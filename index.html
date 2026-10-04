@@ -672,7 +672,7 @@ body.density-compact .subtask { padding: 2px 5px; }
   <nav class="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="active" aria-selected="true"><span class="tab-icon">📋</span><span class="tab-label">Активные</span></button>
     <button class="tab" role="tab" data-tab="archive" aria-selected="false"><span class="tab-icon">📦</span><span class="tab-label">Архив</span><span class="tab-count" id="archiveCount">0</span></button>
-    <button class="tab" role="tab" data-tab="literature" aria-selected="false"><span class="tab-icon">📚</span><span class="tab-label">Литература</span><span class="tab-count" id="literatureCount">0</span></button>
+    <button class="tab" role="tab" data-tab="literature" aria-selected="false"><span class="tab-icon">📚</span><span class="tab-icon">☁️</span><span class="tab-label">Хранилище</span><span class="tab-count" id="literatureCount">0</span></button>
     <button class="tab" role="tab" data-tab="notes" aria-selected="false"><span class="tab-icon">📝</span><span class="tab-label">Заметки</span><span class="tab-count" id="notesCount">0</span></button>
   </nav>
 
@@ -818,24 +818,22 @@ body.density-compact .subtask { padding: 2px 5px; }
         </div>
         <div id="articlesPanel">
           <div class="lit-toolbar">
-            <button type="button" class="secondary" data-action="pick-folder" data-section="articles">📂 Папка</button>
-            <button type="button" class="secondary" data-action="pick-files" data-section="articles">📄 Файлы</button>
-            <button type="button" class="secondary" data-action="refresh-folder" data-section="articles">🔄</button>
-            <button type="button" class="secondary" data-action="disconnect-folder" data-section="articles">✕</button>
-            <select data-action="set-sort" data-section="articles">
-              <option value="name">По имени</option>
-              <option value="date">Сначала новые</option>
-              <option value="size">По размеру</option>
-              <option value="ext">По типу</option>
-            </select>
-            <button type="button" class="secondary fav-toggle" data-action="toggle-fav-filter" data-section="articles">⭐</button>
-            <button type="button" class="secondary hide-list-btn" data-action="toggle-list" data-section="articles">☰</button>
-            <button type="button" class="secondary" data-action="index-folder" data-section="articles">🔎 Индексировать</button>
-            <button type="button" class="secondary" data-action="search-content" data-section="articles">🔍 Поиск</button>
-            <button type="button" class="secondary snippets-btn" data-action="open-snippets">📄 Цитаты<span class="badge" data-snippets-badge></span></button>
-            <span class="spacer"></span>
-            <div class="lit-meta-info" id="articlesMeta"></div>
-          </div>
+  <button type="button" data-action="upload-to-drive" data-section="articles">➕ Загрузить в облако</button>
+  <button type="button" class="secondary" data-action="refresh-from-drive" data-section="articles">🔄 Обновить из Drive</button>
+  <select data-action="set-sort" data-section="articles">
+    <option value="name">По имени</option>
+    <option value="date">Сначала новые</option>
+    <option value="size">По размеру</option>
+    <option value="ext">По типу</option>
+  </select>
+  <button type="button" class="secondary fav-toggle" data-action="toggle-fav-filter" data-section="articles">⭐</button>
+  <button type="button" class="secondary hide-list-btn" data-action="toggle-list" data-section="articles">☰</button>
+  <button type="button" class="secondary" data-action="index-folder" data-section="articles">🔎 Индексировать</button>
+  <button type="button" class="secondary" data-action="search-content" data-section="articles">🔍 Поиск</button>
+  <button type="button" class="secondary snippets-btn" data-action="open-snippets">📄 Цитаты<span class="badge" data-snippets-badge></span></button>
+  <span class="spacer"></span>
+  <div class="lit-meta-info" id="articlesMeta"></div>
+</div>
           <div class="lit-split" id="articlesSplit">
             <aside class="lit-list-pane">
               <input type="search" class="lit-search" id="articlesSearchInput" placeholder="Поиск по имени..." />
@@ -850,24 +848,22 @@ body.density-compact .subtask { padding: 2px 5px; }
         </div>
         <div id="booksPanel" hidden>
           <div class="lit-toolbar">
-            <button type="button" class="secondary" data-action="pick-folder" data-section="books">📂 Папка</button>
-            <button type="button" class="secondary" data-action="pick-files" data-section="books">📄 Файлы</button>
-            <button type="button" class="secondary" data-action="refresh-folder" data-section="books">🔄</button>
-            <button type="button" class="secondary" data-action="disconnect-folder" data-section="books">✕</button>
-            <select data-action="set-sort" data-section="books">
-              <option value="name">По имени</option>
-              <option value="date">Сначала новые</option>
-              <option value="size">По размеру</option>
-              <option value="ext">По типу</option>
-            </select>
-            <button type="button" class="secondary fav-toggle" data-action="toggle-fav-filter" data-section="books">⭐</button>
-            <button type="button" class="secondary hide-list-btn" data-action="toggle-list" data-section="books">☰</button>
-            <button type="button" class="secondary" data-action="index-folder" data-section="books">🔎 Индексировать</button>
-            <button type="button" class="secondary" data-action="search-content" data-section="books">🔍 Поиск</button>
-            <button type="button" class="secondary snippets-btn" data-action="open-snippets">📄 Цитаты<span class="badge" data-snippets-badge></span></button>
-            <span class="spacer"></span>
-            <div class="lit-meta-info" id="booksMeta"></div>
-          </div>
+  <button type="button" data-action="upload-to-drive" data-section="books">➕ Загрузить в облако</button>
+  <button type="button" class="secondary" data-action="refresh-from-drive" data-section="books">🔄 Обновить из Drive</button>
+  <select data-action="set-sort" data-section="books">
+    <option value="name">По имени</option>
+    <option value="date">Сначала новые</option>
+    <option value="size">По размеру</option>
+    <option value="ext">По типу</option>
+  </select>
+  <button type="button" class="secondary fav-toggle" data-action="toggle-fav-filter" data-section="books">⭐</button>
+  <button type="button" class="secondary hide-list-btn" data-action="toggle-list" data-section="books">☰</button>
+  <button type="button" class="secondary" data-action="index-folder" data-section="books">🔎 Индексировать</button>
+  <button type="button" class="secondary" data-action="search-content" data-section="books">🔍 Поиск</button>
+  <button type="button" class="secondary snippets-btn" data-action="open-snippets">📄 Цитаты<span class="badge" data-snippets-badge></span></button>
+  <span class="spacer"></span>
+  <div class="lit-meta-info" id="booksMeta"></div>
+</div>
           <div class="lit-split" id="booksSplit">
             <aside class="lit-list-pane">
               <input type="search" class="lit-search" id="booksSearchInput" placeholder="Поиск по имени..." />
@@ -1207,7 +1203,23 @@ body.density-compact .subtask { padding: 2px 5px; }
     </div>
   </div>
 </div>
-
+<div class="modal-backdrop" id="googleWelcome" hidden>
+  <div class="modal modal-sm">
+    <div class="modal-body" style="text-align:center; padding: 32px 24px;">
+      <div style="font-size:56px; margin-bottom:12px;">☁️</div>
+      <h2 style="margin:0 0 8px; font-size:18px;">Добро пожаловать</h2>
+      <p style="color:var(--muted); font-size:13px; margin:0 0 20px; line-height:1.5;">
+        Ваши файлы и данные хранятся в Google Drive.<br>Войдите, чтобы начать.
+      </p>
+      <button type="button" id="googleWelcomeSignIn" style="width:100%; padding:12px; font-size:14px;">
+        🔐 Войти через Google
+      </button>
+      <button type="button" class="secondary" id="googleWelcomeSkip" style="width:100%; margin-top:8px; padding:10px; font-size:13px;">
+        Продолжить без входа
+      </button>
+    </div>
+  </div>
+</div>
 <div class="toast-container" id="toastContainer"></div>
 <button type="button" class="kbd-hint-fab" id="kbdHelpBtn" title="Горячие клавиши (?)">?</button>
 <!-- Модалка установки/смены PIN -->
@@ -2142,7 +2154,6 @@ async function extractMarkdownHtml(file) {
       if (changeBtn) changeBtn.hidden = false;
       if (removeBtn) removeBtn.hidden = false;
       if (lockNowBtn) lockNowBtn.hidden = false;
-      if (quickLock) quickLock.hidden = false;
     } else {
       statusEl.textContent = 'PIN не установлен. Нажмите «Установить PIN», чтобы защитить доступ.';
       if (setupBtn) setupBtn.hidden = false;
@@ -2150,8 +2161,9 @@ async function extractMarkdownHtml(file) {
       if (removeBtn) removeBtn.hidden = true;
       if (lockNowBtn) lockNowBtn.hidden = true;
       if (quickLock) quickLock.hidden = true;
-    }
-  }
+   }
+  if (quickLock) quickLock.hidden = false;
+}
   function openPinSetup(mode) {
     const modal = document.getElementById('pinSetupModal');
     if (!modal) return;
@@ -2283,6 +2295,7 @@ async function extractMarkdownHtml(file) {
       markSessionUnlocked();
       resetLockCounters();
       unlockApp();
+	  setTimeout(function () { continueBoot(); }, 300);
       errEl.textContent = '';
       if (attEl) { attEl.textContent = ''; attEl.className = 'lock-attempts'; }
       return;
@@ -2334,10 +2347,42 @@ async function extractMarkdownHtml(file) {
     try { sessionStorage.removeItem(PIN_UNLOCK_FLAG); } catch (e) {}
     lockApp();
   }
-  function initPin() {
+   function initPin() {
     renderPinStatus();
-    if (hasPin() && !isSessionUnlocked()) lockApp();
   }
+
+  async function bootApp() {
+    renderPinStatus();
+    if (hasPin() && !isSessionUnlocked()) {
+      lockApp();
+      return;
+    }
+    await continueBoot();
+  }
+
+  async function continueBoot() {
+    const drive = window.__pgtDrive;
+    if (!drive) return;
+    if (drive.isSignedIn && drive.isSignedIn()) return;
+    const everLoggedIn = drive.hasLoggedInBefore && drive.hasLoggedInBefore();
+    if (everLoggedIn && drive.trySilentReauth) {
+      try { await drive.trySilentReauth(); return; } catch (e) {}
+    }
+    const wel = document.getElementById('googleWelcome');
+    if (wel) wel.hidden = false;
+  }
+
+  setTimeout(function () {
+    const signInBtn = document.getElementById('googleWelcomeSignIn');
+    if (signInBtn) signInBtn.addEventListener('click', function () {
+      document.getElementById('googleWelcome').hidden = true;
+      if (window.__pgtDrive) window.__pgtDrive.signIn();
+    });
+    const skipBtn = document.getElementById('googleWelcomeSkip');
+    if (skipBtn) skipBtn.addEventListener('click', function () {
+      document.getElementById('googleWelcome').hidden = true;
+    });
+  }, 300);
   function checkNotifications() {
     if (!state.notificationsEnabled) return;
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
@@ -2607,16 +2652,21 @@ async function extractMarkdownHtml(file) {
     filtered.sort(function (a, b) { if (sortBy === 'date') { const da = a.lastModified || 0, db = b.lastModified || 0; if (da !== db) return db - da; } else if (sortBy === 'size') { const sa = a.size || 0, sb = b.size || 0; if (sa !== sb) return sb - sa; } else if (sortBy === 'ext') { const c = (a.ext || '').localeCompare(b.ext || ''); if (c !== 0) return c; } return a.name.localeCompare(b.name, 'ru', { numeric: true }); });
     return filtered;
   }
-  function renderMeta(section) {
+    function renderMeta(section) {
     const el = document.getElementById(section + 'Meta'); if (!el) return;
-    const f = state.folders[section]; const favs = state.favorites[section] || {}; const favCount = Object.keys(favs).filter(function (k) { return favs[k]; }).length;
+    const files = state.folders[section].files || [];
+    const cloudCount = files.filter(f => f.remoteOnly).length;
+    const localCount = files.length - cloudCount;
+    const favs = state.favorites[section] || {};
+    const favCount = Object.keys(favs).filter(k => favs[k]).length;
+    const isAuthed = window.__pgtDrive && window.__pgtDrive.isSignedIn && window.__pgtDrive.isSignedIn();
     const parts = [];
-    if (!fsSupported) parts.push('⚠ без авто-доступа');
-    if (f.name) parts.push('Папка: <b>' + escapeHtml(f.name) + '</b>');
-    parts.push('Файлов: <b>' + f.files.length + '</b>');
+    parts.push(isAuthed ? '☁️ <b>Google Drive</b>' : '⚠ <b>не подключено</b>');
+    if (files.length) {
+      parts.push('в облаке: <b>' + cloudCount + '</b>');
+      if (localCount) parts.push('локально: <b>' + localCount + '</b>');
+    }
     if (favCount) parts.push('⭐ <b>' + favCount + '</b>');
-    if (f.updatedAt) parts.push('обновлено ' + formatDateTime(f.updatedAt));
-    if (f.needsPermission) parts.push('<span class="badge-restore" data-action="request-permission" data-section="' + section + '">разрешить доступ</span>');
     el.innerHTML = parts.join(' · ');
   }
   function renderList(section) {
@@ -2628,7 +2678,11 @@ async function extractMarkdownHtml(file) {
     if (!filtered.length) { const hasFilter = state.litFavFilter[section] || (state.ui.litSearch[section] || '').trim(); listEl.innerHTML = '<div class="empty">' + (allFiles.length ? (hasFilter ? 'Ничего не найдено' : 'Нет файлов') : (state.folders[section].name ? 'В папке нет поддерживаемых файлов' : 'Папка не подключена')) + '</div>'; return; }
     listEl.innerHTML = filtered.map(function (f) { const ext = f.ext || getExt(f.name); const active = selected === f.name ? ' active' : ''; const isFav = !!favs[f.name]; return '<div class="lit-item' + active + '" data-section="' + section + '" data-name="' + escapeHtml(f.name) + '" tabindex="0"><div class="lit-item-icon">' + iconForExt(ext) + '</div><div class="lit-item-body"><div class="lit-item-name">' + escapeHtml(f.name) + '</div><div class="lit-item-sub"><span class="ext">' + escapeHtml(ext) + '</span>' + (f.size ? '<span>' + formatBytes(f.size) + '</span>' : '') + '</div></div><button type="button" class="lit-item-fav' + (isFav ? ' active' : '') + '" data-action="toggle-fav" data-section="' + section + '" data-name="' + escapeHtml(f.name) + '">' + (isFav ? '★' : '☆') + '</button></div>'; }).join('');
   }
-  function renderReaderEmpty(section) { const pane = document.getElementById(section + 'Reader'); if (!pane) return; const icon = section === 'books' ? '📚' : '📖'; const word = section === 'books' ? 'книгу' : 'статью'; pane.innerHTML = '<div class="reader-empty"><span class="reader-empty-icon">' + icon + '</span>Выберите ' + word + ' слева.<br><br>📌 — цитата · 📖 — режим чтения<br><kbd>←</kbd> <kbd>→</kbd> — навигация.</div>'; }
+    function renderReaderEmpty(section) {
+    const pane = document.getElementById(section + 'Reader'); if (!pane) return;
+    const icon = section === 'books' ? '📚' : '📖';
+    const word = section === 'books' ? 'книгу' : 'статью';
+    pane.innerHTML = '<div class="reader-empty"><span class="reader-empty-icon">' + icon + '</span>Выберите ' + word + ' слева или загрузите файл в облако кнопкой «➕».<br><br><b>☁️ в облаке</b> — скачается при открытии · <b>💾 + ☁️</b> — есть локально.<br><br>📌 — цитата · 📖 — режим чтения · <kbd>←</kbd> <kbd>→</kbd> — навигация.</div>';
   function saveCurrentPosition(section) { const name = runtime[section].selected; if (!name) return; const bodyEl = document.getElementById('readerBody_' + section); if (!bodyEl) return; const meta = state.folders[section].files.find(function (f) { return f.name === name; }) || {}; const ext = meta.ext || getExt(name); if (ext === 'pdf') return; state.readingPos[section][name] = bodyEl.scrollTop || 0; savePrefs(); }
   function restorePosition(section, name) { const bodyEl = document.getElementById('readerBody_' + section); if (!bodyEl) return; const pos = (state.readingPos[section] || {})[name]; if (typeof pos === 'number' && pos > 0) requestAnimationFrame(function () { bodyEl.scrollTop = pos; }); }
   function cleanupPdf(section) { const rt = runtime[section]; if (rt.pdfObserver) { try { rt.pdfObserver.disconnect(); } catch (e) {} rt.pdfObserver = null; } rt.pdfPages = []; rt.pdfDoc = null; }
@@ -4080,7 +4134,65 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
     // Тяжёлое — на следующий тик (после того как браузер отпустит главный поток)
     scheduleDeferredRender();
   }
+  async function uploadToDrive(section) {
+    if (!window.__pgtDrive || !window.__pgtDrive.isSignedIn()) { showToast('Сначала войдите в Google', 'warn'); return; }
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.accept = '.pdf,.docx,.txt,.md,.markdown';
+    input.onchange = async function () {
+      if (!input.files || !input.files.length) return;
+      let done = 0, failed = 0;
+      for (const file of input.files) {
+        if (!isSupportedFile(file.name)) continue;
+        try {
+          showToast('Загружаю: ' + file.name, 'ok', null, null, 1500);
+          runtime[section].fileCache.set(file.name, file);
+          await storageWrite(section, file.name, file);
+          let f = state.folders[section].files.find(x => x.name === file.name);
+          if (f) { f.size = file.size; f.lastModified = file.lastModified; f.remoteOnly = false; }
+          else { state.folders[section].files.push({ name: file.name, ext: getExt(file.name), size: file.size, lastModified: file.lastModified, remoteOnly: false }); }
+          const result = await window.__pgtDrive.uploadFile(section, file.name, file);
+          if (result && result.id) {
+            const fx = state.folders[section].files.find(x => x.name === file.name);
+            if (fx) fx.driveId = result.id;
+          }
+          done++;
+        } catch (e) { console.warn('[upload]', e); failed++; }
+      }
+      saveData(); renderList(section); renderSectionCount();
+      showToast('Загружено: ' + done + (failed ? ', ошибок: ' + failed : ''), done ? 'ok' : 'warn');
+      input.value = '';
+    };
+    input.click();
+  }
 
+  async function refreshFromDrive(section) {
+    if (!window.__pgtDrive || !window.__pgtDrive.isSignedIn()) { showToast('Сначала войдите в Google', 'warn'); return; }
+    showToast('Обновляю список из Drive…', 'ok');
+    try {
+      const remote = await window.__pgtDrive.listRemote(section);
+      const byName = {};
+      (remote || []).forEach(f => { byName[f.name] = f; });
+      let added = 0, updated = 0;
+      for (const name in byName) {
+        const r = byName[name];
+        const existing = state.folders[section].files.find(x => x.name === name);
+        if (existing) {
+          if (existing.driveId !== r.id) { existing.driveId = r.id; updated++; }
+          if (typeof r.size === 'string' || typeof r.size === 'number') existing.size = parseInt(r.size, 10) || existing.size;
+        } else {
+          state.folders[section].files.push({ name: name, ext: getExt(name), size: parseInt(r.size, 10) || 0, lastModified: r.modifiedTime ? new Date(r.modifiedTime).getTime() : Date.now(), driveId: r.id, remoteOnly: true });
+          added++;
+        }
+      }
+      const toRemove = [];
+      state.folders[section].files.forEach(f => { if (f.remoteOnly && f.driveId && !byName[f.name]) toRemove.push(f.name); });
+      toRemove.forEach(n => { const idx = state.folders[section].files.findIndex(x => x.name === n); if (idx !== -1) state.folders[section].files.splice(idx, 1); });
+      saveData(); renderList(section); renderSectionCount();
+      showToast('Обновлено: +' + added + ' ~' + updated, 'ok');
+    } catch (e) { console.warn('[refresh]', e); showToast('Ошибка обновления: ' + (e.message || e), 'error'); }
+  }
   function bindEvents() {
         document.getElementById('settingsBtn').addEventListener('click', function () { document.getElementById('settingsModal').hidden = false; syncToolbarInputs(); renderBackupList(); renderCacheStats(); });
     document.getElementById('globalSearchBtn').addEventListener('click', openGlobalSearch);
@@ -4277,7 +4389,9 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
         const el = e.target.closest('[data-action]'); if (!el) return;
         const action = el.dataset.action;
         const sec = el.dataset.section || section;
-        if (action === 'pick-folder') { if (fsSupported) pickFolderFSA(sec); else pickFolderFallback(sec); }
+                if (action === 'upload-to-drive') { uploadToDrive(sec); }
+        else if (action === 'refresh-from-drive') { refreshFromDrive(sec); }
+        else if (action === 'pick-folder') { if (fsSupported) pickFolderFSA(sec); else pickFolderFallback(sec); }
         else if (action === 'pick-files') pickFiles(sec);
         else if (action === 'refresh-folder') refreshFolder(sec);
         else if (action === 'disconnect-folder') disconnectFolder(sec);
@@ -4358,7 +4472,10 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
       lockNow();
     });
     const _quickLock = document.getElementById('quickLockBtn');
-    if (_quickLock) _quickLock.addEventListener('click', lockNow);
+    if (_quickLock) _quickLock.addEventListener('click', function () {
+  if (!hasPin()) { if (confirm('PIN не установлен. Установить сейчас?')) openPinSetup('setup'); return; }
+  lockNow();
+});
 
     const _pinModal = document.getElementById('pinSetupModal');
     if (_pinModal) {
@@ -4634,7 +4751,7 @@ function tickLiveClock() {
   updateSnippetsBadges();
   tryRestoreHandles();
   updateNotifBtn();
-  initPin();
+   bootApp();
   setTimeout(checkBackup, 3000);
   // Миграция старых IDB-блобов в OPFS и запрос persistent-хранилища
   (async function initStorage() {
