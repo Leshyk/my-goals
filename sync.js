@@ -235,10 +235,9 @@
   window.addEventListener('online', function () {
     if (accessToken && window.__pgtSetSyncDot) window.__pgtSetSyncDot('ok');
   });
-  window.addEventListener('offline', function () {
-    if (window.__pgtSetSyncDot) window.__pgtSetSyncDot('error');
-  });
-
+      window.addEventListener('offline', function () {
+      if (window.__pgtSetSyncDot) window.__pgtSetSyncDot('error');
+    });
      }
 
   if (document.readyState === 'loading') {
