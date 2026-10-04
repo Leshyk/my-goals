@@ -239,9 +239,10 @@
     if (window.__pgtSetSyncDot) window.__pgtSetSyncDot('error');
   });
 
-  if (document.readyState === 'loading') {
+    if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', bind);
   } else {
     bind();
   }
+}
 })();
