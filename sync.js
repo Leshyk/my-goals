@@ -182,7 +182,7 @@
 
   // ---------- JSON-данные ----------
   async function findDataFile() {
-    const q = "name='" + DATA_FILE_NAME + "' and spaces='appDataFolder'";
+    const q = "name='" + DATA_FILE_NAME + "'";
     const url = driveUrl('files?spaces=appDataFolder&q=' + encodeURIComponent(q) + '&fields=files(id,name,modifiedTime)');
     const r = await driveFetch(url);
     if (!r.ok) throw new Error('findDataFile: ' + r.status);
@@ -455,6 +455,27 @@
         try { tokenClient.requestAccessToken({ prompt: 'none' }); } catch (e) { reject(e); }
       });
     },
+	      });
+    },
+      listRemote: async function (section) {
+      if (!accessToken) accessToken = loadToken();
+      if (!accessToken) throw new Error('Нет доступа. Войдите в Google.');
+      await ensureAppFolders();
+      const folderId = folderIds[section];
+      if (!folderId) throw new Error('Папка не найдена: ' + section);
+      const files = await listFilesInFolder(folderId);
+      return files.map(function (f) {
+        return {
+          id: f.id,
+          name: f.name,
+          size: f.size || 0,
+          modifiedTime: f.modifiedTime || null,
+          md5Checksum: f.md5Checksum || null
+        };
+      });
+    },
+       signIn: signInUser,
+    signOut: function () {
     signIn: signInUser,
     signOut: function () {
       if (accessToken && window.google && google.accounts && google.accounts.oauth2) {
