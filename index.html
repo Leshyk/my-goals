@@ -621,7 +621,7 @@ body.density-compact .subtask { padding: 2px 5px; }
     </div>
         <div class="app-header-right">
       <span class="live-clock" id="liveClock"></span>
-	  <span class="weather-badge" id="weatherBadge" title="Погода" hidden></span>
+	   <span class="weather-badge" id="weatherBadge" title="Погода" hidden></span>
       <span class="save-indicator" id="saveIndicator">✓ Сохранено</span>
       <span class="sync-status" id="syncStatus"></span>
       <button type="button" class="header-btn" id="googleSignInBtn" title="Войти в Google">🔐 Войти</button>
@@ -2660,12 +2660,30 @@ async function extractMarkdownHtml(file) {
     if (!file) { bodyEl.innerHTML = '<div class="reader-msg error">Файл недоступен</div>'; return; }
     const progress = document.getElementById('readerProgress_' + section);
     if (progress) bodyEl.addEventListener('scroll', function () { const total = bodyEl.scrollHeight - bodyEl.clientHeight; if (total <= 0) { progress.style.width = '100%'; return; } progress.style.width = Math.min(100, Math.max(0, (bodyEl.scrollTop / total) * 100)) + '%'; }, { passive: true });
-    try {
+        try {
       if (ext === 'pdf') await renderPdfViewer(section, file, name);
-catch (e) { bodyEl.classList.remove('reader-docx'); bodyEl.classList.add('reader-html'); try { await waitForLib('mammoth'); } catch (e2) { bodyEl.innerHTML = '<div class="reader-msg error">Mammoth не загрузился</div>'; return; } const buf = await file.arrayBuffer(); const opts = { convertImage: window.mammoth.images.imgElement(function (image) { return image.read('base64').then(function (b64) { return { src: 'data:' + (image.contentType || 'image/png') + ';base64,' + b64 }; }); }) }; const result = await window.mammoth.convertToHtml({ arrayBuffer: buf }, opts); bodyEl.innerHTML = result.value || ''; restorePosition(section, name); }
+      else if (ext === 'docx') {
+        bodyEl.classList.add('reader-docx');
+        bodyEl.innerHTML = '<div class="reader-msg">Загрузка…</div>';
+        try {
+          if (!window.docx || !window.docx.renderAsync) throw new Error('no docx-preview');
+          bodyEl.innerHTML = '';
+          await window.docx.renderAsync(file, bodyEl, null, { className: 'docx', inWrapper: true, breakPages: true, experimental: true, useBase64URL: true, renderHeaders: true });
+          restorePosition(section, name);
+        } catch (e) {
+          bodyEl.classList.remove('reader-docx');
+          bodyEl.classList.add('reader-html');
+          try { await waitForLib('mammoth'); } catch (e2) { bodyEl.innerHTML = '<div class="reader-msg error">Mammoth не загрузился</div>'; return; }
+          const buf = await file.arrayBuffer();
+          const opts = { convertImage: window.mammoth.images.imgElement(function (image) { return image.read('base64').then(function (b64) { return { src: 'data:' + (image.contentType || 'image/png') + ';base64,' + b64 }; }); }) };
+          const result = await window.mammoth.convertToHtml({ arrayBuffer: buf }, opts);
+          bodyEl.innerHTML = result.value || '';
+          restorePosition(section, name);
+        }
+      }
       else if (ext === 'md' || ext === 'markdown') { bodyEl.classList.add('reader-html'); bodyEl.innerHTML = await extractMarkdownHtml(file); restorePosition(section, name); }
       else if (ext === 'txt') { bodyEl.classList.add('reader-text'); bodyEl.innerHTML = escapeHtmlWithLinks(await readAsText(file)); restorePosition(section, name); }
-    } catch (e) { bodyEl.innerHTML = '<div class="reader-msg error">Ошибка: ' + escapeHtml(e.message || e) + '</div>'; }
+        } catch (e) { bodyEl.innerHTML = '<div class="reader-msg error">Ошибка: ' + escapeHtml(e.message || e) + '</div>'; }
   }
    async function cacheFileBlob(section, name, file) {
     return await storageWrite(section, name, file);
@@ -4541,9 +4559,7 @@ function tickLiveClock() {
     async function loadWeather() {
       const badge = document.getElementById('weatherBadge');
       if (!badge) return;
-      // Уже загружено в этой сессии — не дёргаем повторно
       if (badge.dataset.loaded === '1') return;
-
       if (!navigator.geolocation) { badge.hidden = true; return; }
 
       badge.hidden = false;
@@ -4566,7 +4582,6 @@ function tickLiveClock() {
           badge.classList.remove('loading');
           badge.dataset.loaded = '1';
           badge.title = 'Погода сейчас: ' + temp + '°C (клик — обновить)';
-          // Кэшируем в localStorage, чтобы показывать сразу при следующем открытии
           try { localStorage.setItem('pgt_v25_weather', JSON.stringify({ icon: icon, temp: temp, ts: Date.now() })); } catch (e) {}
         } catch (e) {
           badge.classList.remove('loading');
@@ -4574,12 +4589,10 @@ function tickLiveClock() {
           badge.title = 'Не удалось получить погоду';
         }
       }, function (err) {
-        // Отказ в геолокации — прячем бейдж
         badge.classList.remove('loading');
         badge.hidden = true;
       }, { timeout: 8000, maximumAge: 10 * 60 * 1000 });
 
-      // Клик — принудительное обновление
       badge.onclick = function () {
         badge.dataset.loaded = '';
         try { localStorage.removeItem('pgt_v25_weather'); } catch (e) {}
@@ -4596,13 +4609,16 @@ function tickLiveClock() {
         if (!raw) return;
         const w = JSON.parse(raw);
         if (!w || typeof w.temp !== 'number') return;
-        // Показываем кэш, если он не старше 2 часов
         if (Date.now() - (w.ts || 0) > 2 * 60 * 60 * 1000) return;
         badge.hidden = false;
         badge.textContent = (w.icon || '🌤') + ' ' + w.temp + '°';
         badge.title = 'Погода (кэш): ' + w.temp + '°C';
       } catch (e) {}
     }
+
+    // Запуск погоды
+    showCachedWeather();
+    setTimeout(loadWeather, 1500);
     tickLiveClock();
     setInterval(tickLiveClock, 1000);
 
@@ -4709,10 +4725,7 @@ function tickLiveClock() {
         });
       });
     }
-    })();
-  // === Погода: показать кэш сразу, обновить в фоне ===
-  showCachedWeather();
-  setTimeout(loadWeather, 1500);
+  })();
 })();
 </script>
 </body>
