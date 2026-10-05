@@ -1,8 +1,8 @@
 // Service Worker — Мои цели и задачи
 // Чтобы «выпустить обновление» — поменяй CACHE_VERSION (например, pgt-v25-32)
 
-const CACHE_VERSION = 'pgt-v25-41';
-const RUNTIME_CACHE = 'pgt-runtime-v25-41';
+const CACHE_VERSION = 'pgt-v25-44';
+const RUNTIME_CACHE = 'pgt-runtime-v25-44';
 
 const PRECACHE = [
   './',
@@ -37,6 +37,8 @@ self.addEventListener('fetch', function (event) {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+ // Не трогаем Google API — иначе ответы кэшируются и не обновляются
+  if (url.hostname.endsWith('googleapis.com')) return;
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
     if (url.origin === self.location.origin) {

@@ -7,10 +7,9 @@
 
   const CLIENT_ID = '358788438808-j3duf0p7pfec636k6oscv0dtv14ffacu.apps.googleusercontent.com';
   const SCOPE = [
-  'https://www.googleapis.com/auth/drive.appdata',
-  'https://www.googleapis.com/auth/drive',
-  'https://www.googleapis.com/auth/userinfo.profile'
-].join(' ');
+    'https://www.googleapis.com/auth/drive.appdata',
+    'https://www.googleapis.com/auth/drive.file'
+  ].join(' ');
 
   const DATA_FILE_NAME = 'pgt_v25_sync_data.json';
   const APP_FOLDER_NAME = 'Мои цели и задачи';
@@ -253,7 +252,7 @@
     } catch (e) { console.warn('[applyRemote]', e); }
   }
 
-  async function syncData(silent) {
+   async function syncData(silent) {
     const remote = await findDataFile();
     let remoteContent = null;
     if (remote) {
@@ -262,15 +261,23 @@
     const localSavedAt = parseInt(localStorage.getItem(LOCAL_SAVED_AT) || '0', 10);
     const remoteSavedAt = remoteContent ? (remoteContent.savedAt || 0) : 0;
 
-    // Если облако свежее — применяем себе
-    if (remoteSavedAt > localSavedAt + 1000) {
+    // Облако явно свежее (на 2+ секунды) — применяем его себе и НЕ выгружаем обратно.
+    // Это защищает от затирания облачных правок локальной копией.
+    if (remote && remoteContent && remoteSavedAt > localSavedAt + 2000) {
       applyRemoteData(remoteContent);
-      localStorage.setItem(LOCAL_SAVED_AT, String(remoteSavedAt));
+      try { localStorage.setItem(LOCAL_SAVED_AT, String(remoteSavedAt)); } catch (e) {}
+      return;
     }
-    // Выгружаем свой свежий слепок
-    const content = JSON.stringify(collectData(), null, 2);
-    await uploadJson(remote ? remote.id : null, content);
-    localStorage.setItem(LOCAL_SAVED_AT, String(Date.now()));
+
+    // Локально новее — выгружаем наш слепок
+    if (!remote || localSavedAt > remoteSavedAt + 500) {
+      const content = JSON.stringify(collectData(), null, 2);
+      await uploadJson(remote ? remote.id : null, content);
+      try { localStorage.setItem(LOCAL_SAVED_AT, String(Date.now())); } catch (e) {}
+      return;
+    }
+
+    // Разница меньше 2 секунд — данные практически совпадают, ничего не делаем
   }
 
   // ---------- Файлы статей/книг ----------
@@ -437,23 +444,39 @@
 	    hasLoggedInBefore: function () {
       try { return localStorage.getItem('pgt_v25_had_login') === '1'; } catch (e) { return false; }
     },
-    trySilentReauth: function () {
+       trySilentReauth: function () {
       if (!tokenClient) initAuth();
       if (!tokenClient) return Promise.reject(new Error('GIS не загружен'));
       return new Promise(function (resolve, reject) {
-        const prev = tokenClient.callback;
+        let done = false;
+        const prevCb = tokenClient.callback;
+        const prevErrCb = tokenClient.error_callback;
+        const finish = function (ok, err) {
+          if (done) return;
+          done = true;
+          tokenClient.callback = prevCb;
+          tokenClient.error_callback = prevErrCb;
+          if (ok) resolve(true); else reject(err || new Error('silent reauth failed'));
+        };
+        // Таймаут на случай, если Google вообще не отвечает
+        setTimeout(function () { finish(false, new Error('silent reauth timeout')); }, 5000);
         tokenClient.callback = function (resp) {
-          tokenClient.callback = prev;
           if (resp && resp.access_token) {
             accessToken = resp.access_token;
             saveToken(resp.access_token, parseInt(resp.expires_in, 10) || 3600);
             showSignedInUI();
             try { localStorage.setItem('pgt_v25_had_login', '1'); } catch (e) {}
-            resolve(true);
-          } else { reject(new Error('no token')); }
+            finish(true);
+          } else {
+            finish(false, new Error('no token'));
+          }
         };
-        try { tokenClient.requestAccessToken({ prompt: 'none' }); } catch (e) { reject(e); }
-     });
+        tokenClient.error_callback = function (err) {
+          finish(false, err || new Error('silent reauth error'));
+        };
+        try { tokenClient.requestAccessToken({ prompt: 'none' }); }
+        catch (e) { finish(false, e); }
+      });
     },
     listRemote: async function (section) {
       if (!accessToken) accessToken = loadToken();
