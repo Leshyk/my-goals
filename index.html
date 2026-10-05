@@ -1976,6 +1976,7 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
   const SNIPPETS_KEY = 'pgt_v25_snippets';
   const NOTES_KEY = 'pgt_v25_notes';
   const TEMPLATES_KEY = 'pgt_v25_templates';
+const CUSTOM_TABS_KEY = 'pgt_v25_custom_tabs';
   const THEME_KEY = 'pgt_v25_theme';
   const IDB_NAME = 'pgt_handles_v25';
   const IDB_HANDLES = 'handles';
@@ -2013,9 +2014,10 @@ const DEFAULT_TABS = [
   { id: 'archive',    icon: '📦', label: 'Архив',     visible: true, hasCounter: true, counterId: 'archiveCount' }
 ];
 
-  const state = {
+    const state = {
     goals: [], folders: { articles: emptySection('Статьи'), books: emptySection('Книги') },
     snippets: [], notes: [], templates: [], habits: [],
+    customTabs: [], customActiveTab: null,
     collapsed: {}, colorTotal: DEFAULT_TOTAL_COLOR, colorDone: DEFAULT_DONE_COLOR,
     favorites: { articles: {}, books: {} },
     readingPos: { articles: {}, books: {} }, pdfPage: { articles: {}, books: {} },
@@ -2279,7 +2281,14 @@ function waitForLib(name, ms) {
     try { const raw = localStorage.getItem(SNIPPETS_KEY) || localStorage.getItem('pgt_v24_snippets'); if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) state.snippets = arr.map(normalizeSnippet).filter(Boolean); } } catch (e) {}
     try { const raw = localStorage.getItem(NOTES_KEY) || localStorage.getItem('pgt_v24_notes'); if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) state.notes = arr.map(normalizeNote).filter(Boolean); } } catch (e) {}
     try { const raw = localStorage.getItem(TEMPLATES_KEY) || localStorage.getItem('pgt_v24_templates'); if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) state.templates = arr.filter(function (t) { return t && typeof t === 'object' && typeof t.text === 'string'; }); } } catch (e) {}
-    try { const raw = localStorage.getItem('pgt_v25_habits'); if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) state.habits = arr.filter(function (h) { return h && typeof h === 'object' && typeof h.title === 'string'; }).map(function (h) { return { id: h.id || ('h-' + Math.random().toString(36).slice(2)), title: String(h.title).slice(0, 200), icon: String(h.icon || '🎯').slice(0, 4), marks: Array.isArray(h.marks) ? h.marks.filter(function (m) { return typeof m === 'string'; }) : [], createdAt: h.createdAt || Date.now() }; }); } } catch (e) {}
+        try {
+      const raw = localStorage.getItem(CUSTOM_TABS_KEY);
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) state.customTabs = arr.map(normalizeCustomTab).filter(Boolean);
+      }
+    } catch (e) {}
+	try { const raw = localStorage.getItem('pgt_v25_habits'); if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) state.habits = arr.filter(function (h) { return h && typeof h === 'object' && typeof h.title === 'string'; }).map(function (h) { return { id: h.id || ('h-' + Math.random().toString(36).slice(2)), title: String(h.title).slice(0, 200), icon: String(h.icon || '🎯').slice(0, 4), marks: Array.isArray(h.marks) ? h.marks.filter(function (m) { return typeof m === 'string'; }) : [], createdAt: h.createdAt || Date.now() }; }); } } catch (e) {}
       state.tabs = mergeTabs(state.tabs);
 }
 
@@ -2343,6 +2352,57 @@ scheduleDiskWrite();
 	  scheduleAutoSync();
  scheduleDiskWrite();
     }, 250);
+  }
+
+  let _saveCustomTabsTimer = null;
+  function saveCustomTabs() {
+    clearTimeout(_saveCustomTabsTimer);
+    _saveCustomTabsTimer = setTimeout(function () {
+      try {
+        localStorage.setItem(CUSTOM_TABS_KEY, JSON.stringify(state.customTabs));
+        flashSaved();
+      } catch (e) { showToast('Переполнено хранилище', 'error'); }
+      if (typeof bcBroadcast === 'function') bcBroadcast('data-changed', {});
+      _searchIndexDirty = true;
+      scheduleAutoSync();
+      scheduleDiskWrite();
+    }, 250);
+  }
+
+  function normalizeCustomTab(t) {
+    if (!t || typeof t !== 'object') return null;
+    const tab = {
+      id: typeof t.id === 'string' && t.id ? t.id : ('ct-' + Math.random().toString(36).slice(2)),
+      icon: String(t.icon || '📌').slice(0, 4),
+      label: String(t.label || 'Без названия').slice(0, 60),
+      createdAt: typeof t.createdAt === 'number' ? t.createdAt : Date.now(),
+      cards: []
+    };
+    if (Array.isArray(t.cards)) {
+      tab.cards = t.cards.map(function (c) {
+        if (!c || typeof c !== 'object') return null;
+        return {
+          id: typeof c.id === 'string' && c.id ? c.id : ('cc-' + Math.random().toString(36).slice(2)),
+          title: String(c.title || '').slice(0, 200),
+          body: String(c.body || '').slice(0, 10000),
+          done: !!c.done,
+          doneAt: typeof c.doneAt === 'number' ? c.doneAt : null,
+          archivedAt: typeof c.archivedAt === 'number' ? c.archivedAt : null,
+          createdAt: typeof c.createdAt === 'number' ? c.createdAt : Date.now()
+        };
+      }).filter(Boolean);
+    }
+    return tab;
+  }
+
+  function findCustomTab(id) {
+    for (let i = 0; i < state.customTabs.length; i++) if (state.customTabs[i].id === id) return state.customTabs[i];
+    return null;
+  }
+
+  function getActiveCustomTab() {
+    if (!state.customActiveTab) return null;
+    return findCustomTab(state.customActiveTab);
   }
 
   function saveHabits() {
@@ -3457,8 +3517,10 @@ if (hasUser && hasToken) {
     state.notes = [];
     state.templates = [];
     state.habits = [];
-    state.folders = { articles: emptySection('Статьи'), books: emptySection('Книги') };
+     state.folders = { articles: emptySection('Статьи'), books: emptySection('Книги') };
     state.collapsed = {};
+    state.customTabs = [];
+    state.customActiveTab = null;
     state.favorites = { articles: {}, books: {} };
     state.readingPos = { articles: {}, books: {} };
     state.pdfPage = { articles: {}, books: {} };
@@ -3497,10 +3559,11 @@ const isBeforeRestore = (reason === 'before-restore' || reason === 'before-json-
       ts: Date.now(),
       reason: reason || 'auto',
       data: {
-        goals: state.goals,
+               goals: state.goals,
         snippets: state.snippets,
         notes: state.notes,
         templates: state.templates,
+        customTabs: state.customTabs,
         folders: {
           articles: { name: state.folders.articles.name, files: state.folders.articles.files, updatedAt: state.folders.articles.updatedAt },
           books: { name: state.folders.books.name, files: state.folders.books.files, updatedAt: state.folders.books.updatedAt }
@@ -3704,6 +3767,7 @@ const isBeforeRestore = (reason === 'before-restore' || reason === 'before-json-
       if (Array.isArray(parsed.notes)) localStorage.setItem(NOTES_KEY, JSON.stringify(parsed.notes));
       if (Array.isArray(parsed.templates)) localStorage.setItem(TEMPLATES_KEY, JSON.stringify(parsed.templates));
       if (Array.isArray(parsed.habits)) localStorage.setItem('pgt_v25_habits', JSON.stringify(parsed.habits));
+      if (Array.isArray(parsed.customTabs)) localStorage.setItem('pgt_v25_custom_tabs', JSON.stringify(parsed.customTabs));
       if (parsed.prefs) localStorage.setItem(PREFS_KEY, JSON.stringify(parsed.prefs));
 
   // === ARIA и фокус для модалок ===
@@ -3777,6 +3841,7 @@ const isBeforeRestore = (reason === 'before-restore' || reason === 'before-json-
         notes: JSON.parse(localStorage.getItem(NOTES_KEY) || '[]'),
         templates: JSON.parse(localStorage.getItem(TEMPLATES_KEY) || '[]'),
         habits: JSON.parse(localStorage.getItem('pgt_v25_habits') || '[]'),
+ 	customTabs: JSON.parse(localStorage.getItem('pgt_v25_custom_tabs') || '[]'),
         prefs: JSON.parse(localStorage.getItem(PREFS_KEY) || '{}')
       };
       const fh = await _dataFolderHandle.getFileHandle(DATA_FOLDER_FILENAME, { create: true });
@@ -3875,6 +3940,7 @@ function autoArchiveOldCompletedTasks() {
         if (Array.isArray(b.data.snippets)) state.snippets = b.data.snippets.map(normalizeSnippet).filter(Boolean);
         if (Array.isArray(b.data.notes)) state.notes = b.data.notes.map(normalizeNote).filter(Boolean);
         if (Array.isArray(b.data.templates)) state.templates = b.data.templates;
+        if (Array.isArray(b.data.customTabs)) state.customTabs = b.data.customTabs.map(normalizeCustomTab).filter(Boolean);
         if (b.data.folders && typeof b.data.folders === 'object') {
           SECTIONS.forEach(function (s) {
             const fd = b.data.folders[s];
@@ -3886,7 +3952,7 @@ function autoArchiveOldCompletedTasks() {
             }
           });
         }
-                saveData(); saveSnippets(); saveNotes();
+                 saveData(); saveSnippets(); saveNotes(); saveCustomTabs();
         render();
         renderBackupList();
         showToast('Данные восстановлены из бэкапа', 'ok');
@@ -4373,6 +4439,7 @@ function autoArchiveOldCompletedTasks() {
     if (Array.isArray(parsed.snippets)) state.snippets = parsed.snippets.map(normalizeSnippet).filter(Boolean);
     if (Array.isArray(parsed.notes)) state.notes = parsed.notes.map(normalizeNote).filter(Boolean);
     if (Array.isArray(parsed.templates)) state.templates = parsed.templates;
+  if (Array.isArray(parsed.customTabs)) state.customTabs = parsed.customTabs.map(normalizeCustomTab).filter(Boolean);
     if (parsed.folders && typeof parsed.folders === 'object') {
       SECTIONS.forEach(function (s) {
         const fd = parsed.folders[s];
@@ -5756,7 +5823,7 @@ function toggleCalendar() { state.calendarVisible = !state.calendarVisible; save
     showToast('Обработано: ' + ids.length + ' задач', 'ok');
   }
  
-  function exportData() { const blob = new Blob([JSON.stringify({ goals: state.goals, folders: state.folders, snippets: state.snippets, notes: state.notes, templates: state.templates }, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'backup_' + new Date().toISOString().slice(0, 10) + '.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); }
+    function exportData() { const blob = new Blob([JSON.stringify({ goals: state.goals, folders: state.folders, snippets: state.snippets, notes: state.notes, templates: state.templates, customTabs: state.customTabs }, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'backup_' + new Date().toISOString().slice(0, 10) + '.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); }
   function importData(e) {
     const file = e.target.files[0]; if (!file) return;
     const r = new FileReader();
@@ -5770,6 +5837,7 @@ function toggleCalendar() { state.calendarVisible = !state.calendarVisible; save
         if (Array.isArray(parsed.snippets)) { state.snippets = parsed.snippets.map(normalizeSnippet).filter(Boolean); saveSnippets(); }
         if (Array.isArray(parsed.notes)) { state.notes = parsed.notes.map(normalizeNote).filter(Boolean); saveNotes(); }
                 if (Array.isArray(parsed.templates)) { state.templates = parsed.templates; }
+        if (Array.isArray(parsed.customTabs)) { state.customTabs = parsed.customTabs.map(normalizeCustomTab).filter(Boolean); }
         state.collapsed = {}; saveData(); savePrefs(); resetGoalForm(); resetTaskForm(); render();
       } catch (err) { alert('Ошибка: ' + err.message); }
     };
@@ -5825,7 +5893,7 @@ function toggleCalendar() { state.calendarVisible = !state.calendarVisible; save
         runtime[s].fileCache.clear();
         runtime[s].selected = null;
       });
-      state.goals = []; state.snippets = []; state.notes = []; state.templates = []; state.habits = [];
+      state.goals = []; state.snippets = []; state.notes = []; state.templates = []; state.habits = []; state.customTabs = []; state.customActiveTab = null;
       state.folders = { articles: emptySection('Статьи'), books: emptySection('Книги') };
       state.collapsed = {};
       state.colorTotal = DEFAULT_TOTAL_COLOR;

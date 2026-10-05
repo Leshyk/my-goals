@@ -1,8 +1,8 @@
 // Service Worker — Мои цели и задачи
 // Чтобы «выпустить обновление» — поменяй CACHE_VERSION (например, pgt-v25-32)
 
-const CACHE_VERSION = 'pgt-v25-53';
-const RUNTIME_CACHE = 'pgt-runtime-v25-53';
+const CACHE_VERSION = 'pgt-v25-55';
+const RUNTIME_CACHE = 'pgt-runtime-v25-55';
 
 const PRECACHE = [
   './',

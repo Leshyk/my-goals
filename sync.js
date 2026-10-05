@@ -340,7 +340,8 @@
       snippets: read('pgt_v25_snippets', '[]'),
       notes: read('pgt_v25_notes', '[]'),
       templates: read('pgt_v25_templates', '[]'),
-      habits: read('pgt_v25_habits', '[]'),
+            habits: read('pgt_v25_habits', '[]'),
+      customTabs: read('pgt_v25_custom_tabs', '[]'),
       prefs: read('pgt_v25_prefs', '{}'),
     };
   }
@@ -356,7 +357,8 @@
       if (Array.isArray(remote.snippets)) localStorage.setItem('pgt_v25_snippets', JSON.stringify(remote.snippets));
       if (Array.isArray(remote.notes)) localStorage.setItem('pgt_v25_notes', JSON.stringify(remote.notes));
       if (Array.isArray(remote.templates)) localStorage.setItem('pgt_v25_templates', JSON.stringify(remote.templates));
-      if (Array.isArray(remote.habits)) localStorage.setItem('pgt_v25_habits', JSON.stringify(remote.habits));
+            if (Array.isArray(remote.habits)) localStorage.setItem('pgt_v25_habits', JSON.stringify(remote.habits));
+      if (Array.isArray(remote.customTabs)) localStorage.setItem('pgt_v25_custom_tabs', JSON.stringify(remote.customTabs));
       if (remote.prefs && typeof remote.prefs === 'object') localStorage.setItem('pgt_v25_prefs', JSON.stringify(remote.prefs));
       if (window.__pgtApplyRemoteData) window.__pgtApplyRemoteData();
     } catch (e) { console.warn('[applyRemote]', e); }
