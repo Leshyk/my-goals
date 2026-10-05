@@ -10,7 +10,6 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <link rel="manifest" href="./manifest.webmanifest" />
 <link rel="icon" type="image/svg+xml" href="./icon.svg" />
-<link rel="icon" type="image/svg+xml" href="./icon.svg" />
 <script async defer src="https://apis.google.com/js/api.js"></script>
 <script async defer src="https://accounts.google.com/gsi/client"></script>
 <script defer src="./sync.js"></script>
@@ -949,6 +948,7 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
       <button type="button" class="header-btn" id="syncBtn" title="Синхронизировать" hidden>☁️ Синхро</button>
       <button type="button" class="header-btn" id="globalSearchBtn" title="Поиск (Ctrl+/)">🔍 Поиск</button>
 	    <button type="button" class="header-btn" id="quickLockBtn" title="Заблокировать" hidden>🔒</button>
+ <button type="button" class="header-btn" id="installPwaBtn" title="Установить как приложение" hidden>📥 Установить</button>
       <button type="button" class="header-btn active" id="calToggle" title="Календарь (Ctrl+K)">📅 Календарь</button>
       <button type="button" class="header-btn" id="settingsBtn">⚙ Настройки</button>
     </div>
@@ -1072,7 +1072,6 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
                 <option value="kanban">Kanban-доска</option>
                 <option value="none">Без группировки</option>
                 <option value="date">По датам</option>
-              </select>
               </select>
               <select id="tagFilterSelect" title="Фильтр по тегу">
                 <option value="">Все теги</option>
@@ -1699,9 +1698,14 @@ let _searchIndexDirty = true;
     };
   }
 
-  if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  }
+    // pdf.js может быть ещё не загружен — ждём и настраиваем воркер
+  waitForLib('pdfjsLib', 15000).then(function (lib) {
+    if (lib && lib.GlobalWorkerOptions) {
+      lib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  }).catch(function () {
+    console.warn('[pdf.js] не загрузился за 15 секунд');
+  });
 
   function emptySection(defaultName) { return { name: '', files: [], updatedAt: null, needsPermission: false, defaultName: defaultName }; }
 
