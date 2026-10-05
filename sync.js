@@ -11,7 +11,7 @@
     'email',
     'profile',
     'https://www.googleapis.com/auth/drive.appdata',
-    'https://www.googleapis.com/auth/drive.file'
+    'https://www.googleapis.com/auth/drive'
   ].join(' ');
 
   const DATA_FILE_NAME = 'pgt_v25_sync_data.json';
