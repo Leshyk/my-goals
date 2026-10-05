@@ -598,7 +598,75 @@ body.density-compact .subtask { padding: 2px 5px; }
 .kbd-row kbd { background: var(--bar-bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-family: ui-monospace, monospace; font-size: 11px; }
 .kbd-hint-fab { position: fixed; bottom: 20px; right: 20px; z-index: 1400; width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: #fff; border: 0; font-size: 18px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; }
 .kbd-hint-fab:hover { filter: brightness(1.1); }
-
+  /* === ЭКРАН ВХОДА GOOGLE === */
+  .login-gate {
+    position: fixed; inset: 0; z-index: 5500;
+    background: #0a1420;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px; overflow-y: auto;
+  }
+  :root[data-theme="light"] .login-gate { background: #eef1f5; }
+  .login-gate[hidden] { display: none !important; }
+  .login-gate-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 40px 32px; max-width: 440px; width: 100%;
+    text-align: center; box-shadow: 0 30px 80px rgba(0,0,0,.6);
+  }
+  .login-gate-icon { font-size: 64px; margin-bottom: 16px; line-height: 1; }
+  .login-gate-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+  .login-gate-sub { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+  .login-gate-users { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+  .login-user-row { display: flex; gap: 6px; align-items: stretch; }
+  .login-user-btn {
+    flex: 1 1 auto; display: flex; gap: 12px; align-items: center;
+    padding: 10px 14px; background: var(--card-alt);
+    border: 1px solid var(--border); border-radius: 12px;
+    cursor: pointer; font-family: inherit; text-align: left; color: var(--text);
+    transition: border-color .15s, background .15s; min-width: 0;
+  }
+  .login-user-btn:hover { border-color: var(--accent); background: var(--highlight-bg); }
+  .login-user-avatar {
+    width: 40px; height: 40px; border-radius: 50%; flex: 0 0 auto;
+    object-fit: cover; background: var(--bar-bg);
+  }
+  .login-user-avatar-letter {
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 16px; color: #fff; background: var(--accent);
+  }
+  .login-user-info { flex: 1 1 auto; min-width: 0; }
+  .login-user-name {
+    font-size: 14px; font-weight: 600; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .login-user-email {
+    font-size: 11px; color: var(--muted); white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; margin-top: 2px;
+  }
+  .login-user-remove {
+    flex: 0 0 auto; width: 40px; background: transparent;
+    border: 1px solid var(--border); border-radius: 12px; color: var(--muted);
+    cursor: pointer; font-size: 14px; font-family: inherit;
+    transition: color .15s, border-color .15s;
+  }
+  .login-user-remove:hover { color: var(--danger); border-color: var(--danger); }
+  .login-gate-btn {
+    width: 100%; padding: 14px; font-size: 15px; border-radius: 10px;
+    background: var(--accent); color: #fff; border: none;
+    font-weight: 600; cursor: pointer; font-family: inherit;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .login-gate-btn:hover { filter: brightness(1.1); }
+  .login-gate-btn-new {
+    background: transparent; color: var(--accent); border: 1px dashed var(--accent);
+  }
+  .login-gate-btn-new:hover { background: var(--highlight-bg); filter: none; }
+  .login-gate-status { font-size: 12px; color: var(--muted); min-height: 18px; margin-top: 14px; }
+  .user-badge {
+    font-size: 11px; color: var(--muted); padding: 4px 10px; border-radius: 6px;
+    background: var(--bar-bg); max-width: 180px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .user-badge[hidden] { display: none !important; }
   /* === ЭКРАН БЛОКИРОВКИ PIN === */
   .lock-screen { position: fixed; inset: 0; z-index: 5000; background: #0a1420; display: flex; align-items: center; justify-content: center; padding: 20px; }
   :root[data-theme="light"] .lock-screen { background: #eef1f5; }
@@ -930,6 +998,44 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
   .analytics-streak-num { font-size: 36px; }
   .analytics-streak { flex-direction: column; align-items: flex-start; gap: 8px; }
 }
+/* === УПРАВЛЕНИЕ ВКЛАДКАМИ === */
+.tab.tab-manage {
+  margin-top: 4px;
+  border-style: dashed;
+  border-color: var(--border);
+  color: var(--muted);
+  font-size: 12px;
+}
+.tab.tab-manage:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(88,166,255,.06);
+}
+.tabs-manage-row {
+  display: grid;
+  grid-template-columns: auto 56px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.tabs-manage-row:last-child { border-bottom: 0; }
+.tabs-manage-row input[type="checkbox"] {
+  width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; margin: 0;
+}
+.tabs-manage-row .icon-input {
+  width: 100%; text-align: center; font-size: 20px; padding: 6px 4px;
+}
+.tabs-manage-row .label-input {
+  width: 100%; font-size: 13px; padding: 6px 10px;
+}
+.tabs-manage-row .order-btns { display: flex; gap: 2px; }
+.tabs-manage-row .order-btns button {
+  padding: 4px 10px; font-size: 12px; min-width: 32px;
+  background: transparent; color: var(--text); border: 1px solid var(--border);
+}
+.tabs-manage-row .order-btns button:hover { border-color: var(--accent); }
+.tabs-manage-row .order-btns button:disabled { opacity: 0.3; cursor: default; }
 </style>
 </head>
 <body>
@@ -943,7 +1049,7 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
       <span class="live-clock" id="liveClock"></span>
 	  <span class="save-indicator" id="saveIndicator">✓ Сохранено</span>
       <span class="sync-status" id="syncStatus"></span>
-      <button type="button" class="header-btn" id="googleSignInBtn" title="Войти в Google">🔐 Войти</button>
+       <span class="user-badge" id="userBadge" hidden></span>
        <span class="sync-dot" id="syncDot" title="Не синхронизировано"></span>
       <button type="button" class="header-btn" id="syncBtn" title="Синхронизировать" hidden>☁️ Синхро</button>
       <button type="button" class="header-btn" id="globalSearchBtn" title="Поиск (Ctrl+/)">🔍 Поиск</button>
@@ -970,15 +1076,7 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
   </div>
 
      <div class="main-layout">
-  <nav class="tabs" role="tablist">
-    <button class="tab" role="tab" data-tab="today" aria-selected="false"><span class="tab-icon">📌</span><span class="tab-label">Сегодня</span></button>
-    <button class="tab" role="tab" data-tab="active" aria-selected="true"><span class="tab-icon">📋</span><span class="tab-label">Активные</span></button>
-    <button class="tab" role="tab" data-tab="literature" aria-selected="false"><span class="tab-icon">☁️</span><span class="tab-label">Хранилище</span><span class="tab-count" id="literatureCount">0</span></button>
-    <button class="tab" role="tab" data-tab="notes" aria-selected="false"><span class="tab-icon">📝</span><span class="tab-label">Заметки</span><span class="tab-count" id="notesCount">0</span></button>
-    <button class="tab" role="tab" data-tab="habits" aria-selected="false"><span class="tab-icon">📆</span><span class="tab-label">Привычки</span></button>
-    <button class="tab" role="tab" data-tab="analytics" aria-selected="false"><span class="tab-icon">📊</span><span class="tab-label">Аналитика</span></button>
-    <button class="tab" role="tab" data-tab="archive" aria-selected="false"><span class="tab-icon">📦</span><span class="tab-label">Архив</span><span class="tab-count" id="archiveCount">0</span></button>
-  </nav>
+  <nav class="tabs" role="tablist" id="tabsNav"></nav>
 
   <div class="app-shell with-cal" id="appShell">
     <div class="app-main" id="appMain">
@@ -1247,15 +1345,7 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
   </div>
   </div><!-- /main-layout -->
 
-  <footer>
-    <div class="footer-actions">
-      <button type="button" class="secondary" id="exportBtn">💾 JSON</button>
-      <button type="button" class="secondary" id="exportMdBtn">📄 Markdown-отчёт</button>
-      <button type="button" class="secondary" id="exportIcsBtn">📅 .ics</button>
-      <label class="file-label">📁 Загрузить JSON<input type="file" id="importInput" accept=".json,application/json" hidden /></label>
-      <label class="file-label">📊 Импорт CSV<input type="file" id="importCsvInput" accept=".csv,text/csv" hidden /></label>
-      <button type="button" class="danger" id="clearBtn">🗑 Очистить всё</button>
-    </div>
+    <footer>
     <div class="footer-note">Данные хранятся локально в браузере.</div>
   </footer>
 </div>
@@ -1400,7 +1490,33 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
     <button type="button" class="danger" id="driveSignOutBtn" hidden>🚪 Выйти из Google</button>
   </div>
 </div>
-                <div class="settings-section">
+         <div class="settings-section">
+        <h3>Элементы интерфейса</h3>
+        <div class="settings-row">
+          <div><label>Строка быстрой задачи</label><span class="muted">Поле вверху сайта для быстрого добавления задач</span></div>
+          <button type="button" class="secondary" id="toggleQuickInputBtn">Скрыть</button>
+        </div>
+      </div>
+             <div class="settings-section" id="advancedToolsSection">
+        <h3>🔐 Расширенные инструменты</h3>
+        <div class="muted" style="font-size:11px; margin-bottom:8px;">
+          Резервное копирование, экспорт и импорт данных. Видно только тем, кто включил режим администратора.
+        </div>
+        <div class="settings-row">
+          <div><label>Показать инструменты</label><span class="muted">Только для вас</span></div>
+          <button type="button" class="secondary" id="toggleAdvancedBtn">Показать</button>
+        </div>
+        <div id="advancedToolsBlock" hidden style="margin-top:10px; display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:8px;">
+          <button type="button" class="secondary" id="exportBtn">💾 JSON</button>
+          <button type="button" class="secondary" id="exportMdBtn">📄 Markdown-отчёт</button>
+          <button type="button" class="secondary" id="exportIcsBtn">📅 .ics</button>
+          <label class="file-label">📁 Загрузить JSON<input type="file" id="importInput" accept=".json,application/json" hidden /></label>
+          <label class="file-label">📊 Импорт CSV<input type="file" id="importCsvInput" accept=".csv,text/csv" hidden /></label>
+          <button type="button" class="danger" id="clearBtn">🗑 Очистить всё</button>
+        </div>
+      </div>
+     
+ <div class="settings-section">
         <h3>Уведомления</h3>
         <div class="settings-row">
           <div><label>О задачах с дедлайном</label><span class="muted">Проверка раз в 15 минут</span></div>
@@ -1531,23 +1647,59 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
     </div>
   </div>
 </div>
-<div class="modal-backdrop" id="googleWelcome" hidden>
+<!-- Экран входа через Google -->
+<div class="login-gate" id="loginGate" hidden>
+  <div class="login-gate-card">
+    <div class="login-gate-icon">☁️</div>
+    <div class="login-gate-title">Мои цели и задачи</div>
+    <div class="login-gate-sub">
+      Выберите, под кем войти.<br>
+      Ваши данные хранятся в вашем личном Google Drive.
+    </div>
+    <div class="login-gate-users" id="loginGateUsers"></div>
+    <button type="button" class="login-gate-btn login-gate-btn-new" id="loginGateAddBtn">
+      ＋ Добавить аккаунт
+    </button>
+    <div class="login-gate-status" id="loginGateStatus"></div>
+  </div>
+</div>
+<!-- Универсальное подтверждение -->
+<div class="modal-backdrop" id="pgtConfirmModal" hidden>
   <div class="modal modal-sm">
-    <div class="modal-body" style="text-align:center; padding: 32px 24px;">
-      <div style="font-size:56px; margin-bottom:12px;">☁️</div>
-      <h2 style="margin:0 0 8px; font-size:18px;">Добро пожаловать</h2>
-      <p style="color:var(--muted); font-size:13px; margin:0 0 20px; line-height:1.5;">
-        Ваши файлы и данные хранятся в Google Drive.<br>Войдите, чтобы начать.
-      </p>
-      <button type="button" id="googleWelcomeSignIn" style="width:100%; padding:12px; font-size:14px;">
-        🔐 Войти через Google
-      </button>
-      <button type="button" class="secondary" id="googleWelcomeSkip" style="width:100%; margin-top:8px; padding:10px; font-size:13px;">
-        Продолжить без входа
-      </button>
+    <header class="modal-head">
+      <div class="modal-title" id="pgtConfirmTitle">Подтверждение</div>
+      <button type="button" class="secondary" data-action="pgt-confirm-no">✕</button>
+    </header>
+    <div class="modal-body">
+      <div id="pgtConfirmMessage" style="font-size:14px; padding:6px 0; line-height:1.55;"></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="secondary" data-action="pgt-confirm-no" id="pgtConfirmNoBtn">Отмена</button>
+      <button type="button" class="danger" data-action="pgt-confirm-yes" id="pgtConfirmYesBtn">Да, удалить</button>
     </div>
   </div>
 </div>
+
+<!-- Управление вкладками -->
+<div class="modal-backdrop" id="tabsManageModal" hidden>
+  <div class="modal modal-sm">
+    <header class="modal-head">
+      <div class="modal-title">⚙ Управление вкладками</div>
+      <button type="button" class="secondary" data-action="close-tabs-manage">✕</button>
+    </header>
+    <div class="modal-body">
+      <div class="modal-hint">
+        Переименовывайте, меняйте иконки, скрывайте ненужное, переставляйте стрелочками. Всё сохраняется в вашем аккаунте — у других пользователей свои настройки.
+      </div>
+      <div id="tabsManageList"></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="secondary" data-action="reset-tabs">↺ Сбросить к стандарту</button>
+      <button type="button" data-action="close-tabs-manage">Готово</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast-container" id="toastContainer"></div>
 <button type="button" class="kbd-hint-fab" id="kbdHelpBtn" title="Горячие клавиши (?)">?</button>
 <!-- Модалка установки/смены PIN -->
@@ -1598,7 +1750,50 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
 <script>
 (function () {
   'use strict';
+  // === Изоляция localStorage по Google-аккаунту ===
+  (function installUserNamespace() {
+    const GLOBAL_KEYS = {
+      'pgt_v25_drive_folders': 1,
+      'pgt_v25_current_user': 1,
+      'pgt_v25_had_login': 1,
+      'pgt_v25_google_token': 1,
+      'pgt_v25_user_email': 1,
+      'pgt_v25_known_users': 1,
+      'pgt_v25_pin_hash': 1,
+      'pgt_v25_pin_salt': 1,
+      'pgt_v25_pin_len': 1,
+      'pgt_v25_pin_attempts': 1,
+      'pgt_v25_pin_lock_until': 1,
+      'pgt_v25_pin_lock_level': 1,
+      'pgt_v25_unlocked': 1
+    };
+    const origGet    = Storage.prototype.getItem;
+    const origSet    = Storage.prototype.setItem;
+    const origRemove = Storage.prototype.removeItem;
 
+    function scopeKey(key) {
+      if (typeof key !== 'string') return key;
+      if (key.indexOf('pgt_v25_') !== 0) return key;
+      if (GLOBAL_KEYS[key]) return key;
+      let uid;
+      try { uid = origGet.call(localStorage, 'pgt_v25_current_user'); } catch (e) {}
+      if (!uid) return key;
+      if (key.length > uid.length + 1 &&
+          key.slice(-uid.length - 1) === '_' + uid) return key;
+      return key + '_' + uid;
+    }
+
+    Storage.prototype.getItem = function (key) { return origGet.call(this, scopeKey(key)); };
+    Storage.prototype.setItem = function (key, value) { return origSet.call(this, scopeKey(key), value); };
+    Storage.prototype.removeItem = function (key) { return origRemove.call(this, scopeKey(key)); };
+
+    window.__pgtRawStorage = {
+      get: function (k) { return origGet.call(localStorage, k); },
+      set: function (k, v) { return origSet.call(localStorage, k, v); },
+      remove: function (k) { return origRemove.call(localStorage, k); },
+      keys: function () { return Object.keys(localStorage); }
+    };
+  })();
   const DATA_KEY = 'pgt_v25_data';
   const PREFS_KEY = 'pgt_v25_prefs';
   const SNIPPETS_KEY = 'pgt_v25_snippets';
@@ -1627,6 +1822,19 @@ const DATA_FOLDER_FILENAME = 'pgt_v25_local.json';
   const VALID_PRIORITIES = ['high', 'medium', 'low'];
   const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
   const MAX_BACKUPS = 7;
+// === ОПИСАНИЕ ВКЛАДОК ===
+// Каждый раз, когда ты (разработчик) добавляешь новую вкладку — впиши её сюда.
+// У пользователей она появится автоматически ВИДИМОЙ.
+// Они смогут её спрятать / переименовать / переставить.
+const DEFAULT_TABS = [
+  { id: 'today',      icon: '📌', label: 'Сегодня',   visible: true, hasCounter: false },
+  { id: 'active',     icon: '📋', label: 'Активные',  visible: true, hasCounter: false },
+  { id: 'literature', icon: '☁️', label: 'Хранилище', visible: true, hasCounter: true, counterId: 'literatureCount' },
+  { id: 'notes',      icon: '📝', label: 'Заметки',   visible: true, hasCounter: true, counterId: 'notesCount' },
+  { id: 'habits',     icon: '📆', label: 'Привычки',  visible: true, hasCounter: false },
+  { id: 'analytics',  icon: '📊', label: 'Аналитика', visible: true, hasCounter: false },
+  { id: 'archive',    icon: '📦', label: 'Архив',     visible: true, hasCounter: true, counterId: 'archiveCount' }
+];
 
   const state = {
     goals: [], folders: { articles: emptySection('Статьи'), books: emptySection('Книги') },
@@ -1646,6 +1854,7 @@ const DATA_FOLDER_FILENAME = 'pgt_v25_local.json';
     massMode: false, massSelected: {}, tasksGrouping: 'eisenhower', tagFilter: '',
 notesFilter: 'all',
     density: 'normal',
+     tabs: null, quickInputVisible: true, advancedToolsVisible: false,
      ui: { search: '', filter: 'all', sort: 'deadline', tab: 'active', activeTab: 'goals', litTab: 'articles', litSearch: { articles: '', books: '' }, snippetsSearch: '', snippetsSort: 'new', snippetsTagFilter: '', snippetsGroup: 'flat', notesSearch: '' }
   };
 
@@ -1707,6 +1916,30 @@ let _searchIndexDirty = true;
     console.warn('[pdf.js] не загрузился за 15 секунд');
   });
 
+// Собираем итоговый список вкладок:
+// - что пользователь настроил — оставляем
+// - что ты добавил в код — добавляем видимым
+// - чего больше нет в коде — удаляем
+function mergeTabs(userTabs) {
+  const map = {};
+  if (Array.isArray(userTabs)) {
+    userTabs.forEach(function (t) {
+      if (t && typeof t.id === 'string') map[t.id] = t;
+    });
+  }
+  return DEFAULT_TABS.map(function (def) {
+    const u = map[def.id];
+    if (!u) return Object.assign({}, def);
+    return {
+      id: def.id,
+      icon: (typeof u.icon === 'string' && u.icon) ? u.icon : def.icon,
+      label: (typeof u.label === 'string' && u.label) ? u.label : def.label,
+      visible: (typeof u.visible === 'boolean') ? u.visible : def.visible,
+      hasCounter: def.hasCounter,
+      counterId: def.counterId
+    };
+  });
+}
   function emptySection(defaultName) { return { name: '', files: [], updatedAt: null, needsPermission: false, defaultName: defaultName }; }
 
   // Утилиты
@@ -1849,6 +2082,9 @@ function waitForLib(name, ms) {
           if (typeof p.allCollapsedSnapshot === 'boolean') state.allCollapsedSnapshot = p.allCollapsedSnapshot;
           if (typeof p.notesFilter === 'string') state.notesFilter = p.notesFilter;
           if (typeof p.density === 'string') state.density = p.density;
+ 	  if (Array.isArray(p.tabs)) state.tabs = p.tabs;
+          if (typeof p.quickInputVisible === 'boolean') state.quickInputVisible = p.quickInputVisible;
+ if (typeof p.advancedToolsVisible === 'boolean') state.advancedToolsVisible = p.advancedToolsVisible;
           if (p.ui && typeof p.ui === 'object') state.ui = Object.assign({}, state.ui, p.ui);
           if (!state.ui.litSearch || typeof state.ui.litSearch !== 'object') state.ui.litSearch = { articles: '', books: '' };
           if (!state.ui.litTab) state.ui.litTab = 'articles';
@@ -1867,7 +2103,8 @@ function waitForLib(name, ms) {
     try { const raw = localStorage.getItem(NOTES_KEY) || localStorage.getItem('pgt_v24_notes'); if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) state.notes = arr.map(normalizeNote).filter(Boolean); } } catch (e) {}
     try { const raw = localStorage.getItem(TEMPLATES_KEY) || localStorage.getItem('pgt_v24_templates'); if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) state.templates = arr.filter(function (t) { return t && typeof t === 'object' && typeof t.text === 'string'; }); } } catch (e) {}
     try { const raw = localStorage.getItem('pgt_v25_habits'); if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) state.habits = arr.filter(function (h) { return h && typeof h === 'object' && typeof h.title === 'string'; }).map(function (h) { return { id: h.id || ('h-' + Math.random().toString(36).slice(2)), title: String(h.title).slice(0, 200), icon: String(h.icon || '🎯').slice(0, 4), marks: Array.isArray(h.marks) ? h.marks.filter(function (m) { return typeof m === 'string'; }) : [], createdAt: h.createdAt || Date.now() }; }); } } catch (e) {}
-  }
+      state.tabs = mergeTabs(state.tabs);
+}
 
             // Debounced сохранения — пишут в localStorage не чаще 250 мс
     let _saveDataTimer = null, _savePrefsTimer = null, _saveSnippetsTimer = null, _saveNotesTimer = null;
@@ -1901,7 +2138,7 @@ scheduleDiskWrite();
     clearTimeout(_savePrefsTimer);
     _savePrefsTimer = setTimeout(function () {
       try {
-        const json = JSON.stringify({ collapsed: state.collapsed, colorTotal: state.colorTotal, colorDone: state.colorDone, calendarVisible: state.calendarVisible, notificationsEnabled: state.notificationsEnabled, tasksGrouping: state.tasksGrouping, tagFilter: state.tagFilter, allCollapsedSnapshot: state.allCollapsedSnapshot, notesFilter: state.notesFilter, density: state.density, ui: state.ui, favorites: state.favorites, readingPos: state.readingPos, pdfPage: state.pdfPage, pdfZoom: state.pdfZoom, pdfInvert: state.pdfInvert, litSort: state.litSort, litFavFilter: state.litFavFilter, listHidden: state.listHidden });
+        const json = JSON.stringify({ collapsed: state.collapsed, colorTotal: state.colorTotal, colorDone: state.colorDone, calendarVisible: state.calendarVisible, notificationsEnabled: state.notificationsEnabled, tasksGrouping: state.tasksGrouping, tagFilter: state.tagFilter, allCollapsedSnapshot: state.allCollapsedSnapshot, notesFilter: state.notesFilter, density: state.density, tabs: state.tabs, quickInputVisible: state.quickInputVisible,  advancedToolsVisible: state.advancedToolsVisible, ui: state.ui, favorites: state.favorites, readingPos: state.readingPos, pdfPage: state.pdfPage, pdfZoom: state.pdfZoom, pdfInvert: state.pdfInvert, litSort: state.litSort, litFavFilter: state.litFavFilter, listHidden: state.listHidden });
         if (json === _lastPrefsHash) return;
         _lastPrefsHash = json;
         localStorage.setItem(PREFS_KEY, json);
@@ -2095,19 +2332,43 @@ scheduleDiskWrite();
     g.tasks.splice(idx, 1); saveData(); render();
     pushUndo(function () { g.tasks.splice(idx, 0, snapshot); saveData(); render(); }, 'удаление задачи');
   }
-  function archiveGoal(id) {
+    function archiveGoal(id) {
     if (archivingGoalId) return;
     const g = findGoal(id); if (!g) return;
     const activeTasks = g.tasks.filter(function (t) { return !t.archivedAt; });
     const pending = activeTasks.filter(function (t) { return !t.done; });
-    if (pending.length > 0) { if (!confirm('В цели «' + g.title + '» ' + pending.length + ' невыполненных. Отметить выполненными?')) return; pending.forEach(function (t) { t.done = true; }); saveData(); }
+    if (pending.length > 0) {
+      pgtConfirm({
+        title: 'Завершить цель?',
+        message: 'В цели «' + g.title + '» ' + pending.length + ' невыполненных задач. Они будут отмечены выполненными.',
+        yesLabel: 'Завершить',
+        danger: false,
+        onYes: function () { archiveGoalNow(id, pending); }
+      });
+      return;
+    }
+    archiveGoalNow(id, pending);
+  }
+  function archiveGoalNow(id, pending) {
+    const g = findGoal(id); if (!g) return;
+    const activeTasks = g.tasks.filter(function (t) { return !t.archivedAt; });
+    pending.forEach(function (t) { t.done = true; });
+    saveData();
     const goalEl = document.querySelector('.goal[data-goal-id="' + CSS.escape(id) + '"]');
     archivingGoalId = id;
     if (goalEl) { goalEl.classList.add('all-done', 'archiving'); const fill = goalEl.querySelector('.goal-progress .bar'); if (fill) { const total = activeTasks.length; const cur = total ? Math.round((total - pending.length) / total * 100) : 0; fill.style.width = cur + '%'; void fill.offsetWidth; requestAnimationFrame(function () { fill.style.width = '100%'; }); } pending.forEach(function (t) { const cb = goalEl.querySelector('.task input[data-task-id="' + CSS.escape(t.id) + '"]'); if (cb) { cb.checked = true; const r = cb.closest('.task'); if (r) r.classList.add('done'); } }); setTimeout(function () { goalEl.classList.add('fading'); }, ARCHIVE_ANIM_MS - 300); }
     setTimeout(function () { archivingGoalId = null; const gg = findGoal(id); if (!gg) { render(); return; } gg.archivedAt = Date.now(); delete state.collapsed[id]; saveData(); savePrefs(); render(); }, ARCHIVE_ANIM_MS);
   }
   function restoreGoal(id) { const g = findGoal(id); if (!g) return; g.archivedAt = null; saveData(); render(); }
-  function archiveTask(goalId, taskId) { const g = findGoal(goalId); if (!g) return; const t = g.tasks.find(function (x) { return x.id === taskId; }); if (!t) return; if (!t.done) { if (!confirm('Задача не выполнена. Пометить и в архив?')) return; t.done = true; } t.archivedAt = Date.now(); saveData(); render(); }
+    function archiveTask(goalId, taskId) {
+    const g = findGoal(goalId); if (!g) return;
+    const t = g.tasks.find(function (x) { return x.id === taskId; }); if (!t) return;
+    if (!t.done) {
+      pgtConfirm({ title: 'Задача не выполнена', message: 'Пометить её выполненной и убрать в архив?', yesLabel: 'В архив', danger: false, onYes: function(){ t.done = true; t.archivedAt = Date.now(); saveData(); render(); } });
+      return;
+    }
+    t.archivedAt = Date.now(); saveData(); render();
+  }
   function restoreTask(goalId, taskId) { const g = findGoal(goalId); if (!g) return; const t = g.tasks.find(function (x) { return x.id === taskId; }); if (!t) return; t.archivedAt = null; saveData(); render(); }
   function toggleGoalCollapse(id) {
     state.collapsed[id] = !state.collapsed[id];
@@ -2182,13 +2443,17 @@ scheduleDiskWrite();
     saveData(); render();
     closeEditTask();
   }
-  function deleteTaskFromEdit() {
+    function deleteTaskFromEdit() {
     const taskId = state.editingTaskId;
     const goalId = state.editingTaskGoalId;
     if (!taskId || !goalId) return;
-    if (!confirm('Удалить задачу?')) return;
     closeEditTask();
-    deleteTask(goalId, taskId);
+    pgtConfirm({
+      title: 'Удалить задачу?',
+      message: 'Задача будет удалена безвозвратно.',
+      yesLabel: 'Да, удалить',
+      onYes: function () { deleteTask(goalId, taskId); }
+    });
   }
 
   // === МОДАЛ РЕДАКТИРОВАНИЯ ЦЕЛИ ===
@@ -2726,7 +2991,7 @@ async function extractMarkdownHtml(file) {
       markSessionUnlocked();
       resetLockCounters();
       unlockApp();
-	  setTimeout(function () { continueBoot(); }, 300);
+      setTimeout(function () { bootApp(); }, 300);
       errEl.textContent = '';
       if (attEl) { attEl.textContent = ''; attEl.className = 'lock-attempts'; }
       return;
@@ -2766,20 +3031,191 @@ async function extractMarkdownHtml(file) {
     }
   }
   function wipeAllData() {
-    try {
-      Object.keys(localStorage).forEach(function (k) { if (k.indexOf('pgt_v25_') === 0) localStorage.removeItem(k); });
-      sessionStorage.clear();
-      try { indexedDB.deleteDatabase(IDB_NAME); } catch (e) {}
-    } catch (e) {}
-    setTimeout(function () { location.reload(); }, 3000);
-  }
+  try {
+    const keys = window.__pgtRawStorage.keys();
+    keys.forEach(function (k) {
+      if (k.indexOf('pgt_v25_') === 0) window.__pgtRawStorage.remove(k);
+    });
+    sessionStorage.clear();
+    try { indexedDB.deleteDatabase(IDB_NAME); } catch (e) {}
+  } catch (e) {}
+  setTimeout(function () { location.reload(); }, 3000);
+}
   function lockNow() {
     if (!hasPin()) return;
     try { sessionStorage.removeItem(PIN_UNLOCK_FLAG); } catch (e) {}
     lockApp();
   }
-   function initPin() {
+  // === ЭЛЕМЕНТЫ ИНТЕРФЕЙСА ===
+function applyQuickInputVisibility() {
+  const wrap = document.querySelector('.quick-input-wrap');
+  if (wrap) wrap.hidden = !state.quickInputVisible;
+  const btn = document.getElementById('toggleQuickInputBtn');
+  if (btn) btn.textContent = state.quickInputVisible ? 'Скрыть' : 'Показать';
+}
+function applyAdvancedToolsVisibility() {
+  const block = document.getElementById('advancedToolsBlock');
+  if (block) block.hidden = !state.advancedToolsVisible;
+  const btn = document.getElementById('toggleAdvancedBtn');
+  if (btn) btn.textContent = state.advancedToolsVisible ? 'Скрыть' : 'Показать';
+}
+ // === УНИВЕРСАЛЬНОЕ ПОДТВЕРЖДЕНИЕ ===
+function pgtConfirm(opts) {
+  // opts = { message, onYes, yesLabel, danger, title }
+  const modal = document.getElementById('pgtConfirmModal');
+  if (!modal) return;
+  document.getElementById('pgtConfirmTitle').textContent = opts.title || 'Подтверждение';
+  document.getElementById('pgtConfirmMessage').textContent = opts.message || '';
+  const yesBtn = document.getElementById('pgtConfirmYesBtn');
+  yesBtn.textContent = opts.yesLabel || 'Да';
+  yesBtn.className = (opts.danger === false) ? 'secondary' : 'danger';
+  modal.hidden = false;
+
+  function close() {
+    modal.hidden = true;
+    modal.removeEventListener('click', onClick);
+    document.removeEventListener('keydown', onKey);
+  }
+  function onClick(e) {
+    const el = e.target.closest('[data-action]');
+    if (!el) return;
+    const action = el.dataset.action;
+    if (action === 'pgt-confirm-yes') {
+      close();
+      if (typeof opts.onYes === 'function') opts.onYes();
+    } else if (action === 'pgt-confirm-no') {
+      close();
+      if (typeof opts.onNo === 'function') opts.onNo();
+    }
+  }
+  function onKey(e) {
+    if (e.key === 'Escape') close();
+  }
+  modal.addEventListener('click', onClick);
+  document.addEventListener('keydown', onKey);
+  setTimeout(function () { yesBtn.focus(); }, 50);
+}
+function initPin() {
     renderPinStatus();
+  }
+
+    // === Логин-гейт ===
+  function showLoginGate() {
+    const gate = document.getElementById('loginGate');
+    if (gate) gate.hidden = false;
+    document.body.classList.add('login-gate-open');
+    renderLoginGateUsers();
+  }
+
+  function hideLoginGate() {
+    const gate = document.getElementById('loginGate');
+    if (gate) gate.hidden = true;
+    document.body.classList.remove('login-gate-open');
+  }
+
+  function updateUserBadge() {
+    const el = document.getElementById('userBadge');
+    if (!el) return;
+    const email = (window.__pgtDrive && window.__pgtDrive.getUserEmail && window.__pgtDrive.getUserEmail()) || '';
+    if (email) {
+      el.textContent = '👤 ' + email;
+      el.hidden = false;
+    } else {
+      el.hidden = true;
+    }
+  }
+
+  function renderLoginGateUsers() {
+    const box = document.getElementById('loginGateUsers');
+    const addBtn = document.getElementById('loginGateAddBtn');
+    if (!box) return;
+
+    const users = (window.__pgtDrive && window.__pgtDrive.getKnownUsers)
+      ? window.__pgtDrive.getKnownUsers()
+      : [];
+
+    if (!users.length) {
+      box.innerHTML = '';
+      if (addBtn) {
+        addBtn.textContent = '🔐 Войти через Google';
+        addBtn.classList.remove('login-gate-btn-new');
+      }
+      return;
+    }
+
+    if (addBtn) {
+      addBtn.textContent = '＋ Добавить аккаунт';
+      addBtn.classList.add('login-gate-btn-new');
+    }
+
+    box.innerHTML = users.map(function (u) {
+      const initial = (u.name || u.email || '?').charAt(0).toUpperCase();
+      const avatar = u.picture
+        ? '<img src="' + escapeHtml(u.picture) + '" alt="" class="login-user-avatar" />'
+        : '<div class="login-user-avatar login-user-avatar-letter">' + escapeHtml(initial) + '</div>';
+      return '<div class="login-user-row" data-sub="' + escapeHtml(u.sub) + '">' +
+        '<button type="button" class="login-user-btn" data-action="login-user" data-email="' + escapeHtml(u.email) + '">' +
+          avatar +
+          '<div class="login-user-info">' +
+            '<div class="login-user-name">' + escapeHtml(u.name || u.email) + '</div>' +
+            '<div class="login-user-email">' + escapeHtml(u.email) + '</div>' +
+          '</div>' +
+        '</button>' +
+        '<button type="button" class="login-user-remove" data-action="remove-user" data-sub="' + escapeHtml(u.sub) + '" title="Забыть этот аккаунт на этом устройстве">✕</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  function setGateStatus(text) {
+    const el = document.getElementById('loginGateStatus');
+    if (el) el.textContent = text || '';
+  }
+
+  function initLoginGate() {
+    const box = document.getElementById('loginGateUsers');
+    const addBtn = document.getElementById('loginGateAddBtn');
+    if (!box || !addBtn) return;
+
+    box.addEventListener('click', async function (e) {
+      const row = e.target.closest('[data-action]');
+      if (!row) return;
+      const action = row.dataset.action;
+
+           if (action === 'remove-user') {
+        e.stopPropagation();
+        const _sub = row.dataset.sub;
+        pgtConfirm({ title: 'Забыть аккаунт?', message: 'Аккаунт исчезнет из списка на этом устройстве. Данные в Google Drive останутся.', yesLabel: 'Забыть', onYes: function(){
+          if (window.__pgtDrive && window.__pgtDrive.removeKnownUser) {
+            window.__pgtDrive.removeKnownUser(_sub);
+          }
+          renderLoginGateUsers();
+        } });
+        return;
+      }
+
+      if (action === 'login-user') {
+        const email = row.dataset.email || '';
+        setGateStatus('Проверяю…');
+        try {
+          await window.__pgtDrive.signInSilentForKnownUser(email);
+          setGateStatus('');
+        } catch (silentErr) {
+          setGateStatus('Открываю окно Google…');
+          try { window.__pgtDrive.signInAs(email); }
+          catch (err) { setGateStatus('Ошибка: ' + (err.message || err)); }
+        }
+      }
+    });
+
+    addBtn.addEventListener('click', function () {
+      if (!window.__pgtDrive) {
+        setGateStatus('Google ещё загружается… попробуйте через секунду.');
+        return;
+      }
+      setGateStatus('Открываю окно Google…');
+      try { window.__pgtDrive.signIn(); }
+      catch (e) { setGateStatus('Ошибка: ' + (e.message || e)); }
+    });
   }
 
   async function bootApp() {
@@ -2788,32 +3224,80 @@ async function extractMarkdownHtml(file) {
       lockApp();
       return;
     }
-    await continueBoot();
+   const hasUser  = !!window.__pgtRawStorage.get('pgt_v25_current_user');
+let hasToken = false;
+try {
+  const rawT = window.__pgtRawStorage.get('pgt_v25_google_token');
+  if (rawT) {
+    const t = JSON.parse(rawT);
+    if (t && t.expiresAt && Date.now() < t.expiresAt) hasToken = true;
   }
-
-  async function continueBoot() {
-    const drive = window.__pgtDrive;
-    if (!drive) return;
-    if (drive.isSignedIn && drive.isSignedIn()) return;
-    const everLoggedIn = drive.hasLoggedInBefore && drive.hasLoggedInBefore();
-    if (everLoggedIn && drive.trySilentReauth) {
-      try { await drive.trySilentReauth(); return; } catch (e) {}
+} catch (e) {}
+if (hasUser && hasToken) {
+      hideLoginGate();
+      updateUserBadge();
+    } else {
+      showLoginGate();
     }
-    const wel = document.getElementById('googleWelcome');
-    if (wel) wel.hidden = false;
   }
 
-  setTimeout(function () {
-    const signInBtn = document.getElementById('googleWelcomeSignIn');
-    if (signInBtn) signInBtn.addEventListener('click', function () {
-      document.getElementById('googleWelcome').hidden = true;
-      if (window.__pgtDrive) window.__pgtDrive.signIn();
+    function migrateLegacyData() {
+    const uid = window.__pgtRawStorage.get('pgt_v25_current_user');
+    if (!uid) return;
+    const BASES = [
+  'pgt_v25_data', 'pgt_v25_prefs', 'pgt_v25_snippets',
+  'pgt_v25_notes', 'pgt_v25_templates', 'pgt_v25_theme',
+  'pgt_v25_habits'
+];
+    BASES.forEach(function (key) {
+      const legacy = window.__pgtRawStorage.get(key);
+      if (legacy == null) return;
+      const scopedKey = key + '_' + uid;
+      const existing = window.__pgtRawStorage.get(scopedKey);
+      if (existing == null) {
+        try { window.__pgtRawStorage.set(scopedKey, legacy); } catch (e) {}
+      }
     });
-    const skipBtn = document.getElementById('googleWelcomeSkip');
-    if (skipBtn) skipBtn.addEventListener('click', function () {
-      document.getElementById('googleWelcome').hidden = true;
-    });
-  }, 300);
+  }
+
+  window.__pgtOnUserReady = function () {
+    migrateLegacyData();
+    loadState();
+    _searchIndexDirty = true;
+    applyTheme();
+    applyColors();
+    syncToolbarInputs();
+    applyCalendarVisibility();
+    render();
+    SECTIONS.forEach(renderReaderEmpty);
+    hideLoginGate();
+    updateUserBadge();
+  };
+
+  window.__pgtOnUserSignedOut = function () {
+    state.goals = [];
+    state.snippets = [];
+    state.notes = [];
+    state.templates = [];
+    state.habits = [];
+    state.folders = { articles: emptySection('Статьи'), books: emptySection('Книги') };
+    state.collapsed = {};
+    state.favorites = { articles: {}, books: {} };
+    state.readingPos = { articles: {}, books: {} };
+    state.pdfPage = { articles: {}, books: {} };
+    state.calSelectedDate = null;
+    state.massMode = false; state.massSelected = {};
+    state.massModeGoals = false; state.massSelectedGoals = {};
+    state.ui = {
+      search: '', filter: 'all', sort: 'deadline', tab: 'active', activeTab: 'goals',
+      litTab: 'articles', litSearch: { articles: '', books: '' },
+      snippetsSearch: '', snippetsSort: 'new', snippetsTagFilter: '', snippetsGroup: 'flat',
+      notesSearch: ''
+    };
+    try { render(); } catch (e) {}
+    showLoginGate();
+    updateUserBadge();
+  };
   function checkNotifications() {
     if (!state.notificationsEnabled) return;
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
@@ -2927,8 +3411,9 @@ const isBeforeRestore = (reason === 'before-restore' || reason === 'before-json-
         setTimeout(function () {
           var g = findGoal(goalId);
           var task = g ? g.tasks.find(function (x) { return x.id === taskId; }) : null;
-          if (task && task.repeat) {
-            if (!confirm('Удалить повторяющуюся задачу «' + task.text + '»?\nВсе будущие повторы будут потеряны.')) return;
+                    if (task && task.repeat) {
+            pgtConfirm({ title: 'Удалить повторяющуюся задачу?', message: '«' + task.text + '». Все будущие повторы будут потеряны.', yesLabel: 'Да, удалить', onYes: function(){ deleteTask(goalId, taskId); } });
+            return;
           }
           deleteTask(goalId, taskId);
           showToast('Задача удалена', 'warn', 'Отменить', function () {
@@ -3018,12 +3503,13 @@ const isBeforeRestore = (reason === 'before-restore' || reason === 'before-json-
     }
   }
 
-  async function disconnectDataFolder() {
-    if (!confirm('Отключить папку данных? Файлы в ней останутся, но приложение перестанет туда писать.')) return;
-    _dataFolderHandle = null;
-    await idbDelete(IDB_HANDLES, DATA_FOLDER_KEY);
-    await initDataFolder();
-    showToast('Папка данных отключена', 'ok');
+   async function disconnectDataFolder() {
+    pgtConfirm({ title: 'Отключить папку данных?', message: 'Файлы в ней останутся, но приложение перестанет туда писать.', yesLabel: 'Отключить', onYes: async function(){
+      _dataFolderHandle = null;
+      await idbDelete(IDB_HANDLES, DATA_FOLDER_KEY);
+      await initDataFolder();
+      showToast('Папка данных отключена', 'ok');
+    } });
   }
 
   async function readAllFromDisk() {
@@ -3198,36 +3684,44 @@ function autoArchiveOldCompletedTasks() {
     } catch (e) {}
     el.innerHTML = html;
   }
-    async function restoreBackup(date) {
-    if (!confirm('Восстановить данные из бэкапа от ' + formatDate(date) + '? Текущие данные будут заменены (но перед заменой создастся новая резервная копия).')) return;
-    await makeBackup('before-restore');
-    const b = await idbGet(IDB_BACKUPS, date);
-    if (!b || !b.data) { showToast('Бэкап не найден', 'error'); return; }
-    if (Array.isArray(b.data.goals)) state.goals = b.data.goals.map(normalizeGoal).filter(Boolean);
-    if (Array.isArray(b.data.snippets)) state.snippets = b.data.snippets.map(normalizeSnippet).filter(Boolean);
-    if (Array.isArray(b.data.notes)) state.notes = b.data.notes.map(normalizeNote).filter(Boolean);
-    if (Array.isArray(b.data.templates)) state.templates = b.data.templates;
-    if (b.data.folders && typeof b.data.folders === 'object') {
-      SECTIONS.forEach(function (s) {
-        const fd = b.data.folders[s];
-        if (fd && typeof fd === 'object') {
-          state.folders[s].name = String(fd.name || '');
-          state.folders[s].files = Array.isArray(fd.files) ? fd.files.filter(function (f) { return f && typeof f.name === 'string'; }) : [];
-          state.folders[s].updatedAt = typeof fd.updatedAt === 'number' ? fd.updatedAt : null;
-          state.folders[s].needsPermission = !!state.folders[s].name;
+        async function restoreBackup(date) {
+    pgtConfirm({
+      title: 'Восстановить бэкап?',
+      message: 'Данные от ' + formatDate(date) + ' заменят текущие. Перед заменой автоматически создастся новая копия.',
+      yesLabel: 'Восстановить',
+      danger: false,
+      onYes: async function () {
+        await makeBackup('before-restore');
+        const b = await idbGet(IDB_BACKUPS, date);
+        if (!b || !b.data) { showToast('Бэкап не найден', 'error'); return; }
+        if (Array.isArray(b.data.goals)) state.goals = b.data.goals.map(normalizeGoal).filter(Boolean);
+        if (Array.isArray(b.data.snippets)) state.snippets = b.data.snippets.map(normalizeSnippet).filter(Boolean);
+        if (Array.isArray(b.data.notes)) state.notes = b.data.notes.map(normalizeNote).filter(Boolean);
+        if (Array.isArray(b.data.templates)) state.templates = b.data.templates;
+        if (b.data.folders && typeof b.data.folders === 'object') {
+          SECTIONS.forEach(function (s) {
+            const fd = b.data.folders[s];
+            if (fd && typeof fd === 'object') {
+              state.folders[s].name = String(fd.name || '');
+              state.folders[s].files = Array.isArray(fd.files) ? fd.files.filter(function (f) { return f && typeof f.name === 'string'; }) : [];
+              state.folders[s].updatedAt = typeof fd.updatedAt === 'number' ? fd.updatedAt : null;
+              state.folders[s].needsPermission = !!state.folders[s].name;
+            }
+          });
         }
-      });
-    }
-    saveData(); saveSnippets(); saveNotes();
-    render();
-    renderBackupList();
-    showToast('Данные восстановлены из бэкапа', 'ok');
+                saveData(); saveSnippets(); saveNotes();
+        render();
+        renderBackupList();
+        showToast('Данные восстановлены из бэкапа', 'ok');
+      }
+    });
   }
-  async function clearAllBackups() {
-    if (!confirm('Удалить ВСЕ резервные копии? Действие необратимо.')) return;
-    await idbClear(IDB_BACKUPS);
-    renderBackupList();
-    showToast('Все бэкапы удалены', 'ok');
+    async function clearAllBackups() {
+    pgtConfirm({ title: 'Удалить все резервные копии?', message: 'Действие необратимо. Локальные данные не пострадают.', yesLabel: 'Удалить', onYes: async function(){
+      await idbClear(IDB_BACKUPS);
+      renderBackupList();
+      showToast('Все бэкапы удалены', 'ok');
+    } });
   }
 
   function exportMarkdownReport() {
@@ -3267,7 +3761,19 @@ function autoArchiveOldCompletedTasks() {
     try { window.getSelection().removeAllRanges(); } catch (e) {}
   }
   function deleteSnippet(id) { const s = findSnippet(id); if (!s) return; const snapshot = JSON.parse(JSON.stringify(s)); const idx = state.snippets.indexOf(s); state.snippets.splice(idx, 1); saveSnippets(); updateSnippetsBadges(); renderSnippetsList(); pushUndo(function () { state.snippets.splice(idx, 0, snapshot); saveSnippets(); updateSnippetsBadges(); renderSnippetsList(); }, 'удаление цитаты'); }
-  function clearAllSnippets() { if (!state.snippets.length) return; if (!confirm('Удалить все цитаты?')) return; const snapshot = JSON.parse(JSON.stringify(state.snippets)); state.snippets = []; saveSnippets(); updateSnippetsBadges(); renderSnippetsList(); pushUndo(function () { state.snippets = snapshot; saveSnippets(); updateSnippetsBadges(); renderSnippetsList(); }, 'удаление всех цитат'); }
+    function clearAllSnippets() {
+    if (!state.snippets.length) return;
+    pgtConfirm({
+      title: 'Удалить все цитаты?',
+      message: 'Будет удалено ' + state.snippets.length + ' цитат. Действие можно отменить через Ctrl+Z.',
+      yesLabel: 'Да, удалить',
+      onYes: function () {
+        const snapshot = JSON.parse(JSON.stringify(state.snippets));
+        state.snippets = []; saveSnippets(); updateSnippetsBadges(); renderSnippetsList();
+        pushUndo(function () { state.snippets = snapshot; saveSnippets(); updateSnippetsBadges(); renderSnippetsList(); }, 'удаление всех цитат');
+      }
+    });
+  }
   function openSnippetsModal() { document.getElementById('snippetsModal').hidden = false; renderSnippetsList(); renderSnippetsTagFilter(); }
   function closeSnippetsModal() { document.getElementById('snippetsModal').hidden = true; state.editingSnippetId = null; }
   function renderSnippetsTagFilter() { const set = {}; state.snippets.forEach(function (s) { (s.tags || []).forEach(function (t) { set[t] = true; }); }); const tags = Object.keys(set).sort(function (a, b) { return a.localeCompare(b, 'ru'); }); const sel = document.getElementById('snippetsTagFilter'); const prev = state.ui.snippetsTagFilter || ''; sel.innerHTML = '<option value="">Все теги</option>' + tags.map(function (t) { return '<option value="' + escapeHtml(t) + '">#' + escapeHtml(t) + '</option>'; }).join(''); if (prev && tags.indexOf(prev) !== -1) sel.value = prev; else { sel.value = ''; state.ui.snippetsTagFilter = ''; } }
@@ -3324,7 +3830,7 @@ function autoArchiveOldCompletedTasks() {
     const list = document.getElementById('notesList');
     let items = getVisibleNotes();
     if (state.notesFilter === 'fav') items = items.filter(function (n) { return !!n.fav; });
-    document.getElementById('notesCount').textContent = state.notes.length;
+        const _nc = document.getElementById('notesCount'); if (_nc) _nc.textContent = state.notes.length;
     if (!items.length) { list.innerHTML = '<div class="empty">' + (state.notes.length ? (state.notesFilter === 'fav' ? 'Нет избранных' : 'Ничего не найдено') : 'Пока нет заметок') + '</div>'; return; }
     list.innerHTML = items.map(function (n) {
       const isActive = state.editingNoteId === n.id;
@@ -3667,7 +4173,11 @@ function autoArchiveOldCompletedTasks() {
   async function importFromZip(file) {
     if (!window.JSZip) { showToast('JSZip не загружен', 'error'); return; }
     if (!file) return;
-    if (!confirm('Загрузить ZIP? Текущие данные будут заменены (перед этим создастся резервная копия).')) return;
+        pgtConfirm({ title: 'Загрузить ZIP?', message: 'Текущие данные будут заменены. Перед этим создастся резервная копия.', yesLabel: 'Загрузить', danger: false, onYes: function(){ importFromZipContinue(file); } });
+    return;
+  }
+
+  async function importFromZipContinue(file) {
     await makeBackup('before-zip-import');
     showToast('Распаковываю…', 'ok', null, null, 8000);
 
@@ -4063,10 +4573,30 @@ function autoArchiveOldCompletedTasks() {
     if (fsSupported) { const saved = await idbGet(IDB_HANDLES, 'folder_' + section); if (saved) { rt.handle = saved; try { const perm = await saved.queryPermission({ mode: 'read' }); if (perm === 'granted') { await scanFolder(section, saved); return; } } catch (e) {} } }
     alert('Выберите папку заново');
   }
-  async function disconnectFolder(section) { if (!confirm('Отсоединить папку?')) return; const rt = runtime[section]; cleanupPdf(section); rt.handle = null; rt.fileCache.clear(); rt.selected = null; state.folders[section] = emptySection(state.folders[section].defaultName); await idbDelete(IDB_HANDLES, 'folder_' + section); saveData(); renderMeta(section); renderList(section); renderReaderEmpty(section); renderSectionCount(); }
+  async function disconnectFolder(section) {
+  pgtConfirm({ title: 'Отсоединить папку?', message: 'Файлы в ней останутся, но приложение перестанет её видеть.', yesLabel: 'Отсоединить', onYes: async function(){
+    const rt = runtime[section];
+    cleanupPdf(section);
+    rt.handle = null;
+    rt.fileCache.clear();
+    rt.selected = null;
+    state.folders[section] = emptySection(state.folders[section].defaultName);
+    await idbDelete(IDB_HANDLES, 'folder_' + section);
+    saveData();
+    renderMeta(section);
+    renderList(section);
+    renderReaderEmpty(section);
+    renderSectionCount();
+  } });
+}
   async function requestPermission(section) { if (!fsSupported) return; const rt = runtime[section]; const handle = rt.handle || await idbGet(IDB_HANDLES, 'folder_' + section); if (!handle) return; try { const perm = await handle.requestPermission({ mode: 'read' }); if (perm === 'granted') { rt.handle = handle; await scanFolder(section, handle); } } catch (e) {} }
   async function tryRestoreHandles() { if (!fsSupported) return; for (const section of SECTIONS) { const handle = await idbGet(IDB_HANDLES, 'folder_' + section); if (!handle) continue; try { const perm = await handle.queryPermission({ mode: 'read' }); if (perm === 'granted') { runtime[section].handle = handle; await scanFolder(section, handle); } else { state.folders[section].name = state.folders[section].name || handle.name; state.folders[section].needsPermission = true; saveData(); renderMeta(section); renderList(section); } } catch (e) {} } }
-  function renderSectionCount() { let total = 0; SECTIONS.forEach(function (s) { total += state.folders[s].files.length; }); document.getElementById('literatureCount').textContent = total; }
+    function renderSectionCount() {
+    let total = 0;
+    SECTIONS.forEach(function (s) { total += state.folders[s].files.length; });
+    const el = document.getElementById('literatureCount');
+    if (el) el.textContent = total;
+  }
 
   function resetGoalForm() { document.getElementById('goalTitle').value = ''; document.getElementById('goalDesc').value = ''; document.getElementById('goalPriority').value = 'medium'; document.getElementById('goalDeadline').value = ''; document.getElementById('goalMoreBody').hidden = true; }
   function resetTaskForm() { document.getElementById('taskText').value = ''; document.getElementById('taskPriority').value = 'medium'; document.getElementById('taskTags').value = ''; document.getElementById('taskDeadline').value = ''; }
@@ -4093,9 +4623,42 @@ function autoArchiveOldCompletedTasks() {
     SECTIONS.forEach(function (s) { const view = document.getElementById(s === 'articles' ? 'articlesPanel' : 'booksPanel'); if (!view) return; const sel = view.querySelector('[data-action="set-sort"][data-section="' + s + '"]'); if (sel) sel.value = state.litSort[s] || 'name'; const favBtn = view.querySelector('[data-action="toggle-fav-filter"][data-section="' + s + '"]'); if (favBtn) favBtn.classList.toggle('active', !!state.litFavFilter[s]); applyListVisibility(s); });
    updateNotifBtn();
     syncQuickHint();
-  }
-  function renderTabs() {
-    document.querySelectorAll('.tab').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.tab === state.ui.tab ? 'true' : 'false'); });
+  }  function renderTabs() {
+    if (!Array.isArray(state.tabs)) state.tabs = mergeTabs(null);
+
+    // Если текущая вкладка спрятана — переключаемся на первую видимую
+    const visibleIds = state.tabs.filter(function (t) { return t.visible; }).map(function (t) { return t.id; });
+    if (visibleIds.length && visibleIds.indexOf(state.ui.tab) === -1) {
+      state.ui.tab = visibleIds[0];
+    }
+
+    // Рисуем кнопки вкладок
+    const nav = document.getElementById('tabsNav');
+    if (nav) {
+      let html = state.tabs.filter(function (t) { return t.visible; }).map(function (t) {
+        const sel = state.ui.tab === t.id ? 'true' : 'false';
+        const counter = (t.hasCounter && t.counterId)
+          ? '<span class="tab-count" id="' + t.counterId + '">0</span>'
+          : '';
+        return '<button class="tab" role="tab" data-tab="' + escapeHtml(t.id) + '" aria-selected="' + sel + '">' +
+          '<span class="tab-icon">' + escapeHtml(t.icon) + '</span>' +
+          '<span class="tab-label">' + escapeHtml(t.label) + '</span>' +
+          counter +
+        '</button>';
+      }).join('');
+      html += '<button type="button" class="tab tab-manage" id="tabsManageBtn" title="Управление вкладками">' +
+        '<span class="tab-icon">⚙</span><span class="tab-label">Вкладки</span>' +
+      '</button>';
+      nav.innerHTML = html;
+
+      nav.querySelectorAll('.tab[data-tab]').forEach(function (b) {
+        b.addEventListener('click', function () { switchTab(b.dataset.tab); });
+      });
+      const mb = document.getElementById('tabsManageBtn');
+      if (mb) mb.addEventListener('click', openTabsManageModal);
+    }
+
+    // Показываем только активное «полотно»
     document.getElementById('viewActive').hidden = state.ui.tab !== 'active';
     document.getElementById('viewArchive').hidden = state.ui.tab !== 'archive';
     document.getElementById('viewLiterature').hidden = state.ui.tab !== 'literature';
@@ -4103,10 +4666,9 @@ function autoArchiveOldCompletedTasks() {
     document.getElementById('viewNotes').hidden = state.ui.tab !== 'notes';
     document.getElementById('viewHabits').hidden = state.ui.tab !== 'habits';
     document.getElementById('viewAnalytics').hidden = state.ui.tab !== 'analytics';
+
+    // Подвкладки внутри «Литературы» и «Активных»
     document.querySelectorAll('[data-lit-tab]').forEach(function (b) { b.classList.toggle('active', b.dataset.litTab === state.ui.litTab); });
-    document.querySelectorAll('[data-active-tab-btn]').forEach(function (b) {
-      b.addEventListener('click', function () { switchActiveTab(b.dataset.activeTabBtn); });
-    });
     document.getElementById('articlesPanel').hidden = state.ui.litTab !== 'articles';
     document.getElementById('booksPanel').hidden = state.ui.litTab !== 'books';
     applyActiveTab();
@@ -4887,7 +5449,7 @@ function renderKanbanHtml(items) {
     else { at.sort(function (a, b) { return b.task.archivedAt - a.task.archivedAt; }); tasksEl.innerHTML = at.map(function (it) { const g = it.goal, t = it.task; const meta = [];
 if (!g.isInbox) meta.push(escapeHtml(g.title));
 meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-item"><div class="archive-head"><div><div class="archive-title">' + escapeHtml(t.text) + '</div><div class="archive-meta">' + meta.join(' · ') + '</div></div><div style="display:flex;gap:4px;"><button type="button" class="icon-btn" data-action="restore-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="Восстановить">↺</button><button type="button" class="icon-btn" data-action="delete-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="Удалить">✕</button></div></div></article>'; }).join(''); }
-    document.getElementById('archiveCount').textContent = ag.length + at.length;
+        const _ac = document.getElementById('archiveCount'); if (_ac) _ac.textContent = ag.length + at.length;
   }
 
      function renderGoalSelect() {
@@ -4956,15 +5518,60 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
   function selectCalendarDay(iso) { state.calSelectedDate = state.calSelectedDate === iso ? null : iso; renderCalendar(); renderTasks(); syncQuickHint(); }
   function clearDateFilter() { state.calSelectedDate = null; renderCalendar(); renderTasks(); syncQuickHint(); }
 
-  function toggleCalendar() { state.calendarVisible = !state.calendarVisible; savePrefs(); applyCalendarVisibility(); if (state.calendarVisible) renderCalendar(); syncQuickHint(); }
+    // === УПРАВЛЕНИЕ ВКЛАДКАМИ (логика окна) ===
+  function openTabsManageModal() {
+    renderTabsManageList();
+    const m = document.getElementById('tabsManageModal');
+    if (m) m.hidden = false;
+  }
+  function closeTabsManageModal() {
+    const m = document.getElementById('tabsManageModal');
+    if (m) m.hidden = true;
+  }
+  function renderTabsManageList() {
+    const box = document.getElementById('tabsManageList');
+    if (!box) return;
+    box.innerHTML = state.tabs.map(function (t, i) {
+      const upDis = i === 0 ? ' disabled' : '';
+      const dnDis = i === state.tabs.length - 1 ? ' disabled' : '';
+      return '<div class="tabs-manage-row" data-tab-id="' + escapeHtml(t.id) + '">' +
+        '<input type="checkbox" data-action="tab-toggle-visible" ' + (t.visible ? 'checked' : '') + ' title="Показывать вкладку" />' +
+        '<input type="text" class="icon-input" data-action="tab-icon" value="' + escapeHtml(t.icon) + '" maxlength="4" title="Иконка (эмодзи)" />' +
+        '<input type="text" class="label-input" data-action="tab-label" value="' + escapeHtml(t.label) + '" maxlength="30" title="Название" />' +
+        '<div class="order-btns">' +
+          '<button type="button" data-action="tab-move-up" title="Выше"' + upDis + '>↑</button>' +
+          '<button type="button" data-action="tab-move-down" title="Ниже"' + dnDis + '>↓</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+  function findTabIndexById(id) {
+    for (let i = 0; i < state.tabs.length; i++) if (state.tabs[i].id === id) return i;
+    return -1;
+  }
+
+function toggleCalendar() { state.calendarVisible = !state.calendarVisible; savePrefs(); applyCalendarVisibility(); if (state.calendarVisible) renderCalendar(); syncQuickHint(); }
   function applyCalendarVisibility() { const shell = document.getElementById('appShell'); const btn = document.getElementById('calToggle'); if (shell) shell.classList.toggle('with-cal', !!state.calendarVisible); if (btn) btn.classList.toggle('active', !!state.calendarVisible); }
 
   function toggleMassMode() { state.massMode = !state.massMode; if (!state.massMode) state.massSelected = {}; document.getElementById('massModeToggle').textContent = state.massMode ? '☒ Отменить' : '☑ Выбрать'; document.getElementById('massModeToggle').classList.toggle('active', state.massMode); renderTasks(); }
   function toggleMassCheck(goalId, taskId) { if (state.massSelected[taskId]) delete state.massSelected[taskId]; else state.massSelected[taskId] = { goalId: goalId }; renderTasks(); }
-    function massAction(action) {
+          function massAction(action) {
     const ids = Object.keys(state.massSelected);
     if (!ids.length) return;
     if (action === 'export') { exportSelectedTasks(); return; }
+    if (action === 'delete') {
+      pgtConfirm({ title: 'Удалить выбранные задачи?', message: 'Выбрано ' + ids.length + ' задач. Они будут удалены безвозвратно.', yesLabel: 'Да, удалить', onYes: function(){ massActionApply('delete'); } });
+      return;
+    }
+    if (action === 'archive') {
+      pgtConfirm({ title: 'Переместить в архив?', message: 'Выбрано ' + ids.length + ' задач.', yesLabel: 'В архив', danger: false, onYes: function(){ massActionApply('archive'); } });
+      return;
+    }
+    massActionApply(action);
+  }
+  function massActionApply(action) {
+    const ids = Object.keys(state.massSelected);
+    if (!ids.length) return;
     const snapshot = [];
     ids.forEach(function (taskId) { const info = state.massSelected[taskId]; const g = findGoal(info.goalId); if (!g) return; const t = g.tasks.find(function (x) { return x.id === taskId; }); if (!t) return; snapshot.push({ goalId: info.goalId, task: JSON.parse(JSON.stringify(t)) }); if (action === 'delete') g.tasks = g.tasks.filter(function (x) { return x.id !== taskId; }); else if (action === 'archive') { t.archivedAt = Date.now(); if (!t.done) t.done = true; } else if (action === 'done') t.done = true; });
     saveData(); state.massSelected = {}; render();
@@ -4991,10 +5598,13 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
     };
     r.readAsText(file); e.target.value = '';
   }
-    function clearAllData() {
-    if (!confirm('Удалить ВСЁ? (перед удалением создастся бэкап)')) return;
-    if (!confirm('Это удалит все цели, задачи, заметки, цитаты, привычки, кэшированные файлы и резервные копии. Продолжить?')) return;
-    makeBackup('before-clear').then(async function () {
+        function clearAllData() {
+    pgtConfirm({
+      title: 'Удалить все данные?',
+      message: 'Будут удалены: цели, задачи, заметки, цитаты, привычки, кэшированные файлы и резервные копии. Перед удалением автоматически создастся бэкап.',
+      yesLabel: 'Удалить всё',
+      onYes: function () {
+        makeBackup('before-clear').then(async function () {
       // 1. Отменяем все отложенные сохранения, чтобы они не вернули данные
       clearTimeout(_saveDataTimer);
       clearTimeout(_savePrefsTimer);
@@ -5004,10 +5614,23 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
       _lastDataHash = '';
       _lastPrefsHash = '';
 
-      // 2. Чистим все ключи localStorage с префиксом pgt_v25_
+            // 2. Чистим ТОЛЬКО данные текущего пользователя (через сырое API)
       try {
-        Object.keys(localStorage).forEach(function (k) {
-          if (k.indexOf('pgt_v25_') === 0) localStorage.removeItem(k);
+        const uid = window.__pgtRawStorage.get('pgt_v25_current_user') || '';
+        const suffix = uid ? '_' + uid : '';
+        const KEEP = {
+          'pgt_v25_current_user': 1, 'pgt_v25_had_login': 1,
+          'pgt_v25_google_token': 1, 'pgt_v25_user_email': 1,
+          'pgt_v25_known_users': 1,
+          'pgt_v25_pin_hash': 1, 'pgt_v25_pin_salt': 1, 'pgt_v25_pin_len': 1,
+          'pgt_v25_pin_attempts': 1, 'pgt_v25_pin_lock_until': 1, 'pgt_v25_pin_lock_level': 1
+        };
+        window.__pgtRawStorage.keys().forEach(function (k) {
+          if (k.indexOf('pgt_v25_') !== 0) return;
+          if (KEEP[k]) return;
+          if (suffix && k.slice(-suffix.length) === suffix) {
+            window.__pgtRawStorage.remove(k);
+          }
         });
       } catch (e) {}
       try { sessionStorage.removeItem('pgt_v25_unlocked'); } catch (e) {}
@@ -5055,10 +5678,12 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
       if (typeof renderBackupList === 'function') renderBackupList();
       if (typeof renderCacheStats === 'function') renderCacheStats();
 
-      showToast('Все данные удалены. Страница будет перезагружена.', 'ok', null, null, 2500);
+            showToast('Все данные удалены. Страница будет перезагружена.', 'ok', null, null, 2500);
       setTimeout(function () { location.reload(); }, 2500);
-    }).catch(function (e) {
-      showToast('Ошибка при очистке: ' + (e.message || e), 'error');
+        }).catch(function (e) {
+          showToast('Ошибка при очистке: ' + (e.message || e), 'error');
+        });
+      }
     });
   }
 
@@ -5091,7 +5716,20 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
     else state.massSelectedGoals[goalId] = true;
     renderGoals();
   }
-    function massActionGoals(action) {
+        function massActionGoals(action) {
+    const ids = Object.keys(state.massSelectedGoals);
+    if (!ids.length) return;
+    if (action === 'delete') {
+      pgtConfirm({ title: 'Удалить выбранные цели?', message: 'Выбрано ' + ids.length + ' целей. Они и все их задачи будут удалены безвозвратно.', yesLabel: 'Да, удалить', onYes: function(){ massActionGoalsApply('delete'); } });
+      return;
+    }
+    if (action === 'archive') {
+      pgtConfirm({ title: 'Завершить выбранные цели?', message: 'Выбрано ' + ids.length + ' целей. Они уйдут в архив.', yesLabel: 'Завершить', danger: false, onYes: function(){ massActionGoalsApply('archive'); } });
+      return;
+    }
+    massActionGoalsApply(action);
+  }
+  function massActionGoalsApply(action) {
     const ids = Object.keys(state.massSelectedGoals);
     if (!ids.length) return;
     const snapshot = ids.map(function (id) { const g = findGoal(id); return g ? JSON.parse(JSON.stringify(g)) : null; }).filter(Boolean);
@@ -5231,16 +5869,22 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
     renderHabits();
     showToast('Привычка добавлена', 'ok');
   }
-
-  function deleteHabit(id) {
+function deleteHabit(id) {
     const h = findHabit(id); if (!h) return;
-    if (!confirm('Удалить привычку «' + h.title + '»? Все отметки будут потеряны.')) return;
-    const idx = state.habits.indexOf(h);
-    const snapshot = JSON.parse(JSON.stringify(h));
-    state.habits.splice(idx, 1);
-    saveHabits();
-    renderHabits();
-    pushUndo(function () { state.habits.splice(idx, 0, snapshot); saveHabits(); renderHabits(); }, 'удаление привычки');
+    pgtConfirm({
+      title: 'Удалить привычку?',
+      message: '«' + h.title + '». Все отметки будут потеряны.',
+      yesLabel: 'Удалить',
+      onYes: function () {
+        const idx = state.habits.indexOf(h);
+        if (idx === -1) return;
+        const snapshot = JSON.parse(JSON.stringify(h));
+        state.habits.splice(idx, 1);
+        saveHabits();
+        renderHabits();
+        pushUndo(function () { state.habits.splice(idx, 0, snapshot); saveHabits(); renderHabits(); }, 'удаление привычки');
+      }
+    });
   }
 
     function startEditHabit(id) {
@@ -5929,11 +6573,16 @@ function initKanbanDnD() {
   }
 
 function bindEvents() {
+tickLiveClock();
+setInterval(tickLiveClock, 1000);
         document.getElementById('settingsBtn').addEventListener('click', function () { document.getElementById('settingsModal').hidden = false; syncToolbarInputs(); renderBackupList(); renderCacheStats(); });
     document.getElementById('globalSearchBtn').addEventListener('click', openGlobalSearch);
         document.getElementById('calToggle').addEventListener('click', toggleCalendar);
 
     document.querySelectorAll('.tab').forEach(function (b) { b.addEventListener('click', function () { switchTab(b.dataset.tab); }); });
+document.querySelectorAll('[data-active-tab-btn]').forEach(function (b) {
+  b.addEventListener('click', function () { switchActiveTab(b.dataset.activeTabBtn); });
+});
     document.querySelectorAll('[data-lit-tab]').forEach(function (b) { b.addEventListener('click', function () { switchLitTab(b.dataset.litTab); }); });
 
     document.getElementById('quickAddBtn').addEventListener('click', handleQuickAdd);
@@ -5996,7 +6645,11 @@ function bindEvents() {
 
         // Цели
         if (action === 'toggle-goal' && goalId) { toggleGoalCollapse(goalId); return; }
-        if (action === 'delete-goal' && goalId) { deleteGoal(goalId); return; }
+        if (action === 'delete-goal' && goalId) {
+          const _g = findGoal(goalId); if (!_g) return;
+          pgtConfirm({ title: 'Удалить цель?', message: 'Цель «' + (_g.title || '') + '» и все её задачи будут удалены безвозвратно.', yesLabel: 'Да, удалить', onYes: function(){ deleteGoal(goalId); } });
+          return;
+        }
         if (action === 'edit-goal' && goalId) { openEditGoal(goalId); return; }
         if (action === 'archive-goal' && goalId) { archiveGoal(goalId); return; }
         if (action === 'pin-goal' && goalId) { togglePinGoal(goalId); return; }
@@ -6004,7 +6657,11 @@ function bindEvents() {
         if (action === 'mass-goals-delete') { massActionGoals('delete'); return; }
 
         // Задачи
-        if (action === 'delete-task' && goalId) { deleteTask(goalId, taskId); return; }
+       if (action === 'delete-task' && goalId) {
+          const _g = findGoal(goalId); const _t = _g ? _g.tasks.find(function(x){return x.id===taskId;}) : null;
+          pgtConfirm({ title: 'Удалить задачу?', message: _t ? _t.text : 'Задача будет удалена безвозвратно.', yesLabel: 'Да, удалить', onYes: function(){ deleteTask(goalId, taskId); } });
+          return;
+        }
         if (action === 'archive-task' && goalId) { archiveTask(goalId, taskId); return; }
         if (action === 'edit-task' && goalId) { openEditTask(goalId, taskId); return; }
 	if (action === 'kanban-toggle-task') { return; }
@@ -6077,6 +6734,104 @@ function bindEvents() {
  initKanbanDnD();
  initTaskToGoalDnD();
 
+    // === Обработчики окна «Управление вкладками» ===
+    (function bindTabsManage() {
+      const modal = document.getElementById('tabsManageModal');
+      if (!modal) return;
+
+      modal.addEventListener('click', function (e) {
+        if (e.target === modal) { closeTabsManageModal(); return; }
+        const el = e.target.closest('[data-action]');
+        if (!el) return;
+        const action = el.dataset.action;
+
+        if (action === 'close-tabs-manage') { closeTabsManageModal(); return; }
+        if (action === 'reset-tabs') {
+                   pgtConfirm({
+            title: 'Сбросить вкладки?',
+            message: 'Все ваши названия, иконки и порядок вкладок вернутся к стандартным.',
+            yesLabel: 'Сбросить',
+            onYes: function () {
+              state.tabs = DEFAULT_TABS.map(function (t) { return Object.assign({}, t); });
+              savePrefs();
+              renderTabsManageList();
+              renderTabs();
+              showToast('Вкладки сброшены к стандарту', 'ok');
+            }
+          });
+          return;
+        }
+
+        const row = el.closest('.tabs-manage-row');
+        if (!row) return;
+        const id = row.dataset.tabId;
+        const idx = findTabIndexById(id);
+        if (idx === -1) return;
+
+        if (action === 'tab-move-up' && idx > 0) {
+          const tmp = state.tabs[idx - 1];
+          state.tabs[idx - 1] = state.tabs[idx];
+          state.tabs[idx] = tmp;
+          savePrefs();
+          renderTabsManageList();
+          renderTabs();
+        } else if (action === 'tab-move-down' && idx < state.tabs.length - 1) {
+          const tmp = state.tabs[idx + 1];
+          state.tabs[idx + 1] = state.tabs[idx];
+          state.tabs[idx] = tmp;
+          savePrefs();
+          renderTabsManageList();
+          renderTabs();
+        }
+      });
+
+      modal.addEventListener('input', function (e) {
+        const el = e.target.closest('[data-action]');
+        if (!el) return;
+        const row = el.closest('.tabs-manage-row');
+        if (!row) return;
+        const idx = findTabIndexById(row.dataset.tabId);
+        if (idx === -1) return;
+
+        if (el.dataset.action === 'tab-icon') {
+          state.tabs[idx].icon = (el.value || '').slice(0, 4) || '📌';
+          savePrefs();
+          renderTabs();
+        } else if (el.dataset.action === 'tab-label') {
+          state.tabs[idx].label = (el.value || '').slice(0, 30) || 'Вкладка';
+          savePrefs();
+          renderTabs();
+        }
+      });
+
+      modal.addEventListener('change', function (e) {
+        const el = e.target.closest('[data-action="tab-toggle-visible"]');
+        if (!el) return;
+        const row = el.closest('.tabs-manage-row');
+        if (!row) return;
+        const idx = findTabIndexById(row.dataset.tabId);
+        if (idx === -1) return;
+
+        if (!el.checked) {
+          const others = state.tabs.filter(function (t, i) { return i !== idx && t.visible; }).length;
+          if (others === 0) {
+            el.checked = true;
+            showToast('Хотя бы одна вкладка должна остаться видимой', 'warn');
+            return;
+          }
+          state.tabs[idx].visible = false;
+        } else {
+          state.tabs[idx].visible = true;
+        }
+        savePrefs();
+        renderTabs();
+      });
+
+      modal.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeTabsManageModal();
+      });
+    })();
+
     document.getElementById('massModeToggle').addEventListener('click', toggleMassMode);
     const mgt = document.getElementById('massModeGoalsToggle');
     if (mgt) mgt.addEventListener('click', toggleMassModeGoals);
@@ -6114,13 +6869,19 @@ function bindEvents() {
       else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveEditGoal(); }
     });
 
-    document.getElementById('viewArchive').addEventListener('click', function (e) {
+        document.getElementById('viewArchive').addEventListener('click', function (e) {
       const el = e.target.closest('[data-action]'); if (!el) return;
       const action = el.dataset.action; const gid = el.dataset.goalId, tid = el.dataset.taskId;
       if (action === 'restore-goal') restoreGoal(gid);
       else if (action === 'restore-task') restoreTask(gid, tid);
-      else if (action === 'delete-goal') deleteGoal(gid);
-      else if (action === 'delete-task') deleteTask(gid, tid);
+      else if (action === 'delete-goal') {
+        const g = findGoal(gid);
+        pgtConfirm({ title: 'Удалить цель?', message: g ? ('«' + g.title + '» и все её задачи будут удалены безвозвратно.') : 'Цель будет удалена безвозвратно.', yesLabel: 'Да, удалить', onYes: function(){ deleteGoal(gid); } });
+      }
+      else if (action === 'delete-task') {
+        const g = findGoal(gid); const t = g ? g.tasks.find(function(x){return x.id===tid;}) : null;
+        pgtConfirm({ title: 'Удалить задачу?', message: t ? t.text : 'Задача будет удалена безвозвратно.', yesLabel: 'Да, удалить', onYes: function(){ deleteTask(gid, tid); } });
+      }
     });
 
     SECTIONS.forEach(function (section) {
@@ -6219,7 +6980,7 @@ function bindEvents() {
       const item = e.target.closest('.note-item'); if (!item) return;
       state.editingNoteId = item.dataset.id; renderNotesList(); renderNoteEditor();
     });
-    document.getElementById('noteEditor').addEventListener('click', function (e) { const el = e.target.closest('[data-action]'); if (!el) return; const action = el.dataset.action; const id = el.dataset.id; if (action === 'note-delete') { if (confirm('Удалить заметку?')) deleteNote(id); } else if (action === 'note-export-md') exportNoteAsMd(id); else if (action === 'note-copy') copyNote(id); });
+    document.getElementById('noteEditor').addEventListener('click', function (e) { const el = e.target.closest('[data-action]'); if (!el) return; const action = el.dataset.action; const id = el.dataset.id; if (action === 'note-delete') { pgtConfirm({ title: 'Удалить заметку?', message: 'Заметка будет удалена безвозвратно.', yesLabel: 'Да, удалить', onYes: function(){ deleteNote(id); } }); } else if (action === 'note-export-md') exportNoteAsMd(id); else if (action === 'note-copy') copyNote(id); });
 
     document.getElementById('settingsModal').addEventListener('click', function (e) {
       if (e.target === this) { this.hidden = true; return; }
@@ -6229,6 +6990,20 @@ function bindEvents() {
       else if (action === 'restore-backup') { restoreBackup(el.dataset.date); }
     });
     document.querySelectorAll('[data-theme-opt]').forEach(function (b) { b.addEventListener('click', function () { setTheme(b.dataset.themeOpt); }); });
+        const _tadvBtn = document.getElementById('toggleAdvancedBtn');
+    if (_tadvBtn) _tadvBtn.addEventListener('click', function () {
+      state.advancedToolsVisible = !state.advancedToolsVisible;
+      savePrefs();
+      applyAdvancedToolsVisibility();
+    });
+
+const _tqiBtn = document.getElementById('toggleQuickInputBtn');
+    if (_tqiBtn) _tqiBtn.addEventListener('click', function () {
+      state.quickInputVisible = !state.quickInputVisible;
+      savePrefs();
+      applyQuickInputVisibility();
+    });
+
     document.getElementById('notifToggle').addEventListener('click', function () { if (state.notificationsEnabled) { state.notificationsEnabled = false; savePrefs(); showToast('Уведомления выключены', 'warn'); updateNotifBtn(); } else requestNotifications(); });
             // === PIN: обработчики ===
     const _pinSetupBtn = document.getElementById('pinSetupBtn');
@@ -6236,11 +7011,10 @@ function bindEvents() {
     const _pinChangeBtn = document.getElementById('pinChangeBtn');
     if (_pinChangeBtn) _pinChangeBtn.addEventListener('click', function () { openPinSetup('change'); });
     const _pinRemoveBtn = document.getElementById('pinRemoveBtn');
-    if (_pinRemoveBtn) _pinRemoveBtn.addEventListener('click', function () {
-      if (!confirm('Убрать PIN-код? Приложение перестанет спрашивать его при открытии.')) return;
-      removePin();
-      renderPinStatus();
-      showToast('PIN убран', 'ok');
+        if (_pinRemoveBtn) _pinRemoveBtn.addEventListener('click', function () {
+      pgtConfirm({ title: 'Убрать PIN?', message: 'Приложение перестанет спрашивать PIN при открытии.', yesLabel: 'Убрать', onYes: function(){
+        removePin(); renderPinStatus(); showToast('PIN убран', 'ok');
+      } });
     });
     const _pinLockNowBtn = document.getElementById('pinLockNowBtn');
     if (_pinLockNowBtn) _pinLockNowBtn.addEventListener('click', function () {
@@ -6250,7 +7024,10 @@ function bindEvents() {
     });
     const _quickLock = document.getElementById('quickLockBtn');
     if (_quickLock) _quickLock.addEventListener('click', function () {
-  if (!hasPin()) { if (confirm('PIN не установлен. Установить сейчас?')) openPinSetup('setup'); return; }
+  if (!hasPin()) {
+    pgtConfirm({ title: 'PIN не установлен', message: 'Установить PIN прямо сейчас?', yesLabel: 'Установить', danger: false, onYes: function(){ openPinSetup('setup'); } });
+    return;
+  }
   lockNow();
 });
 
@@ -6290,16 +7067,21 @@ function bindEvents() {
         if (e.key === 'Enter') { e.preventDefault(); tryUnlock(); }
       });
     }
-    const _lockResetBtn = document.getElementById('lockResetBtn');
-    if (_lockResetBtn) _lockResetBtn.addEventListener('click', function () {
-      if (!confirm('Забыли PIN? Сброс удалит ВСЕ данные приложения: цели, задачи, заметки, настройки. Продолжить?')) return;
-      if (!confirm('Это необратимо. Точно удалить всё?')) return;
-      removePin();
-      try {
-        Object.keys(localStorage).forEach(function (k) { if (k.indexOf('pgt_v25_') === 0) localStorage.removeItem(k); });
-        sessionStorage.clear();
-      } catch (e) {}
-      location.reload();
+   const _lockResetBtn = document.getElementById('lockResetBtn');
+        if (_lockResetBtn) _lockResetBtn.addEventListener('click', function () {
+      pgtConfirm({
+        title: 'Сбросить PIN и удалить всё?',
+        message: 'Будут удалены ВСЕ данные приложения: цели, задачи, заметки, настройки. Это необратимо.',
+        yesLabel: 'Удалить всё',
+        onYes: function () {
+          removePin();
+          try {
+            Object.keys(localStorage).forEach(function (k) { if (k.indexOf('pgt_v25_') === 0) localStorage.removeItem(k); });
+            sessionStorage.clear();
+          } catch (e) {}
+          location.reload();
+        }
+      });
     });
 		
     const _ssb = document.getElementById('settingsSnippetsBtn');
@@ -6327,11 +7109,12 @@ function bindEvents() {
       renderCacheStats();
       showToast('Обновлено: +' + added + ' ~' + updated + ' −' + removed + (failed ? ' ⚠' + failed : ''), failed ? 'warn' : 'ok');
     });
-    document.getElementById('clearCacheBtn').addEventListener('click', async function () {
-      if (!confirm('Удалить кэш файлов? Книги и статьи придётся подключать заново (цели, задачи, заметки останутся).')) return;
-      await clearCachedFiles(null);
-      renderCacheStats();
-      showToast('Кэш очищен', 'ok');
+        document.getElementById('clearCacheBtn').addEventListener('click', function () {
+      pgtConfirm({ title: 'Очистить кэш файлов?', message: 'Книги и статьи придётся подключать заново. Цели, задачи, заметки останутся.', yesLabel: 'Очистить', onYes: async function(){
+        await clearCachedFiles(null);
+        renderCacheStats();
+        showToast('Кэш очищен', 'ok');
+      } });
     });
     document.getElementById('exportZipBtn').addEventListener('click', exportAllToZip);
     document.getElementById('importZipInput').addEventListener('change', function (e) {
@@ -6420,7 +7203,10 @@ document.getElementById('manualBackupBtn').addEventListener('click', async funct
       const action = el.dataset.action; const id = el.dataset.id;
       if (action === 'close-snippets') closeSnippetsModal();
       else if (action === 'clear-snippets') clearAllSnippets();
-      else if (action === 'delete-snippet') deleteSnippet(id);
+            else if (action === 'delete-snippet') {
+        const s = findSnippet(id);
+        pgtConfirm({ title: 'Удалить цитату?', message: s ? (s.text.slice(0, 120) + (s.text.length > 120 ? '…' : '')) : 'Цитата будет удалена безвозвратно.', yesLabel: 'Да, удалить', onYes: function(){ deleteSnippet(id); } });
+      }
       else if (action === 'edit-snippet') editSnippet(id);
       else if (action === 'cancel-snippet-edit') cancelSnippetEdit();
       else if (action === 'save-snippet-edit') saveSnippetEdit(id);
@@ -6503,7 +7289,22 @@ document.getElementById('manualBackupBtn').addEventListener('click', async funct
       }
     });
     window.addEventListener('beforeunload', function () { if (runtime.articles.selected) saveCurrentPosition('articles'); if (runtime.books.selected) saveCurrentPosition('books'); if (window.speechSynthesis) window.speechSynthesis.cancel(); });
-        window.addEventListener('storage', function (e) { if ([DATA_KEY, PREFS_KEY, SNIPPETS_KEY, NOTES_KEY, TEMPLATES_KEY].indexOf(e.key) !== -1) { loadState(); _searchIndexDirty = true; applyTheme(); applyColors(); syncToolbarInputs(); applyCalendarVisibility(); render(); } });
+               window.addEventListener('storage', function (e) {
+          if (!e.key) return;
+          const bases = [DATA_KEY, PREFS_KEY, SNIPPETS_KEY, NOTES_KEY, TEMPLATES_KEY];
+          const hit = bases.some(function (b) {
+            return e.key === b || e.key.indexOf(b + '_') === 0;
+          });
+          if (hit) {
+            loadState();
+            _searchIndexDirty = true;
+            applyTheme();
+            applyColors();
+            syncToolbarInputs();
+            applyCalendarVisibility();
+            render();
+          }
+        });
      }     
 		// === Часы реального времени в шапке ===
     
@@ -6545,11 +7346,14 @@ function tickLiveClock() {
 
   window.__pgtAutoSyncDone = function (ok) { _autoSyncInFlight = false; };
   
-   loadState();
+    initLoginGate();
+  loadState();
   applyTheme();
   applyColors();
   syncToolbarInputs();
   applyCalendarVisibility();
+applyQuickInputVisibility();
+  applyAdvancedToolsVisibility();
   bindEvents();
   resetGoalForm();
   resetTaskForm();
@@ -6775,7 +7579,7 @@ function tickLiveClock() {
 
     const signedIn = window.__pgtDrive && window.__pgtDrive.isSignedIn();
     if (!signedIn) {
-      statusEl.innerHTML = '<b style="color:var(--gold)">Не подключено.</b> Нажмите 🔐 Войти в шапке.';
+      statusEl.innerHTML = '<b style="color:var(--gold)">Не подключено.</b> Перезагрузите страницу и войдите через экран входа.';
       if (signOutBtn) signOutBtn.hidden = true;
     } else {
       statusEl.innerHTML = '<b style="color:var(--color-total)">Подключено.</b> Синхронизация активна.';
@@ -6853,11 +7657,12 @@ function tickLiveClock() {
     });
 
     const signOutBtn = document.getElementById('driveSignOutBtn');
-    if (signOutBtn) signOutBtn.addEventListener('click', function () {
-      if (!confirm('Выйти из Google? Синхронизация остановится. Локальные данные останутся.')) return;
-      if (window.__pgtDrive) window.__pgtDrive.signOut();
-      refreshDriveSettingsUI();
-      showToast('Вы вышли из Google', 'ok');
+        if (signOutBtn) signOutBtn.addEventListener('click', function () {
+      pgtConfirm({ title: 'Выйти из Google?', message: 'Синхронизация остановится. Локальные данные останутся.', yesLabel: 'Выйти', onYes: function(){
+        if (window.__pgtDrive) window.__pgtDrive.signOut();
+        refreshDriveSettingsUI();
+        showToast('Вы вышли из Google', 'ok');
+     } });
     });
   }, 500);
 

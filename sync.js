@@ -63,16 +63,20 @@
     setStatus('☁️ Готово', 'ok');
     setTimeout(function () { setStatus(''); }, 2000);
 
-    if (typeof window.__pgtOnUserReady === 'function') {
+       if (typeof window.__pgtOnUserReady === 'function') {
       try { window.__pgtOnUserReady(); } catch (e) { console.warn('[onUserReady]', e); }
     }
 
     bootstrap().catch(function (e) { console.warn('[bootstrap]', e); });
 
- // После входа — перезагружаем страницу, чтобы всё отрисовалось заново
-    setTimeout(function () {
-      try { location.reload(); } catch (e) {}
-    }, 200);
+    // Перезагрузка ТОЛЬКО при реальном входе (есть resp с токеном).
+    // При восстановлении старой сессии (resp === null) — НЕ перезагружаем.
+    if (resp && resp.access_token) {
+      setTimeout(function () {
+        try { location.reload(); } catch (e) {}
+      }, 200);
+    }
+  }
   }
 
   function getKnownUsers() {
