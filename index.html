@@ -1036,111 +1036,6 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
 }
 .tabs-manage-row .order-btns button:hover { border-color: var(--accent); }
 .tabs-manage-row .order-btns button:disabled { opacity: 0.3; cursor: default; }
-/* === СВОИ ВКЛАДКИ === */
-.custom-cards { display: grid; gap: 8px; }
-.custom-card {
-  background: var(--card-alt); border: 1px solid var(--border); border-radius: 10px;
-  padding: 10px 12px; display: grid; gap: 6px;
-  transition: opacity .3s, transform .3s, border-color .15s;
-}
-.custom-card:hover { border-color: rgba(88,166,255,.5); }
-.custom-card.done { opacity: .55; border-color: rgba(63,185,80,.35); }
-.custom-card.done .custom-card-title { text-decoration: line-through; color: var(--muted); }
-.custom-card.done .custom-card-body { color: var(--muted); }
-.custom-card.fading { opacity: 0; transform: scale(.96); }
-
-.custom-card-head { display: flex; gap: 8px; align-items: flex-start; }
-.custom-card-check {
-  width: 18px; height: 18px; margin-top: 3px; flex: 0 0 auto;
-  accent-color: var(--color-done); cursor: pointer;
-}
-.custom-card-content { flex: 1 1 auto; min-width: 0; }
-.custom-card-title { font-size: 13px; font-weight: 600; word-break: break-word; }
-.custom-card-body {
-  font-size: 12px; color: var(--muted); margin-top: 3px;
-  white-space: pre-wrap; word-break: break-word; line-height: 1.5;
-}
-.custom-card-body h1, .custom-card-body h2, .custom-card-body h3 { font-size: 1.05em; margin: .4em 0 .2em; }
-.custom-card-body p { margin: .3em 0; }
-.custom-card-body code { background: rgba(0,0,0,.2); padding: 1px 5px; border-radius: 3px; font-family: ui-monospace, monospace; font-size: .92em; }
-.custom-card-body a { color: var(--accent); text-decoration: underline; }
-.custom-card-body ul, .custom-card-body ol { padding-left: 1.5em; margin: .3em 0; }
-.custom-card-body blockquote { border-left: 3px solid var(--accent); padding-left: 10px; color: var(--muted); margin: .3em 0; }
-
-.custom-card-actions { display: flex; gap: 4px; flex: 0 0 auto; }
-
-.custom-archive-section {
-  margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--border);
-}
-.custom-archive-head {
-  display: flex; justify-content: space-between; align-items: center; gap: 8px;
-  font-size: 12px; color: var(--muted); margin-bottom: 8px; cursor: pointer;
-  user-select: none; flex-wrap: wrap;
-}
-.custom-archive-head:hover { color: var(--text); }
-.custom-archive-head button {
-  background: transparent; border: 1px solid var(--border); color: var(--muted);
-  padding: 2px 10px; font-size: 11px; border-radius: 6px; cursor: pointer; font-family: inherit;
-}
-.custom-archive-head button:hover { color: var(--danger); border-color: var(--danger); }
-.custom-archive-head button.restore-arrow { color: var(--accent); border-color: var(--accent); }
-.custom-empty {
-  font-size: 12px; color: var(--muted); padding: 24px 16px; text-align: center;
-  border: 1px dashed var(--border); border-radius: 10px;
-}
-.custom-toolbar {
-  display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
-  margin-bottom: 12px;
-}
-.custom-toolbar .spacer { flex: 1 1 auto; }
-
-/* Кнопка "Своя вкладка" в панели */
-.tab.tab-add-custom {
-  margin-top: 4px; border-style: dashed; border-color: var(--accent);
-  color: var(--accent); font-size: 12px;
-}
-.tab.tab-add-custom:hover { background: var(--highlight-bg); }
-
-/* Анимация МОЛОДЕЦ */
-.molodets-overlay {
-  position: fixed; inset: 0; z-index: 9999;
-  pointer-events: none; display: flex;
-  align-items: center; justify-content: center;
-  opacity: 0; transition: opacity .25s;
-}
-.molodets-overlay.show { opacity: 1; }
-.molodets-text {
-  font-size: clamp(48px, 12vw, 140px);
-  font-weight: 900; letter-spacing: .02em;
-  background: linear-gradient(135deg, #3fb950, #58a6ff, #f5c518);
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent; color: transparent;
-  text-shadow: none;
-  transform: scale(.4) rotate(-6deg);
-  animation: molodetsPop .8s cubic-bezier(.22,1.5,.36,1) forwards;
-  filter: drop-shadow(0 6px 18px rgba(88,166,255,.6));
-  padding: 0 20px; text-align: center;
-}
-@keyframes molodetsPop {
-  0%   { transform: scale(.4) rotate(-6deg); }
-  60%  { transform: scale(1.15) rotate(3deg); }
-  100% { transform: scale(1) rotate(-1deg); }
-}
-.molodets-emoji {
-  font-size: clamp(40px, 8vw, 90px); margin-left: 12px;
-  animation: molodetsSpin .9s ease-out;
-  display: inline-block;
-}
-@keyframes molodetsSpin {
-  0% { transform: rotate(-180deg) scale(0); }
-  70% { transform: rotate(20deg) scale(1.2); }
-  100% { transform: rotate(0deg) scale(1); }
-}
-
-/* Модалка создания своей вкладки */
-.custom-tab-form { display: grid; gap: 10px; }
-.custom-tab-form .row-2 { display: grid; grid-template-columns: 64px 1fr; gap: 8px; align-items: center; }
-.custom-tab-form .icon-input { text-align: center; font-size: 22px; padding: 8px 4px; }
 </style>
 </head>
 <body>
@@ -1411,22 +1306,6 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
             <button type="submit">Добавить</button>
           </form>
           <div class="habit-list" id="habitList"></div>
-        </div>
-      </div>
-      <!-- Свои вкладки: полотно -->
-      <div id="viewCustom" hidden>
-        <div class="custom-toolbar">
-          <button type="button" id="customAddCardBtn">＋ Добавить карточку</button>
-          <span class="spacer"></span>
-          <span class="muted" style="font-size:11px;" id="customCounter"></span>
-        </div>
-        <div class="custom-cards" id="customCardsList"></div>
-        <div class="custom-archive-section" id="customArchiveSection" hidden>
-          <div class="custom-archive-head" id="customArchiveToggle">
-            <span>📦 Архив (<span id="customArchiveCount">0</span>)</span>
-            <button type="button" class="restore-arrow" id="customArchiveShowBtn">Показать</button>
-          </div>
-          <div class="custom-cards" id="customArchiveList" hidden></div>
         </div>
       </div>
 
@@ -1821,63 +1700,6 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
   </div>
 </div>
 
-<!-- Модалка: создание / переименование своей вкладки -->
-<div class="modal-backdrop" id="customTabModal" hidden>
-  <div class="modal modal-sm">
-    <header class="modal-head">
-      <div class="modal-title" id="customTabModalTitle">＋ Своя вкладка</div>
-      <button type="button" class="secondary" data-action="close-custom-tab">✕</button>
-    </header>
-    <div class="modal-body">
-      <div class="custom-tab-form">
-        <div class="row-2">
-          <input type="text" class="icon-input" id="customTabIcon" placeholder="📌" maxlength="4" />
-          <input type="text" id="customTabName" placeholder="Название вкладки" maxlength="40" />
-        </div>
-        <div id="customTabError" style="color:var(--danger); font-size:12px; min-height:16px;"></div>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button type="button" class="secondary" data-action="close-custom-tab">Отмена</button>
-      <button type="button" id="customTabSaveBtn">💾 Сохранить</button>
-    </div>
-  </div>
-</div>
-
-<!-- Модалка: карточка -->
-<div class="modal-backdrop" id="customCardModal" hidden>
-  <div class="modal modal-sm">
-    <header class="modal-head">
-      <div class="modal-title" id="customCardModalTitle">✎ Карточка</div>
-      <button type="button" class="secondary" data-action="close-custom-card">✕</button>
-    </header>
-    <div class="modal-body">
-      <div class="custom-tab-form">
-        <div>
-          <label for="customCardTitle">Заголовок</label>
-          <input type="text" id="customCardTitle" placeholder="Короткое название" maxlength="200" />
-        </div>
-        <div>
-          <label for="customCardBody">Текст (можно Markdown и формулы $...$)</label>
-          <textarea id="customCardBody" rows="8" placeholder="Подробности, расчёты, ссылки…"></textarea>
-        </div>
-        <div id="customCardError" style="color:var(--danger); font-size:12px; min-height:16px;"></div>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button type="button" class="secondary" data-action="close-custom-card">Отмена</button>
-      <button type="button" id="customCardSaveBtn">💾 Сохранить</button>
-    </div>
-  </div>
-</div>
-
-<!-- Оверлей "МОЛОДЕЦ!" -->
-<div class="molodets-overlay" id="molodetsOverlay">
-  <div>
-    <span class="molodets-text">МОЛОДЕЦ!</span>
-    <span class="molodets-emoji">🎉</span>
-  </div>
-</div>
 <div class="toast-container" id="toastContainer"></div>
 <button type="button" class="kbd-hint-fab" id="kbdHelpBtn" title="Горячие клавиши (?)">?</button>
 <!-- Модалка установки/смены PIN -->
@@ -1976,7 +1798,6 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
   const SNIPPETS_KEY = 'pgt_v25_snippets';
   const NOTES_KEY = 'pgt_v25_notes';
   const TEMPLATES_KEY = 'pgt_v25_templates';
-const CUSTOM_TABS_KEY = 'pgt_v25_custom_tabs';
   const THEME_KEY = 'pgt_v25_theme';
   const IDB_NAME = 'pgt_handles_v25';
   const IDB_HANDLES = 'handles';
@@ -2014,10 +1835,9 @@ const DEFAULT_TABS = [
   { id: 'archive',    icon: '📦', label: 'Архив',     visible: true, hasCounter: true, counterId: 'archiveCount' }
 ];
 
-    const state = {
+  const state = {
     goals: [], folders: { articles: emptySection('Статьи'), books: emptySection('Книги') },
     snippets: [], notes: [], templates: [], habits: [],
-    customTabs: [], customActiveTab: null,
     collapsed: {}, colorTotal: DEFAULT_TOTAL_COLOR, colorDone: DEFAULT_DONE_COLOR,
     favorites: { articles: {}, books: {} },
     readingPos: { articles: {}, books: {} }, pdfPage: { articles: {}, books: {} },
@@ -2281,18 +2101,8 @@ function waitForLib(name, ms) {
     try { const raw = localStorage.getItem(SNIPPETS_KEY) || localStorage.getItem('pgt_v24_snippets'); if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) state.snippets = arr.map(normalizeSnippet).filter(Boolean); } } catch (e) {}
     try { const raw = localStorage.getItem(NOTES_KEY) || localStorage.getItem('pgt_v24_notes'); if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) state.notes = arr.map(normalizeNote).filter(Boolean); } } catch (e) {}
     try { const raw = localStorage.getItem(TEMPLATES_KEY) || localStorage.getItem('pgt_v24_templates'); if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) state.templates = arr.filter(function (t) { return t && typeof t === 'object' && typeof t.text === 'string'; }); } } catch (e) {}
-        try {
-      const raw = localStorage.getItem(CUSTOM_TABS_KEY);
-      if (raw) {
-        const arr = JSON.parse(raw);
-        if (Array.isArray(arr)) state.customTabs = arr.map(normalizeCustomTab).filter(Boolean);
-      }
-    } catch (e) {}
-	try { const raw = localStorage.getItem('pgt_v25_habits'); if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) state.habits = arr.filter(function (h) { return h && typeof h === 'object' && typeof h.title === 'string'; }).map(function (h) { return { id: h.id || ('h-' + Math.random().toString(36).slice(2)), title: String(h.title).slice(0, 200), icon: String(h.icon || '🎯').slice(0, 4), marks: Array.isArray(h.marks) ? h.marks.filter(function (m) { return typeof m === 'string'; }) : [], createdAt: h.createdAt || Date.now() }; }); } } catch (e) {}
-           state.tabs = mergeTabs(state.tabs);
-      if (state.ui.tab && state.ui.tab.indexOf('custom:') === 0) {
-        state.customActiveTab = state.ui.tab.slice(7);
-      }
+    try { const raw = localStorage.getItem('pgt_v25_habits'); if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) state.habits = arr.filter(function (h) { return h && typeof h === 'object' && typeof h.title === 'string'; }).map(function (h) { return { id: h.id || ('h-' + Math.random().toString(36).slice(2)), title: String(h.title).slice(0, 200), icon: String(h.icon || '🎯').slice(0, 4), marks: Array.isArray(h.marks) ? h.marks.filter(function (m) { return typeof m === 'string'; }) : [], createdAt: h.createdAt || Date.now() }; }); } } catch (e) {}
+      state.tabs = mergeTabs(state.tabs);
 }
 
             // Debounced сохранения — пишут в localStorage не чаще 250 мс
@@ -2355,58 +2165,6 @@ scheduleDiskWrite();
 	  scheduleAutoSync();
  scheduleDiskWrite();
     }, 250);
-  }
-
-  let _saveCustomTabsTimer = null;
-  function saveCustomTabs() {
-    clearTimeout(_saveCustomTabsTimer);
-    _saveCustomTabsTimer = setTimeout(function () {
-      try {
-        localStorage.setItem(CUSTOM_TABS_KEY, JSON.stringify(state.customTabs));
-        flashSaved();
-      } catch (e) { showToast('Переполнено хранилище', 'error'); }
-      if (typeof bcBroadcast === 'function') bcBroadcast('data-changed', {});
-      _searchIndexDirty = true;
-      scheduleAutoSync();
-      scheduleDiskWrite();
-    }, 250);
-  }
-
-    function normalizeCustomTab(t) {
-    if (!t || typeof t !== 'object') return null;
-    const tab = {
-      id: typeof t.id === 'string' && t.id ? t.id : ('ct-' + Math.random().toString(36).slice(2)),
-      icon: String(t.icon || '📌').slice(0, 4),
-      label: String(t.label || 'Без названия').slice(0, 60),
-      visible: (typeof t.visible === 'boolean') ? t.visible : true,
-      createdAt: typeof t.createdAt === 'number' ? t.createdAt : Date.now(),
-      cards: []
-    };
-    if (Array.isArray(t.cards)) {
-      tab.cards = t.cards.map(function (c) {
-        if (!c || typeof c !== 'object') return null;
-        return {
-          id: typeof c.id === 'string' && c.id ? c.id : ('cc-' + Math.random().toString(36).slice(2)),
-          title: String(c.title || '').slice(0, 200),
-          body: String(c.body || '').slice(0, 10000),
-          done: !!c.done,
-          doneAt: typeof c.doneAt === 'number' ? c.doneAt : null,
-          archivedAt: typeof c.archivedAt === 'number' ? c.archivedAt : null,
-          createdAt: typeof c.createdAt === 'number' ? c.createdAt : Date.now()
-        };
-      }).filter(Boolean);
-    }
-    return tab;
-  }
-
-  function findCustomTab(id) {
-    for (let i = 0; i < state.customTabs.length; i++) if (state.customTabs[i].id === id) return state.customTabs[i];
-    return null;
-  }
-
-  function getActiveCustomTab() {
-    if (!state.customActiveTab) return null;
-    return findCustomTab(state.customActiveTab);
   }
 
   function saveHabits() {
@@ -3521,10 +3279,8 @@ if (hasUser && hasToken) {
     state.notes = [];
     state.templates = [];
     state.habits = [];
-     state.folders = { articles: emptySection('Статьи'), books: emptySection('Книги') };
+    state.folders = { articles: emptySection('Статьи'), books: emptySection('Книги') };
     state.collapsed = {};
-    state.customTabs = [];
-    state.customActiveTab = null;
     state.favorites = { articles: {}, books: {} };
     state.readingPos = { articles: {}, books: {} };
     state.pdfPage = { articles: {}, books: {} };
@@ -3563,11 +3319,10 @@ const isBeforeRestore = (reason === 'before-restore' || reason === 'before-json-
       ts: Date.now(),
       reason: reason || 'auto',
       data: {
-               goals: state.goals,
+        goals: state.goals,
         snippets: state.snippets,
         notes: state.notes,
         templates: state.templates,
-        customTabs: state.customTabs,
         folders: {
           articles: { name: state.folders.articles.name, files: state.folders.articles.files, updatedAt: state.folders.articles.updatedAt },
           books: { name: state.folders.books.name, files: state.folders.books.files, updatedAt: state.folders.books.updatedAt }
@@ -3771,7 +3526,6 @@ const isBeforeRestore = (reason === 'before-restore' || reason === 'before-json-
       if (Array.isArray(parsed.notes)) localStorage.setItem(NOTES_KEY, JSON.stringify(parsed.notes));
       if (Array.isArray(parsed.templates)) localStorage.setItem(TEMPLATES_KEY, JSON.stringify(parsed.templates));
       if (Array.isArray(parsed.habits)) localStorage.setItem('pgt_v25_habits', JSON.stringify(parsed.habits));
-      if (Array.isArray(parsed.customTabs)) localStorage.setItem('pgt_v25_custom_tabs', JSON.stringify(parsed.customTabs));
       if (parsed.prefs) localStorage.setItem(PREFS_KEY, JSON.stringify(parsed.prefs));
 
   // === ARIA и фокус для модалок ===
@@ -3845,7 +3599,6 @@ const isBeforeRestore = (reason === 'before-restore' || reason === 'before-json-
         notes: JSON.parse(localStorage.getItem(NOTES_KEY) || '[]'),
         templates: JSON.parse(localStorage.getItem(TEMPLATES_KEY) || '[]'),
         habits: JSON.parse(localStorage.getItem('pgt_v25_habits') || '[]'),
- 	customTabs: JSON.parse(localStorage.getItem('pgt_v25_custom_tabs') || '[]'),
         prefs: JSON.parse(localStorage.getItem(PREFS_KEY) || '{}')
       };
       const fh = await _dataFolderHandle.getFileHandle(DATA_FOLDER_FILENAME, { create: true });
@@ -3944,7 +3697,6 @@ function autoArchiveOldCompletedTasks() {
         if (Array.isArray(b.data.snippets)) state.snippets = b.data.snippets.map(normalizeSnippet).filter(Boolean);
         if (Array.isArray(b.data.notes)) state.notes = b.data.notes.map(normalizeNote).filter(Boolean);
         if (Array.isArray(b.data.templates)) state.templates = b.data.templates;
-        if (Array.isArray(b.data.customTabs)) state.customTabs = b.data.customTabs.map(normalizeCustomTab).filter(Boolean);
         if (b.data.folders && typeof b.data.folders === 'object') {
           SECTIONS.forEach(function (s) {
             const fd = b.data.folders[s];
@@ -3956,7 +3708,7 @@ function autoArchiveOldCompletedTasks() {
             }
           });
         }
-                 saveData(); saveSnippets(); saveNotes(); saveCustomTabs();
+                saveData(); saveSnippets(); saveNotes();
         render();
         renderBackupList();
         showToast('Данные восстановлены из бэкапа', 'ok');
@@ -4420,11 +4172,7 @@ function autoArchiveOldCompletedTasks() {
   async function importFromZip(file) {
     if (!window.JSZip) { showToast('JSZip не загружен', 'error'); return; }
     if (!file) return;
-        pgtConfirm({ title: 'Загрузить ZIP?', message: 'Текущие данные будут заменены. Перед этим создастся резервная копия.', yesLabel: 'Загрузить', danger: false, onYes: function(){ importFromZipContinue(file); } });
-    return;
-  }
-
-  async function importFromZipContinue(file) {
+    if (!confirm('Загрузить ZIP? Текущие данные будут заменены (перед этим создастся резервная копия).')) return;
     await makeBackup('before-zip-import');
     showToast('Распаковываю…', 'ok', null, null, 8000);
 
@@ -4443,7 +4191,6 @@ function autoArchiveOldCompletedTasks() {
     if (Array.isArray(parsed.snippets)) state.snippets = parsed.snippets.map(normalizeSnippet).filter(Boolean);
     if (Array.isArray(parsed.notes)) state.notes = parsed.notes.map(normalizeNote).filter(Boolean);
     if (Array.isArray(parsed.templates)) state.templates = parsed.templates;
-  if (Array.isArray(parsed.customTabs)) state.customTabs = parsed.customTabs.map(normalizeCustomTab).filter(Boolean);
     if (parsed.folders && typeof parsed.folders === 'object') {
       SECTIONS.forEach(function (s) {
         const fd = parsed.folders[s];
@@ -4821,22 +4568,7 @@ function autoArchiveOldCompletedTasks() {
     if (fsSupported) { const saved = await idbGet(IDB_HANDLES, 'folder_' + section); if (saved) { rt.handle = saved; try { const perm = await saved.queryPermission({ mode: 'read' }); if (perm === 'granted') { await scanFolder(section, saved); return; } } catch (e) {} } }
     alert('Выберите папку заново');
   }
-  async function disconnectFolder(section) {
-  pgtConfirm({ title: 'Отсоединить папку?', message: 'Файлы в ней останутся, но приложение перестанет её видеть.', yesLabel: 'Отсоединить', onYes: async function(){
-    const rt = runtime[section];
-    cleanupPdf(section);
-    rt.handle = null;
-    rt.fileCache.clear();
-    rt.selected = null;
-    state.folders[section] = emptySection(state.folders[section].defaultName);
-    await idbDelete(IDB_HANDLES, 'folder_' + section);
-    saveData();
-    renderMeta(section);
-    renderList(section);
-    renderReaderEmpty(section);
-    renderSectionCount();
-  } });
-}
+  async function disconnectFolder(section) { if (!confirm('Отсоединить папку?')) return; const rt = runtime[section]; cleanupPdf(section); rt.handle = null; rt.fileCache.clear(); rt.selected = null; state.folders[section] = emptySection(state.folders[section].defaultName); await idbDelete(IDB_HANDLES, 'folder_' + section); saveData(); renderMeta(section); renderList(section); renderReaderEmpty(section); renderSectionCount(); }
   async function requestPermission(section) { if (!fsSupported) return; const rt = runtime[section]; const handle = rt.handle || await idbGet(IDB_HANDLES, 'folder_' + section); if (!handle) return; try { const perm = await handle.requestPermission({ mode: 'read' }); if (perm === 'granted') { rt.handle = handle; await scanFolder(section, handle); } } catch (e) {} }
   async function tryRestoreHandles() { if (!fsSupported) return; for (const section of SECTIONS) { const handle = await idbGet(IDB_HANDLES, 'folder_' + section); if (!handle) continue; try { const perm = await handle.queryPermission({ mode: 'read' }); if (perm === 'granted') { runtime[section].handle = handle; await scanFolder(section, handle); } else { state.folders[section].name = state.folders[section].name || handle.name; state.folders[section].needsPermission = true; saveData(); renderMeta(section); renderList(section); } } catch (e) {} } }
     function renderSectionCount() {
@@ -4871,307 +4603,13 @@ function autoArchiveOldCompletedTasks() {
     SECTIONS.forEach(function (s) { const view = document.getElementById(s === 'articles' ? 'articlesPanel' : 'booksPanel'); if (!view) return; const sel = view.querySelector('[data-action="set-sort"][data-section="' + s + '"]'); if (sel) sel.value = state.litSort[s] || 'name'; const favBtn = view.querySelector('[data-action="toggle-fav-filter"][data-section="' + s + '"]'); if (favBtn) favBtn.classList.toggle('active', !!state.litFavFilter[s]); applyListVisibility(s); });
    updateNotifBtn();
     syncQuickHint();
-  }  
-  // === СВОИ ВКЛАДКИ: рендер ===
-  function renderCustomView() {
-    const tab = getActiveCustomTab();
-    const list = document.getElementById('customCardsList');
-    const archiveSec = document.getElementById('customArchiveSection');
-    const archiveList = document.getElementById('customArchiveList');
-    const counter = document.getElementById('customCounter');
-    if (!list) return;
-    if (!tab) { list.innerHTML = '<div class="custom-empty">Вкладка не найдена.</div>'; return; }
-
-    const active = tab.cards.filter(function (c) { return !c.archivedAt; });
-    const archived = tab.cards.filter(function (c) { return !!c.archivedAt; });
-
-    active.sort(function (a, b) {
-      if (a.done !== b.done) return a.done ? 1 : -1;
-      return (b.createdAt || 0) - (a.createdAt || 0);
-    });
-
-    if (counter) {
-      const nc = active.filter(function (c) { return !c.done; }).length;
-      const dc = active.filter(function (c) { return c.done; }).length;
-      counter.textContent = 'Активных: ' + nc + ' · выполнено: ' + dc;
-    }
-
-    if (!active.length) {
-      list.innerHTML = '<div class="custom-empty">Пусто. Нажмите «＋ Добавить карточку», чтобы начать.</div>';
-    } else {
-      list.innerHTML = active.map(renderCustomCard).join('');
-    }
-
-    if (archived.length) {
-      archiveSec.hidden = false;
-      const cnt = document.getElementById('customArchiveCount');
-      if (cnt) cnt.textContent = archived.length;
-      archived.sort(function (a, b) { return (b.archivedAt || 0) - (a.archivedAt || 0); });
-      archiveList.innerHTML = archived.map(renderCustomCard).join('');
-    } else {
-      archiveSec.hidden = true;
-      archiveList.innerHTML = '';
-    }
-  }
-
-  function renderCustomCard(c) {
-    const bodyHtml = c.body ? renderMdText(c.body) : '';
-    const archivedBadge = c.archivedAt ? ' <span style="font-size:10px;color:var(--muted);">📦 архив</span>' : '';
-    const actions = [];
-    if (!c.archivedAt) {
-      actions.push('<button type="button" class="icon-btn" data-action="custom-edit-card" data-card-id="' + escapeHtml(c.id) + '" title="Редактировать">✎</button>');
-      actions.push('<button type="button" class="icon-btn" data-action="custom-archive-card" data-card-id="' + escapeHtml(c.id) + '" title="В архив">📦</button>');
-      actions.push('<button type="button" class="icon-btn" data-action="custom-delete-card" data-card-id="' + escapeHtml(c.id) + '" title="Удалить">✕</button>');
-    } else {
-      actions.push('<button type="button" class="icon-btn" data-action="custom-restore-card" data-card-id="' + escapeHtml(c.id) + '" title="Восстановить">↺</button>');
-      actions.push('<button type="button" class="icon-btn" data-action="custom-delete-card" data-card-id="' + escapeHtml(c.id) + '" title="Удалить">✕</button>');
-    }
-    const checkHtml = c.archivedAt ? '' : '<input type="checkbox" class="custom-card-check" ' + (c.done ? 'checked' : '') + ' data-action="custom-toggle-card" data-card-id="' + escapeHtml(c.id) + '" />';
-    return '<div class="custom-card' + (c.done ? ' done' : '') + '" data-card-id="' + escapeHtml(c.id) + '">' +
-      '<div class="custom-card-head">' +
-        checkHtml +
-        '<div class="custom-card-content">' +
-          '<div class="custom-card-title">' + escapeHtml(c.title || 'Без названия') + archivedBadge + '</div>' +
-          (c.body ? '<div class="custom-card-body">' + bodyHtml + '</div>' : '') +
-        '</div>' +
-        '<div class="custom-card-actions">' + actions.join('') + '</div>' +
-      '</div>' +
-    '</div>';
-  }
-
-  function openCustomTabModal(editId) {
-    const modal = document.getElementById('customTabModal');
-    if (!modal) return;
-    modal.dataset.editId = editId || '';
-    const titleEl = document.getElementById('customTabModalTitle');
-    const iconEl = document.getElementById('customTabIcon');
-    const nameEl = document.getElementById('customTabName');
-    const errEl = document.getElementById('customTabError');
-    errEl.textContent = '';
-    if (editId) {
-      const t = findCustomTab(editId);
-      if (t) {
-        titleEl.textContent = '✎ Переименовать вкладку';
-        iconEl.value = t.icon;
-        nameEl.value = t.label;
-      }
-    } else {
-      titleEl.textContent = '＋ Своя вкладка';
-      iconEl.value = '📌';
-      nameEl.value = '';
-    }
-    modal.hidden = false;
-    setTimeout(function () { nameEl.focus(); }, 50);
-  }
-
-  function closeCustomTabModal() {
-    const modal = document.getElementById('customTabModal');
-    if (modal) modal.hidden = true;
-  }
-
-  function saveCustomTab() {
-    const modal = document.getElementById('customTabModal');
-    if (!modal) return;
-    const editId = modal.dataset.editId || '';
-    const iconEl = document.getElementById('customTabIcon');
-    const nameEl = document.getElementById('customTabName');
-    const errEl = document.getElementById('customTabError');
-    const icon = (iconEl.value || '').trim() || '📌';
-    const label = (nameEl.value || '').trim();
-    if (!label) { errEl.textContent = 'Введите название'; nameEl.focus(); return; }
-    if (editId) {
-      const t = findCustomTab(editId);
-      if (!t) { errEl.textContent = 'Вкладка не найдена'; return; }
-      t.icon = icon.slice(0, 4);
-      t.label = label.slice(0, 60);
-      saveCustomTabs();
-      closeCustomTabModal();
-      renderTabs();
-      showToast('Вкладка обновлена', 'ok');
-    } else {
-            const newTab = {
-        id: 'ct-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-        icon: icon.slice(0, 4),
-        label: label.slice(0, 60),
-        visible: true,
-        createdAt: Date.now(),
-        cards: []
-      };
-      state.customTabs.push(newTab);
-      saveCustomTabs();
-      closeCustomTabModal();
-      renderTabs();
-      switchTab('custom:' + newTab.id);
-      showToast('Вкладка создана', 'ok');
-    }
-  }
-
-  function deleteCustomTab(id) {
-    const t = findCustomTab(id);
-    if (!t) return;
-    pgtConfirm({
-      title: 'Удалить вкладку?',
-      message: 'Вкладка «' + t.label + '» и все её карточки (' + t.cards.length + ') будут удалены безвозвратно.',
-      yesLabel: 'Удалить',
-      onYes: function () {
-        const idx = state.customTabs.indexOf(t);
-        state.customTabs.splice(idx, 1);
-        if (state.customActiveTab === id) state.customActiveTab = null;
-        if (state.ui.tab === 'custom:' + id) state.ui.tab = 'active';
-        saveCustomTabs();
-        savePrefs();
-        renderTabs();
-        showToast('Вкладка удалена', 'ok');
-      }
-    });
-  }
-
-  let _customCardEditId = null;
-  function openCustomCardModal(cardId) {
-    const modal = document.getElementById('customCardModal');
-    if (!modal) return;
-    const tab = getActiveCustomTab();
-    if (!tab) return;
-    _customCardEditId = cardId || null;
-    const titleEl = document.getElementById('customCardModalTitle');
-    const titleInp = document.getElementById('customCardTitle');
-    const bodyInp = document.getElementById('customCardBody');
-    const errEl = document.getElementById('customCardError');
-    errEl.textContent = '';
-    if (cardId) {
-      const c = tab.cards.find(function (x) { return x.id === cardId; });
-      if (!c) return;
-      titleEl.textContent = '✎ Карточка';
-      titleInp.value = c.title;
-      bodyInp.value = c.body;
-    } else {
-      titleEl.textContent = '＋ Новая карточка';
-      titleInp.value = '';
-      bodyInp.value = '';
-    }
-    modal.hidden = false;
-    setTimeout(function () { titleInp.focus(); }, 50);
-  }
-
-  function closeCustomCardModal() {
-    const modal = document.getElementById('customCardModal');
-    if (modal) modal.hidden = true;
-    _customCardEditId = null;
-  }
-
-  function saveCustomCard() {
-    const tab = getActiveCustomTab();
-    if (!tab) return;
-    const titleInp = document.getElementById('customCardTitle');
-    const bodyInp = document.getElementById('customCardBody');
-    const errEl = document.getElementById('customCardError');
-    const title = (titleInp.value || '').trim();
-    const body = (bodyInp.value || '');
-    if (!title && !body.trim()) { errEl.textContent = 'Заполните хотя бы заголовок'; titleInp.focus(); return; }
-    if (_customCardEditId) {
-      const c = tab.cards.find(function (x) { return x.id === _customCardEditId; });
-      if (!c) return;
-      c.title = title || 'Без названия';
-      c.body = body;
-      showToast('Карточка обновлена', 'ok');
-    } else {
-      tab.cards.push({
-        id: 'cc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-        title: title || 'Без названия',
-        body: body,
-        done: false,
-        doneAt: null,
-        archivedAt: null,
-        createdAt: Date.now()
-      });
-      showToast('Карточка добавлена', 'ok');
-    }
-    saveCustomTabs();
-    closeCustomCardModal();
-    renderCustomView();
-  }
-
-  function toggleCustomCard(cardId) {
-    const tab = getActiveCustomTab();
-    if (!tab) return;
-    const c = tab.cards.find(function (x) { return x.id === cardId; });
-    if (!c) return;
-    c.done = !c.done;
-    c.doneAt = c.done ? Date.now() : null;
-    saveCustomTabs();
-    if (c.done) {
-      showMolodets();
-      setTimeout(renderCustomView, 700);
-    } else {
-      renderCustomView();
-    }
-  }
-
-  function archiveCustomCard(cardId) {
-    const tab = getActiveCustomTab();
-    if (!tab) return;
-    const c = tab.cards.find(function (x) { return x.id === cardId; });
-    if (!c) return;
-    c.archivedAt = Date.now();
-    saveCustomTabs();
-    renderCustomView();
-    showToast('Карточка в архиве', 'ok');
-  }
-
-  function restoreCustomCard(cardId) {
-    const tab = getActiveCustomTab();
-    if (!tab) return;
-    const c = tab.cards.find(function (x) { return x.id === cardId; });
-    if (!c) return;
-    c.archivedAt = null;
-    saveCustomTabs();
-    renderCustomView();
-    showToast('Карточка восстановлена', 'ok');
-  }
-
-  function deleteCustomCard(cardId) {
-    const tab = getActiveCustomTab();
-    if (!tab) return;
-    const c = tab.cards.find(function (x) { return x.id === cardId; });
-    if (!c) return;
-    pgtConfirm({
-      title: 'Удалить карточку?',
-      message: (c.title || 'Без названия') + ' — будет удалена безвозвратно.',
-      yesLabel: 'Удалить',
-      onYes: function () {
-        tab.cards = tab.cards.filter(function (x) { return x.id !== cardId; });
-        saveCustomTabs();
-        renderCustomView();
-        showToast('Карточка удалена', 'ok');
-      }
-    });
-  }
-
-  let _molodetsTimer = null;
-  function showMolodets() {
-    const ov = document.getElementById('molodetsOverlay');
-    if (!ov) return;
-    clearTimeout(_molodetsTimer);
-    ov.classList.add('show');
-    const text = ov.querySelector('.molodets-text');
-    const emoji = ov.querySelector('.molodets-emoji');
-    if (text) { text.style.animation = 'none'; void text.offsetWidth; text.style.animation = ''; }
-    if (emoji) { emoji.style.animation = 'none'; void emoji.offsetWidth; emoji.style.animation = ''; }
-    _molodetsTimer = setTimeout(function () { ov.classList.remove('show'); }, 1400);
-  }
-
-function renderTabs() {
+  }  function renderTabs() {
     if (!Array.isArray(state.tabs)) state.tabs = mergeTabs(null);
 
     // Если текущая вкладка спрятана — переключаемся на первую видимую
-       const visibleIds = state.tabs.filter(function (t) { return t.visible; }).map(function (t) { return t.id; });
-    const isCustomTab = state.ui.tab && state.ui.tab.indexOf('custom:') === 0;
-    if (!isCustomTab && visibleIds.length && visibleIds.indexOf(state.ui.tab) === -1) {
+    const visibleIds = state.tabs.filter(function (t) { return t.visible; }).map(function (t) { return t.id; });
+    if (visibleIds.length && visibleIds.indexOf(state.ui.tab) === -1) {
       state.ui.tab = visibleIds[0];
-    }
-    if (isCustomTab) {
-      const _cid = state.ui.tab.slice(7);
-      if (!findCustomTab(_cid)) state.ui.tab = visibleIds[0] || 'active';
     }
 
     // Рисуем кнопки вкладок
@@ -5188,34 +4626,19 @@ function renderTabs() {
           counter +
         '</button>';
       }).join('');
-                state.customTabs.filter(function (t) { return t.visible !== false; }).forEach(function (t) {
-        const sel = state.ui.tab === ('custom:' + t.id) ? 'true' : 'false';
-        const activeCount = t.cards.filter(function (c) { return !c.archivedAt && !c.done; }).length;
-        html += '<button class="tab" role="tab" data-tab="custom:' + escapeHtml(t.id) + '" aria-selected="' + sel + '">' +
-          '<span class="tab-icon">' + escapeHtml(t.icon) + '</span>' +
-          '<span class="tab-label">' + escapeHtml(t.label) + '</span>' +
-          (activeCount ? '<span class="tab-count">' + activeCount + '</span>' : '') +
-        '</button>';
-      });
       html += '<button type="button" class="tab tab-manage" id="tabsManageBtn" title="Управление вкладками">' +
         '<span class="tab-icon">⚙</span><span class="tab-label">Вкладки</span>' +
-      '</button>';
-      html += '<button type="button" class="tab tab-add-custom" id="tabsAddCustomBtn" title="Создать свою вкладку">' +
-        '<span class="tab-icon">＋</span><span class="tab-label">Своя вкладка</span>' +
       '</button>';
       nav.innerHTML = html;
 
       nav.querySelectorAll('.tab[data-tab]').forEach(function (b) {
         b.addEventListener('click', function () { switchTab(b.dataset.tab); });
       });
-            const mb = document.getElementById('tabsManageBtn');
+      const mb = document.getElementById('tabsManageBtn');
       if (mb) mb.addEventListener('click', openTabsManageModal);
-      const _addCb = document.getElementById('tabsAddCustomBtn');
-      if (_addCb) _addCb.addEventListener('click', function () { openCustomTabModal(null); });
     }
 
     // Показываем только активное «полотно»
-        const isCustom = state.ui.tab.indexOf('custom:') === 0;
     document.getElementById('viewActive').hidden = state.ui.tab !== 'active';
     document.getElementById('viewArchive').hidden = state.ui.tab !== 'archive';
     document.getElementById('viewLiterature').hidden = state.ui.tab !== 'literature';
@@ -5223,11 +4646,6 @@ function renderTabs() {
     document.getElementById('viewNotes').hidden = state.ui.tab !== 'notes';
     document.getElementById('viewHabits').hidden = state.ui.tab !== 'habits';
     document.getElementById('viewAnalytics').hidden = state.ui.tab !== 'analytics';
-        document.getElementById('viewCustom').hidden = !isCustom;
-    if (isCustom) {
-      state.customActiveTab = state.ui.tab.slice(7);
-      renderCustomView();
-    }
 
     // Подвкладки внутри «Литературы» и «Активных»
     document.querySelectorAll('[data-lit-tab]').forEach(function (b) { b.classList.toggle('active', b.dataset.litTab === state.ui.litTab); });
@@ -6090,10 +5508,10 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
     const m = document.getElementById('tabsManageModal');
     if (m) m.hidden = true;
   }
-    function renderTabsManageList() {
+  function renderTabsManageList() {
     const box = document.getElementById('tabsManageList');
     if (!box) return;
-    let html = state.tabs.map(function (t, i) {
+    box.innerHTML = state.tabs.map(function (t, i) {
       const upDis = i === 0 ? ' disabled' : '';
       const dnDis = i === state.tabs.length - 1 ? ' disabled' : '';
       return '<div class="tabs-manage-row" data-tab-id="' + escapeHtml(t.id) + '">' +
@@ -6106,47 +5524,6 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
         '</div>' +
       '</div>';
     }).join('');
-
-        html += '<div style="margin-top:18px; padding-top:14px; border-top:2px solid var(--border);">';
-    html += '<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;">';
-    html += '<div style="font-size:12px; font-weight:700; color:var(--text);">✨ Свои вкладки</div>';
-    html += '<div style="display:flex; gap:6px; flex-wrap:wrap;">';
-    html += '<button type="button" id="tabsManageShowSelected" style="background:transparent; border:1px solid var(--border); color:var(--muted); padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer; font-family:inherit;">👁 Показать</button>';
-    html += '<button type="button" id="tabsManageHideSelected" style="background:transparent; border:1px solid var(--border); color:var(--muted); padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer; font-family:inherit;">🙈 Скрыть</button>';
-    html += '<button type="button" id="tabsManageDeleteSelected" style="background:transparent; border:1px solid var(--danger); color:var(--danger); padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer; font-family:inherit;">🗑 Удалить выбранные</button>';
-    html += '</div>';
-    html += '</div>';
-
-    if (!state.customTabs.length) {
-      html += '<div class="modal-empty" style="padding:16px 8px; font-size:12px;">Пока нет своих вкладок. Нажмите «＋ Своя вкладка» в левой панели.</div>';
-    } else {
-      state.customTabs.forEach(function (t, i) {
-        const upDis = i === 0 ? ' disabled' : '';
-        const dnDis = i === state.customTabs.length - 1 ? ' disabled' : '';
-        const activeCount = t.cards.filter(function (c) { return !c.archivedAt && !c.done; }).length;
-        const archivedCount = t.cards.filter(function (c) { return !!c.archivedAt; }).length;
-        const isHidden = t.visible === false;
-        html += '<div class="tabs-manage-row" data-custom-tab-id="' + escapeHtml(t.id) + '" style="grid-template-columns:auto auto 40px 1fr auto;">' +
-          '<input type="checkbox" data-custom-select title="Выбрать" style="width:16px; height:16px; accent-color:var(--accent); cursor:pointer; margin:0;" />' +
-          '<span style="font-size:18px; text-align:center;">' + escapeHtml(t.icon) + '</span>' +
-          '<span></span>' +
-          '<div style="min-width:0;">' +
-            '<div style="font-size:13px; font-weight:600; word-break:break-word;">' + escapeHtml(t.label) + (isHidden ? ' <span class="muted" style="font-size:10px;">(скрыта)</span>' : '') + '</div>' +
-            '<div class="muted" style="font-size:10px;">активных: ' + activeCount + ' · в архиве: ' + archivedCount + '</div>' +
-          '</div>' +
-          '<div class="order-btns">' +
-            '<button type="button" data-action="custom-tab-rename" title="Переименовать">✎</button>' +
-            '<button type="button" data-action="custom-tab-move-up" title="Выше"' + upDis + '>↑</button>' +
-            '<button type="button" data-action="custom-tab-move-down" title="Ниже"' + dnDis + '>↓</button>' +
-            '<button type="button" data-action="custom-tab-delete" title="Удалить" style="color:var(--danger);">🗑</button>' +
-          '</div>' +
-        '</div>';
-      });
-    }
-    html += '<button type="button" id="tabsManageCreateBtn" style="margin-top:12px; width:100%; background:transparent; border:1px dashed var(--accent); color:var(--accent); padding:10px; border-radius:8px; font-family:inherit; font-weight:600; cursor:pointer;">＋ Создать свою вкладку</button>';
-    html += '</div>';
-
-    box.innerHTML = html;
   }
   function findTabIndexById(id) {
     for (let i = 0; i < state.tabs.length; i++) if (state.tabs[i].id === id) return i;
@@ -6182,7 +5559,7 @@ function toggleCalendar() { state.calendarVisible = !state.calendarVisible; save
     showToast('Обработано: ' + ids.length + ' задач', 'ok');
   }
  
-    function exportData() { const blob = new Blob([JSON.stringify({ goals: state.goals, folders: state.folders, snippets: state.snippets, notes: state.notes, templates: state.templates, customTabs: state.customTabs }, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'backup_' + new Date().toISOString().slice(0, 10) + '.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); }
+  function exportData() { const blob = new Blob([JSON.stringify({ goals: state.goals, folders: state.folders, snippets: state.snippets, notes: state.notes, templates: state.templates }, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'backup_' + new Date().toISOString().slice(0, 10) + '.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); }
   function importData(e) {
     const file = e.target.files[0]; if (!file) return;
     const r = new FileReader();
@@ -6196,7 +5573,6 @@ function toggleCalendar() { state.calendarVisible = !state.calendarVisible; save
         if (Array.isArray(parsed.snippets)) { state.snippets = parsed.snippets.map(normalizeSnippet).filter(Boolean); saveSnippets(); }
         if (Array.isArray(parsed.notes)) { state.notes = parsed.notes.map(normalizeNote).filter(Boolean); saveNotes(); }
                 if (Array.isArray(parsed.templates)) { state.templates = parsed.templates; }
-        if (Array.isArray(parsed.customTabs)) { state.customTabs = parsed.customTabs.map(normalizeCustomTab).filter(Boolean); }
         state.collapsed = {}; saveData(); savePrefs(); resetGoalForm(); resetTaskForm(); render();
       } catch (err) { alert('Ошибка: ' + err.message); }
     };
@@ -6252,7 +5628,7 @@ function toggleCalendar() { state.calendarVisible = !state.calendarVisible; save
         runtime[s].fileCache.clear();
         runtime[s].selected = null;
       });
-      state.goals = []; state.snippets = []; state.notes = []; state.templates = []; state.habits = []; state.customTabs = []; state.customActiveTab = null;
+      state.goals = []; state.snippets = []; state.notes = []; state.templates = []; state.habits = [];
       state.folders = { articles: emptySection('Статьи'), books: emptySection('Книги') };
       state.collapsed = {};
       state.colorTotal = DEFAULT_TOTAL_COLOR;
@@ -6473,22 +5849,16 @@ function toggleCalendar() { state.calendarVisible = !state.calendarVisible; save
     renderHabits();
     showToast('Привычка добавлена', 'ok');
   }
-function deleteHabit(id) {
+
+  function deleteHabit(id) {
     const h = findHabit(id); if (!h) return;
-    pgtConfirm({
-      title: 'Удалить привычку?',
-      message: '«' + h.title + '». Все отметки будут потеряны.',
-      yesLabel: 'Удалить',
-      onYes: function () {
-        const idx = state.habits.indexOf(h);
-        if (idx === -1) return;
-        const snapshot = JSON.parse(JSON.stringify(h));
-        state.habits.splice(idx, 1);
-        saveHabits();
-        renderHabits();
-        pushUndo(function () { state.habits.splice(idx, 0, snapshot); saveHabits(); renderHabits(); }, 'удаление привычки');
-      }
-    });
+    if (!confirm('Удалить привычку «' + h.title + '»? Все отметки будут потеряны.')) return;
+    const idx = state.habits.indexOf(h);
+    const snapshot = JSON.parse(JSON.stringify(h));
+    state.habits.splice(idx, 1);
+    saveHabits();
+    renderHabits();
+    pushUndo(function () { state.habits.splice(idx, 0, snapshot); saveHabits(); renderHabits(); }, 'удаление привычки');
   }
 
     function startEditHabit(id) {
@@ -7183,7 +6553,8 @@ setInterval(tickLiveClock, 1000);
     document.getElementById('globalSearchBtn').addEventListener('click', openGlobalSearch);
         document.getElementById('calToggle').addEventListener('click', toggleCalendar);
 
-    document.querySelectorAll('[data-active-tab-btn]').forEach(function (b) {
+    document.querySelectorAll('.tab').forEach(function (b) { b.addEventListener('click', function () { switchTab(b.dataset.tab); }); });
+document.querySelectorAll('[data-active-tab-btn]').forEach(function (b) {
   b.addEventListener('click', function () { switchActiveTab(b.dataset.activeTabBtn); });
 });
     document.querySelectorAll('[data-lit-tab]').forEach(function (b) { b.addEventListener('click', function () { switchLitTab(b.dataset.litTab); }); });
@@ -7338,39 +6709,19 @@ setInterval(tickLiveClock, 1000);
  initTaskToGoalDnD();
 
     // === Обработчики окна «Управление вкладками» ===
-        (function bindTabsManage() {
+    (function bindTabsManage() {
       const modal = document.getElementById('tabsManageModal');
       if (!modal) return;
 
       modal.addEventListener('click', function (e) {
         if (e.target === modal) { closeTabsManageModal(); return; }
-
-        if (e.target && e.target.id === 'tabsManageCreateBtn') {
-          closeTabsManageModal();
-          openCustomTabModal(null);
-          return;
-        }
-
-        if (e.target && e.target.id === 'tabsManageHideSelected') {
-          applyCustomTabsVisibility(false);
-          return;
-        }
-        if (e.target && e.target.id === 'tabsManageShowSelected') {
-          applyCustomTabsVisibility(true);
-          return;
-        }
-        if (e.target && e.target.id === 'tabsManageDeleteSelected') {
-          deleteSelectedCustomTabs();
-          return;
-        }
-
         const el = e.target.closest('[data-action]');
         if (!el) return;
         const action = el.dataset.action;
 
         if (action === 'close-tabs-manage') { closeTabsManageModal(); return; }
         if (action === 'reset-tabs') {
-          pgtConfirm({
+                   pgtConfirm({
             title: 'Сбросить вкладки?',
             message: 'Все ваши названия, иконки и порядок вкладок вернутся к стандартным.',
             yesLabel: 'Сбросить',
@@ -7385,49 +6736,8 @@ setInterval(tickLiveClock, 1000);
           return;
         }
 
-        if (action === 'custom-tab-rename') {
-          const row = el.closest('[data-custom-tab-id]');
-          if (row) { closeTabsManageModal(); openCustomTabModal(row.dataset.customTabId); }
-          return;
-        }
-        if (action === 'custom-tab-delete') {
-          const row = el.closest('[data-custom-tab-id]');
-          if (row) { closeTabsManageModal(); deleteCustomTab(row.dataset.customTabId); }
-          return;
-        }
-        if (action === 'custom-tab-move-up') {
-          const row = el.closest('[data-custom-tab-id]');
-          if (!row) return;
-          const id = row.dataset.customTabId;
-          const idx = state.customTabs.findIndex(function (t) { return t.id === id; });
-          if (idx > 0) {
-            const tmp = state.customTabs[idx - 1];
-            state.customTabs[idx - 1] = state.customTabs[idx];
-            state.customTabs[idx] = tmp;
-            saveCustomTabs();
-            renderTabsManageList();
-            renderTabs();
-          }
-          return;
-        }
-        if (action === 'custom-tab-move-down') {
-          const row = el.closest('[data-custom-tab-id]');
-          if (!row) return;
-          const id = row.dataset.customTabId;
-          const idx = state.customTabs.findIndex(function (t) { return t.id === id; });
-          if (idx !== -1 && idx < state.customTabs.length - 1) {
-            const tmp = state.customTabs[idx + 1];
-            state.customTabs[idx + 1] = state.customTabs[idx];
-            state.customTabs[idx] = tmp;
-            saveCustomTabs();
-            renderTabsManageList();
-            renderTabs();
-          }
-          return;
-        }
-
         const row = el.closest('.tabs-manage-row');
-        if (!row || !row.dataset.tabId) return;
+        if (!row) return;
         const id = row.dataset.tabId;
         const idx = findTabIndexById(id);
         if (idx === -1) return;
@@ -7454,45 +6764,41 @@ setInterval(tickLiveClock, 1000);
         if (!el) return;
         const row = el.closest('.tabs-manage-row');
         if (!row) return;
+        const idx = findTabIndexById(row.dataset.tabId);
+        if (idx === -1) return;
 
-        if (row.dataset.tabId) {
-          const idx = findTabIndexById(row.dataset.tabId);
-          if (idx === -1) return;
-          if (el.dataset.action === 'tab-icon') {
-            state.tabs[idx].icon = (el.value || '').slice(0, 4) || '📌';
-            savePrefs();
-            renderTabs();
-          } else if (el.dataset.action === 'tab-label') {
-            state.tabs[idx].label = (el.value || '').slice(0, 30) || 'Вкладка';
-            savePrefs();
-            renderTabs();
-          }
+        if (el.dataset.action === 'tab-icon') {
+          state.tabs[idx].icon = (el.value || '').slice(0, 4) || '📌';
+          savePrefs();
+          renderTabs();
+        } else if (el.dataset.action === 'tab-label') {
+          state.tabs[idx].label = (el.value || '').slice(0, 30) || 'Вкладка';
+          savePrefs();
+          renderTabs();
         }
       });
 
       modal.addEventListener('change', function (e) {
-        const el = e.target;
+        const el = e.target.closest('[data-action="tab-toggle-visible"]');
+        if (!el) return;
+        const row = el.closest('.tabs-manage-row');
+        if (!row) return;
+        const idx = findTabIndexById(row.dataset.tabId);
+        if (idx === -1) return;
 
-        if (el.matches && el.matches('[data-action="tab-toggle-visible"]')) {
-          const row = el.closest('.tabs-manage-row');
-          if (!row || !row.dataset.tabId) return;
-          const idx = findTabIndexById(row.dataset.tabId);
-          if (idx === -1) return;
-          if (!el.checked) {
-            const others = state.tabs.filter(function (t, i) { return i !== idx && t.visible; }).length;
-            if (others === 0) {
-              el.checked = true;
-              showToast('Хотя бы одна вкладка должна остаться видимой', 'warn');
-              return;
-            }
-            state.tabs[idx].visible = false;
-          } else {
-            state.tabs[idx].visible = true;
+        if (!el.checked) {
+          const others = state.tabs.filter(function (t, i) { return i !== idx && t.visible; }).length;
+          if (others === 0) {
+            el.checked = true;
+            showToast('Хотя бы одна вкладка должна остаться видимой', 'warn');
+            return;
           }
-          savePrefs();
-          renderTabs();
-          return;
+          state.tabs[idx].visible = false;
+        } else {
+          state.tabs[idx].visible = true;
         }
+        savePrefs();
+        renderTabs();
       });
 
       modal.addEventListener('keydown', function (e) {
@@ -7500,54 +6806,6 @@ setInterval(tickLiveClock, 1000);
       });
     })();
 
-    function getSelectedCustomTabIds() {
-      const ids = [];
-      const modal = document.getElementById('tabsManageModal');
-      if (!modal) return ids;
-      modal.querySelectorAll('[data-custom-select]:checked').forEach(function (cb) {
-        const row = cb.closest('[data-custom-tab-id]');
-        if (row) ids.push(row.dataset.customTabId);
-      });
-      return ids;
-    }
-
-    function applyCustomTabsVisibility(visible) {
-      const ids = getSelectedCustomTabIds();
-      if (!ids.length) { showToast('Ничего не выбрано', 'warn'); return; }
-      ids.forEach(function (id) {
-        const t = findCustomTab(id);
-        if (t) t.visible = !!visible;
-      });
-      saveCustomTabs();
-      renderTabsManageList();
-      renderTabs();
-      showToast(visible ? 'Показано: ' + ids.length : 'Скрыто: ' + ids.length, 'ok');
-    }
-
-    function deleteSelectedCustomTabs() {
-      const ids = getSelectedCustomTabIds();
-      if (!ids.length) { showToast('Ничего не выбрано', 'warn'); return; }
-      pgtConfirm({
-        title: 'Удалить выбранные вкладки?',
-        message: 'Будет удалено вкладок: ' + ids.length + '. Все их карточки тоже удалятся безвозвратно.',
-        yesLabel: 'Удалить',
-        onYes: function () {
-          ids.forEach(function (id) {
-            const t = findCustomTab(id);
-            if (!t) return;
-            const idx = state.customTabs.indexOf(t);
-            if (idx !== -1) state.customTabs.splice(idx, 1);
-            if (state.customActiveTab === id) state.customActiveTab = null;
-            if (state.ui.tab === 'custom:' + id) state.ui.tab = 'active';
-          });
-          saveCustomTabs();
-          savePrefs();
-          renderTabsManageList();
-          renderTabs();
-          showToast('Удалено: ' + ids.length, 'ok');
-        }
-      });
-    }
     document.getElementById('massModeToggle').addEventListener('click', toggleMassMode);
     const mgt = document.getElementById('massModeGoalsToggle');
     if (mgt) mgt.addEventListener('click', toggleMassModeGoals);
@@ -7740,10 +6998,7 @@ const _tqiBtn = document.getElementById('toggleQuickInputBtn');
     });
     const _quickLock = document.getElementById('quickLockBtn');
     if (_quickLock) _quickLock.addEventListener('click', function () {
-  if (!hasPin()) {
-    pgtConfirm({ title: 'PIN не установлен', message: 'Установить PIN прямо сейчас?', yesLabel: 'Установить', danger: false, onYes: function(){ openPinSetup('setup'); } });
-    return;
-  }
+  if (!hasPin()) { if (confirm('PIN не установлен. Установить сейчас?')) openPinSetup('setup'); return; }
   lockNow();
 });
 
