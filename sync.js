@@ -8,7 +8,7 @@
   const CLIENT_ID = '358788438808-j3duf0p7pfec636k6oscv0dtv14ffacu.apps.googleusercontent.com';
   const SCOPE = [
     'https://www.googleapis.com/auth/drive.appdata',
-    'https://www.googleapis.com/auth/drive.file',
+    https://www.googleapis.com/auth/drive.readonly,
     'https://www.googleapis.com/auth/userinfo.profile'
   ].join(' ');
 
