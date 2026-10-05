@@ -6,8 +6,10 @@
   'use strict';
 
   const CLIENT_ID = '358788438808-j3duf0p7pfec636k6oscv0dtv14ffacu.apps.googleusercontent.com';
-   const SCOPE = [
+     const SCOPE = [
     'openid',
+    'email',
+    'profile',
     'https://www.googleapis.com/auth/drive.appdata',
     'https://www.googleapis.com/auth/drive.file'
   ].join(' ');
@@ -66,6 +68,11 @@
     }
 
     bootstrap().catch(function (e) { console.warn('[bootstrap]', e); });
+
+ // После входа — перезагружаем страницу, чтобы всё отрисовалось заново
+    setTimeout(function () {
+      try { location.reload(); } catch (e) {}
+    }, 200);
   }
 
   function getKnownUsers() {
@@ -602,12 +609,15 @@ return;
       if (accessToken && window.google && google.accounts && google.accounts.oauth2) {
         try { google.accounts.oauth2.revoke(accessToken, () => {}); } catch (e) {}
       }
-      accessToken = null;
-      clearToken();
-      try { localStorage.removeItem(CURRENT_USER_KEY); } catch (e) {}
-      try { localStorage.removeItem(USER_EMAIL_KEY); } catch (e) {}
-      folderIds = { root: null, articles: null, books: null };
-      try { localStorage.removeItem(FOLDERS_KEY); } catch (e) {}
+      const _uidForCleanup = (function(){ try { return localStorage.getItem(CURRENT_USER_KEY) || ''; } catch(e){ return ''; } })();
+accessToken = null;
+clearToken();
+try { localStorage.removeItem(CURRENT_USER_KEY); } catch (e) {}
+try { localStorage.removeItem(USER_EMAIL_KEY); } catch (e) {}
+folderIds = { root: null, articles: null, books: null };
+if (_uidForCleanup) {
+  try { localStorage.removeItem(FOLDERS_KEY + '_' + _uidForCleanup); } catch (e) {}
+}
       showSignedOutUI();
       if (typeof window.__pgtOnUserSignedOut === 'function') {
         try { window.__pgtOnUserSignedOut(); } catch (e) {}
