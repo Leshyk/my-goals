@@ -77,7 +77,6 @@
       }, 200);
     }
   }
-  }
 
   function getKnownUsers() {
     try {
