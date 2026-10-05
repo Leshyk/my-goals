@@ -1430,23 +1430,6 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
         </div>
       </div>
 
-      <!-- Свои вкладки: полотно -->
-      <div id="viewCustom" hidden>
-        <div class="custom-toolbar">
-          <button type="button" id="customAddCardBtn">＋ Добавить карточку</button>
-          <span class="spacer"></span>
-          <span class="muted" style="font-size:11px;" id="customCounter"></span>
-        </div>
-        <div class="custom-cards" id="customCardsList"></div>
-        <div class="custom-archive-section" id="customArchiveSection" hidden>
-          <div class="custom-archive-head" id="customArchiveToggle">
-            <span>📦 Архив (<span id="customArchiveCount">0</span>)</span>
-            <button type="button" class="restore-arrow" id="customArchiveShowBtn">Показать</button>
-          </div>
-          <div class="custom-cards" id="customArchiveList" hidden></div>
-        </div>
-      </div>
-
         <div id="viewNotes" hidden>
         <div class="notes-layout">
           <aside class="notes-list-pane">
@@ -2389,12 +2372,13 @@ scheduleDiskWrite();
     }, 250);
   }
 
-  function normalizeCustomTab(t) {
+    function normalizeCustomTab(t) {
     if (!t || typeof t !== 'object') return null;
     const tab = {
       id: typeof t.id === 'string' && t.id ? t.id : ('ct-' + Math.random().toString(36).slice(2)),
       icon: String(t.icon || '📌').slice(0, 4),
       label: String(t.label || 'Без названия').slice(0, 60),
+      visible: (typeof t.visible === 'boolean') ? t.visible : true,
       createdAt: typeof t.createdAt === 'number' ? t.createdAt : Date.now(),
       cards: []
     };
@@ -5005,10 +4989,11 @@ function autoArchiveOldCompletedTasks() {
       renderTabs();
       showToast('Вкладка обновлена', 'ok');
     } else {
-      const newTab = {
+            const newTab = {
         id: 'ct-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
         icon: icon.slice(0, 4),
         label: label.slice(0, 60),
+        visible: true,
         createdAt: Date.now(),
         cards: []
       };
@@ -5203,7 +5188,7 @@ function renderTabs() {
           counter +
         '</button>';
       }).join('');
-            state.customTabs.forEach(function (t) {
+                state.customTabs.filter(function (t) { return t.visible !== false; }).forEach(function (t) {
         const sel = state.ui.tab === ('custom:' + t.id) ? 'true' : 'false';
         const activeCount = t.cards.filter(function (c) { return !c.archivedAt && !c.done; }).length;
         html += '<button class="tab" role="tab" data-tab="custom:' + escapeHtml(t.id) + '" aria-selected="' + sel + '">' +
@@ -5238,8 +5223,11 @@ function renderTabs() {
     document.getElementById('viewNotes').hidden = state.ui.tab !== 'notes';
     document.getElementById('viewHabits').hidden = state.ui.tab !== 'habits';
     document.getElementById('viewAnalytics').hidden = state.ui.tab !== 'analytics';
-    document.getElementById('viewCustom').hidden = !isCustom;
-    if (isCustom) renderCustomView();
+        document.getElementById('viewCustom').hidden = !isCustom;
+    if (isCustom) {
+      state.customActiveTab = state.ui.tab.slice(7);
+      renderCustomView();
+    }
 
     // Подвкладки внутри «Литературы» и «Активных»
     document.querySelectorAll('[data-lit-tab]').forEach(function (b) { b.classList.toggle('active', b.dataset.litTab === state.ui.litTab); });
@@ -6119,7 +6107,16 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
       '</div>';
     }).join('');
 
-    html += '<div style="margin-top:18px; padding-top:14px; border-top:2px solid var(--border);"><div style="font-size:12px; font-weight:700; color:var(--text); margin-bottom:8px;">✨ Свои вкладки</div>';
+        html += '<div style="margin-top:18px; padding-top:14px; border-top:2px solid var(--border);">';
+    html += '<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;">';
+    html += '<div style="font-size:12px; font-weight:700; color:var(--text);">✨ Свои вкладки</div>';
+    html += '<div style="display:flex; gap:6px; flex-wrap:wrap;">';
+    html += '<button type="button" id="tabsManageShowSelected" style="background:transparent; border:1px solid var(--border); color:var(--muted); padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer; font-family:inherit;">👁 Показать</button>';
+    html += '<button type="button" id="tabsManageHideSelected" style="background:transparent; border:1px solid var(--border); color:var(--muted); padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer; font-family:inherit;">🙈 Скрыть</button>';
+    html += '<button type="button" id="tabsManageDeleteSelected" style="background:transparent; border:1px solid var(--danger); color:var(--danger); padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer; font-family:inherit;">🗑 Удалить выбранные</button>';
+    html += '</div>';
+    html += '</div>';
+
     if (!state.customTabs.length) {
       html += '<div class="modal-empty" style="padding:16px 8px; font-size:12px;">Пока нет своих вкладок. Нажмите «＋ Своя вкладка» в левой панели.</div>';
     } else {
@@ -6128,11 +6125,13 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
         const dnDis = i === state.customTabs.length - 1 ? ' disabled' : '';
         const activeCount = t.cards.filter(function (c) { return !c.archivedAt && !c.done; }).length;
         const archivedCount = t.cards.filter(function (c) { return !!c.archivedAt; }).length;
-        html += '<div class="tabs-manage-row" data-custom-tab-id="' + escapeHtml(t.id) + '">' +
+        const isHidden = t.visible === false;
+        html += '<div class="tabs-manage-row" data-custom-tab-id="' + escapeHtml(t.id) + '" style="grid-template-columns:auto auto 40px 1fr auto;">' +
+          '<input type="checkbox" data-custom-select title="Выбрать" style="width:16px; height:16px; accent-color:var(--accent); cursor:pointer; margin:0;" />' +
           '<span style="font-size:18px; text-align:center;">' + escapeHtml(t.icon) + '</span>' +
           '<span></span>' +
           '<div style="min-width:0;">' +
-            '<div style="font-size:13px; font-weight:600; word-break:break-word;">' + escapeHtml(t.label) + '</div>' +
+            '<div style="font-size:13px; font-weight:600; word-break:break-word;">' + escapeHtml(t.label) + (isHidden ? ' <span class="muted" style="font-size:10px;">(скрыта)</span>' : '') + '</div>' +
             '<div class="muted" style="font-size:10px;">активных: ' + activeCount + ' · в архиве: ' + archivedCount + '</div>' +
           '</div>' +
           '<div class="order-btns">' +
@@ -7184,8 +7183,7 @@ setInterval(tickLiveClock, 1000);
     document.getElementById('globalSearchBtn').addEventListener('click', openGlobalSearch);
         document.getElementById('calToggle').addEventListener('click', toggleCalendar);
 
-    document.querySelectorAll('.tab').forEach(function (b) { b.addEventListener('click', function () { switchTab(b.dataset.tab); }); });
-document.querySelectorAll('[data-active-tab-btn]').forEach(function (b) {
+    document.querySelectorAll('[data-active-tab-btn]').forEach(function (b) {
   b.addEventListener('click', function () { switchActiveTab(b.dataset.activeTabBtn); });
 });
     document.querySelectorAll('[data-lit-tab]').forEach(function (b) { b.addEventListener('click', function () { switchLitTab(b.dataset.litTab); }); });
@@ -7340,59 +7338,39 @@ document.querySelectorAll('[data-active-tab-btn]').forEach(function (b) {
  initTaskToGoalDnD();
 
     // === Обработчики окна «Управление вкладками» ===
-    (function bindTabsManage() {
+        (function bindTabsManage() {
       const modal = document.getElementById('tabsManageModal');
       if (!modal) return;
 
       modal.addEventListener('click', function (e) {
         if (e.target === modal) { closeTabsManageModal(); return; }
+
+        if (e.target && e.target.id === 'tabsManageCreateBtn') {
+          closeTabsManageModal();
+          openCustomTabModal(null);
+          return;
+        }
+
+        if (e.target && e.target.id === 'tabsManageHideSelected') {
+          applyCustomTabsVisibility(false);
+          return;
+        }
+        if (e.target && e.target.id === 'tabsManageShowSelected') {
+          applyCustomTabsVisibility(true);
+          return;
+        }
+        if (e.target && e.target.id === 'tabsManageDeleteSelected') {
+          deleteSelectedCustomTabs();
+          return;
+        }
+
         const el = e.target.closest('[data-action]');
         if (!el) return;
         const action = el.dataset.action;
 
-        // === СВОИ ВКЛАДКИ в редакторе ===
-        if (action === 'custom-tab-rename') {
-          const row = el.closest('[data-custom-tab-id]');
-          if (row) { closeTabsManageModal(); openCustomTabModal(row.dataset.customTabId); }
-          return;
-        }
-        if (action === 'custom-tab-delete') {
-          const row = el.closest('[data-custom-tab-id]');
-          if (row) { closeTabsManageModal(); deleteCustomTab(row.dataset.customTabId); }
-          return;
-        }
-        if (action === 'custom-tab-move-up') {
-          const row = el.closest('[data-custom-tab-id]');
-          if (!row) return;
-          const idx = state.customTabs.findIndex(function (t) { return t.id === row.dataset.customTabId; });
-          if (idx > 0) {
-            const tmp = state.customTabs[idx - 1];
-            state.customTabs[idx - 1] = state.customTabs[idx];
-            state.customTabs[idx] = tmp;
-            saveCustomTabs();
-            renderTabsManageList();
-            renderTabs();
-          }
-          return;
-        }
-        if (action === 'custom-tab-move-down') {
-          const row = el.closest('[data-custom-tab-id]');
-          if (!row) return;
-          const idx = state.customTabs.findIndex(function (t) { return t.id === row.dataset.customTabId; });
-          if (idx !== -1 && idx < state.customTabs.length - 1) {
-            const tmp = state.customTabs[idx + 1];
-            state.customTabs[idx + 1] = state.customTabs[idx];
-            state.customTabs[idx] = tmp;
-            saveCustomTabs();
-            renderTabsManageList();
-            renderTabs();
-          }
-          return;
-        }
-
         if (action === 'close-tabs-manage') { closeTabsManageModal(); return; }
         if (action === 'reset-tabs') {
-                   pgtConfirm({
+          pgtConfirm({
             title: 'Сбросить вкладки?',
             message: 'Все ваши названия, иконки и порядок вкладок вернутся к стандартным.',
             yesLabel: 'Сбросить',
@@ -7407,8 +7385,49 @@ document.querySelectorAll('[data-active-tab-btn]').forEach(function (b) {
           return;
         }
 
+        if (action === 'custom-tab-rename') {
+          const row = el.closest('[data-custom-tab-id]');
+          if (row) { closeTabsManageModal(); openCustomTabModal(row.dataset.customTabId); }
+          return;
+        }
+        if (action === 'custom-tab-delete') {
+          const row = el.closest('[data-custom-tab-id]');
+          if (row) { closeTabsManageModal(); deleteCustomTab(row.dataset.customTabId); }
+          return;
+        }
+        if (action === 'custom-tab-move-up') {
+          const row = el.closest('[data-custom-tab-id]');
+          if (!row) return;
+          const id = row.dataset.customTabId;
+          const idx = state.customTabs.findIndex(function (t) { return t.id === id; });
+          if (idx > 0) {
+            const tmp = state.customTabs[idx - 1];
+            state.customTabs[idx - 1] = state.customTabs[idx];
+            state.customTabs[idx] = tmp;
+            saveCustomTabs();
+            renderTabsManageList();
+            renderTabs();
+          }
+          return;
+        }
+        if (action === 'custom-tab-move-down') {
+          const row = el.closest('[data-custom-tab-id]');
+          if (!row) return;
+          const id = row.dataset.customTabId;
+          const idx = state.customTabs.findIndex(function (t) { return t.id === id; });
+          if (idx !== -1 && idx < state.customTabs.length - 1) {
+            const tmp = state.customTabs[idx + 1];
+            state.customTabs[idx + 1] = state.customTabs[idx];
+            state.customTabs[idx] = tmp;
+            saveCustomTabs();
+            renderTabsManageList();
+            renderTabs();
+          }
+          return;
+        }
+
         const row = el.closest('.tabs-manage-row');
-        if (!row) return;
+        if (!row || !row.dataset.tabId) return;
         const id = row.dataset.tabId;
         const idx = findTabIndexById(id);
         if (idx === -1) return;
@@ -7435,118 +7454,97 @@ document.querySelectorAll('[data-active-tab-btn]').forEach(function (b) {
         if (!el) return;
         const row = el.closest('.tabs-manage-row');
         if (!row) return;
-        const idx = findTabIndexById(row.dataset.tabId);
-        if (idx === -1) return;
 
-        if (el.dataset.action === 'tab-icon') {
-          state.tabs[idx].icon = (el.value || '').slice(0, 4) || '📌';
-          savePrefs();
-          renderTabs();
-        } else if (el.dataset.action === 'tab-label') {
-          state.tabs[idx].label = (el.value || '').slice(0, 30) || 'Вкладка';
-          savePrefs();
-          renderTabs();
+        if (row.dataset.tabId) {
+          const idx = findTabIndexById(row.dataset.tabId);
+          if (idx === -1) return;
+          if (el.dataset.action === 'tab-icon') {
+            state.tabs[idx].icon = (el.value || '').slice(0, 4) || '📌';
+            savePrefs();
+            renderTabs();
+          } else if (el.dataset.action === 'tab-label') {
+            state.tabs[idx].label = (el.value || '').slice(0, 30) || 'Вкладка';
+            savePrefs();
+            renderTabs();
+          }
         }
       });
 
       modal.addEventListener('change', function (e) {
-        const el = e.target.closest('[data-action="tab-toggle-visible"]');
-        if (!el) return;
-        const row = el.closest('.tabs-manage-row');
-        if (!row) return;
-        const idx = findTabIndexById(row.dataset.tabId);
-        if (idx === -1) return;
+        const el = e.target;
 
-        if (!el.checked) {
-          const others = state.tabs.filter(function (t, i) { return i !== idx && t.visible; }).length;
-          if (others === 0) {
-            el.checked = true;
-            showToast('Хотя бы одна вкладка должна остаться видимой', 'warn');
-            return;
+        if (el.matches && el.matches('[data-action="tab-toggle-visible"]')) {
+          const row = el.closest('.tabs-manage-row');
+          if (!row || !row.dataset.tabId) return;
+          const idx = findTabIndexById(row.dataset.tabId);
+          if (idx === -1) return;
+          if (!el.checked) {
+            const others = state.tabs.filter(function (t, i) { return i !== idx && t.visible; }).length;
+            if (others === 0) {
+              el.checked = true;
+              showToast('Хотя бы одна вкладка должна остаться видимой', 'warn');
+              return;
+            }
+            state.tabs[idx].visible = false;
+          } else {
+            state.tabs[idx].visible = true;
           }
-          state.tabs[idx].visible = false;
-        } else {
-          state.tabs[idx].visible = true;
+          savePrefs();
+          renderTabs();
+          return;
         }
-        savePrefs();
-        renderTabs();
       });
 
-           modal.addEventListener('click', function (e) {
-        if (e.target && e.target.id === 'tabsManageCreateBtn') {
-          closeTabsManageModal();
-          openCustomTabModal(null);
-        }
-      });
- modal.addEventListener('keydown', function (e) {
+      modal.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') closeTabsManageModal();
       });
     })();
 
-    // === СВОИ ВКЛАДКИ: обработчики ===
-    const _customTabModal = document.getElementById('customTabModal');
-    if (_customTabModal) {
-      _customTabModal.addEventListener('click', function (e) {
-        if (e.target === this) { closeCustomTabModal(); return; }
-        const el = e.target.closest('[data-action]');
-        if (el && el.dataset.action === 'close-custom-tab') closeCustomTabModal();
+    function getSelectedCustomTabIds() {
+      const ids = [];
+      const modal = document.getElementById('tabsManageModal');
+      if (!modal) return ids;
+      modal.querySelectorAll('[data-custom-select]:checked').forEach(function (cb) {
+        const row = cb.closest('[data-custom-tab-id]');
+        if (row) ids.push(row.dataset.customTabId);
       });
-      _customTabModal.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closeCustomTabModal();
-        else if (e.key === 'Enter') { e.preventDefault(); saveCustomTab(); }
-      });
+      return ids;
     }
-    const _customTabSaveBtn = document.getElementById('customTabSaveBtn');
-    if (_customTabSaveBtn) _customTabSaveBtn.addEventListener('click', saveCustomTab);
 
-    const _customCardModal = document.getElementById('customCardModal');
-    if (_customCardModal) {
-      _customCardModal.addEventListener('click', function (e) {
-        if (e.target === this) { closeCustomCardModal(); return; }
-        const el = e.target.closest('[data-action]');
-        if (el && el.dataset.action === 'close-custom-card') closeCustomCardModal();
+    function applyCustomTabsVisibility(visible) {
+      const ids = getSelectedCustomTabIds();
+      if (!ids.length) { showToast('Ничего не выбрано', 'warn'); return; }
+      ids.forEach(function (id) {
+        const t = findCustomTab(id);
+        if (t) t.visible = !!visible;
       });
-      _customCardModal.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closeCustomCardModal();
-        else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveCustomCard(); }
-      });
+      saveCustomTabs();
+      renderTabsManageList();
+      renderTabs();
+      showToast(visible ? 'Показано: ' + ids.length : 'Скрыто: ' + ids.length, 'ok');
     }
-    const _customCardSaveBtn = document.getElementById('customCardSaveBtn');
-    if (_customCardSaveBtn) _customCardSaveBtn.addEventListener('click', saveCustomCard);
 
-    const _customAddBtn = document.getElementById('customAddCardBtn');
-    if (_customAddBtn) _customAddBtn.addEventListener('click', function () { openCustomCardModal(null); });
-
-    const _customView = document.getElementById('viewCustom');
-    if (_customView) {
-      _customView.addEventListener('click', function (e) {
-        const el = e.target.closest('[data-action]');
-        if (!el) return;
-        const action = el.dataset.action;
-        const cardId = el.dataset.cardId;
-        if (action === 'custom-edit-card') openCustomCardModal(cardId);
-        else if (action === 'custom-archive-card') archiveCustomCard(cardId);
-        else if (action === 'custom-restore-card') restoreCustomCard(cardId);
-        else if (action === 'custom-delete-card') deleteCustomCard(cardId);
-      });
-      _customView.addEventListener('change', function (e) {
-        const el = e.target;
-        if (el.matches && el.matches('input[data-action="custom-toggle-card"]')) {
-          toggleCustomCard(el.dataset.cardId);
-        }
-      });
-    }
-    const _archiveShowBtn = document.getElementById('customArchiveShowBtn');
-    const _archiveList = document.getElementById('customArchiveList');
-    if (_archiveShowBtn && _archiveList) {
-      _archiveShowBtn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        if (_archiveList.hidden) {
-          _archiveList.hidden = false;
-          _archiveShowBtn.textContent = 'Скрыть';
-        } else {
-          _archiveList.hidden = true;
-          _archiveShowBtn.textContent = 'Показать';
+    function deleteSelectedCustomTabs() {
+      const ids = getSelectedCustomTabIds();
+      if (!ids.length) { showToast('Ничего не выбрано', 'warn'); return; }
+      pgtConfirm({
+        title: 'Удалить выбранные вкладки?',
+        message: 'Будет удалено вкладок: ' + ids.length + '. Все их карточки тоже удалятся безвозвратно.',
+        yesLabel: 'Удалить',
+        onYes: function () {
+          ids.forEach(function (id) {
+            const t = findCustomTab(id);
+            if (!t) return;
+            const idx = state.customTabs.indexOf(t);
+            if (idx !== -1) state.customTabs.splice(idx, 1);
+            if (state.customActiveTab === id) state.customActiveTab = null;
+            if (state.ui.tab === 'custom:' + id) state.ui.tab = 'active';
+          });
+          saveCustomTabs();
+          savePrefs();
+          renderTabsManageList();
+          renderTabs();
+          showToast('Удалено: ' + ids.length, 'ok');
         }
       });
     }
