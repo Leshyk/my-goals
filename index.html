@@ -1413,6 +1413,39 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
           <div class="habit-list" id="habitList"></div>
         </div>
       </div>
+      <!-- Свои вкладки: полотно -->
+      <div id="viewCustom" hidden>
+        <div class="custom-toolbar">
+          <button type="button" id="customAddCardBtn">＋ Добавить карточку</button>
+          <span class="spacer"></span>
+          <span class="muted" style="font-size:11px;" id="customCounter"></span>
+        </div>
+        <div class="custom-cards" id="customCardsList"></div>
+        <div class="custom-archive-section" id="customArchiveSection" hidden>
+          <div class="custom-archive-head" id="customArchiveToggle">
+            <span>📦 Архив (<span id="customArchiveCount">0</span>)</span>
+            <button type="button" class="restore-arrow" id="customArchiveShowBtn">Показать</button>
+          </div>
+          <div class="custom-cards" id="customArchiveList" hidden></div>
+        </div>
+      </div>
+
+      <!-- Свои вкладки: полотно -->
+      <div id="viewCustom" hidden>
+        <div class="custom-toolbar">
+          <button type="button" id="customAddCardBtn">＋ Добавить карточку</button>
+          <span class="spacer"></span>
+          <span class="muted" style="font-size:11px;" id="customCounter"></span>
+        </div>
+        <div class="custom-cards" id="customCardsList"></div>
+        <div class="custom-archive-section" id="customArchiveSection" hidden>
+          <div class="custom-archive-head" id="customArchiveToggle">
+            <span>📦 Архив (<span id="customArchiveCount">0</span>)</span>
+            <button type="button" class="restore-arrow" id="customArchiveShowBtn">Показать</button>
+          </div>
+          <div class="custom-cards" id="customArchiveList" hidden></div>
+        </div>
+      </div>
 
         <div id="viewNotes" hidden>
         <div class="notes-layout">
@@ -1802,22 +1835,6 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
       <button type="button" class="secondary" data-action="reset-tabs">↺ Сбросить к стандарту</button>
       <button type="button" data-action="close-tabs-manage">Готово</button>
     </div>
-  </div>
-</div>
-<!-- Свои вкладки: пустое полотно -->
-<div id="viewCustom" hidden>
-  <div class="custom-toolbar">
-    <button type="button" id="customAddCardBtn">＋ Добавить карточку</button>
-    <span class="spacer"></span>
-    <span class="muted" style="font-size:11px;" id="customCounter"></span>
-  </div>
-  <div class="custom-cards" id="customCardsList"></div>
-  <div class="custom-archive-section" id="customArchiveSection" hidden>
-    <div class="custom-archive-head" id="customArchiveToggle">
-      <span>📦 Архив (<span id="customArchiveCount">0</span>)</span>
-      <button type="button" class="restore-arrow" id="customArchiveShowBtn">Показать</button>
-    </div>
-    <div class="custom-cards" id="customArchiveList" hidden></div>
   </div>
 </div>
 
@@ -6085,10 +6102,10 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
     const m = document.getElementById('tabsManageModal');
     if (m) m.hidden = true;
   }
-  function renderTabsManageList() {
+    function renderTabsManageList() {
     const box = document.getElementById('tabsManageList');
     if (!box) return;
-    box.innerHTML = state.tabs.map(function (t, i) {
+    let html = state.tabs.map(function (t, i) {
       const upDis = i === 0 ? ' disabled' : '';
       const dnDis = i === state.tabs.length - 1 ? ' disabled' : '';
       return '<div class="tabs-manage-row" data-tab-id="' + escapeHtml(t.id) + '">' +
@@ -6101,6 +6118,36 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
         '</div>' +
       '</div>';
     }).join('');
+
+    html += '<div style="margin-top:18px; padding-top:14px; border-top:2px solid var(--border);"><div style="font-size:12px; font-weight:700; color:var(--text); margin-bottom:8px;">✨ Свои вкладки</div>';
+    if (!state.customTabs.length) {
+      html += '<div class="modal-empty" style="padding:16px 8px; font-size:12px;">Пока нет своих вкладок. Нажмите «＋ Своя вкладка» в левой панели.</div>';
+    } else {
+      state.customTabs.forEach(function (t, i) {
+        const upDis = i === 0 ? ' disabled' : '';
+        const dnDis = i === state.customTabs.length - 1 ? ' disabled' : '';
+        const activeCount = t.cards.filter(function (c) { return !c.archivedAt && !c.done; }).length;
+        const archivedCount = t.cards.filter(function (c) { return !!c.archivedAt; }).length;
+        html += '<div class="tabs-manage-row" data-custom-tab-id="' + escapeHtml(t.id) + '">' +
+          '<span style="font-size:18px; text-align:center;">' + escapeHtml(t.icon) + '</span>' +
+          '<span></span>' +
+          '<div style="min-width:0;">' +
+            '<div style="font-size:13px; font-weight:600; word-break:break-word;">' + escapeHtml(t.label) + '</div>' +
+            '<div class="muted" style="font-size:10px;">активных: ' + activeCount + ' · в архиве: ' + archivedCount + '</div>' +
+          '</div>' +
+          '<div class="order-btns">' +
+            '<button type="button" data-action="custom-tab-rename" title="Переименовать">✎</button>' +
+            '<button type="button" data-action="custom-tab-move-up" title="Выше"' + upDis + '>↑</button>' +
+            '<button type="button" data-action="custom-tab-move-down" title="Ниже"' + dnDis + '>↓</button>' +
+            '<button type="button" data-action="custom-tab-delete" title="Удалить" style="color:var(--danger);">🗑</button>' +
+          '</div>' +
+        '</div>';
+      });
+    }
+    html += '<button type="button" id="tabsManageCreateBtn" style="margin-top:12px; width:100%; background:transparent; border:1px dashed var(--accent); color:var(--accent); padding:10px; border-radius:8px; font-family:inherit; font-weight:600; cursor:pointer;">＋ Создать свою вкладку</button>';
+    html += '</div>';
+
+    box.innerHTML = html;
   }
   function findTabIndexById(id) {
     for (let i = 0; i < state.tabs.length; i++) if (state.tabs[i].id === id) return i;
@@ -7303,6 +7350,46 @@ document.querySelectorAll('[data-active-tab-btn]').forEach(function (b) {
         if (!el) return;
         const action = el.dataset.action;
 
+        // === СВОИ ВКЛАДКИ в редакторе ===
+        if (action === 'custom-tab-rename') {
+          const row = el.closest('[data-custom-tab-id]');
+          if (row) { closeTabsManageModal(); openCustomTabModal(row.dataset.customTabId); }
+          return;
+        }
+        if (action === 'custom-tab-delete') {
+          const row = el.closest('[data-custom-tab-id]');
+          if (row) { closeTabsManageModal(); deleteCustomTab(row.dataset.customTabId); }
+          return;
+        }
+        if (action === 'custom-tab-move-up') {
+          const row = el.closest('[data-custom-tab-id]');
+          if (!row) return;
+          const idx = state.customTabs.findIndex(function (t) { return t.id === row.dataset.customTabId; });
+          if (idx > 0) {
+            const tmp = state.customTabs[idx - 1];
+            state.customTabs[idx - 1] = state.customTabs[idx];
+            state.customTabs[idx] = tmp;
+            saveCustomTabs();
+            renderTabsManageList();
+            renderTabs();
+          }
+          return;
+        }
+        if (action === 'custom-tab-move-down') {
+          const row = el.closest('[data-custom-tab-id]');
+          if (!row) return;
+          const idx = state.customTabs.findIndex(function (t) { return t.id === row.dataset.customTabId; });
+          if (idx !== -1 && idx < state.customTabs.length - 1) {
+            const tmp = state.customTabs[idx + 1];
+            state.customTabs[idx + 1] = state.customTabs[idx];
+            state.customTabs[idx] = tmp;
+            saveCustomTabs();
+            renderTabsManageList();
+            renderTabs();
+          }
+          return;
+        }
+
         if (action === 'close-tabs-manage') { closeTabsManageModal(); return; }
         if (action === 'reset-tabs') {
                    pgtConfirm({
@@ -7385,7 +7472,13 @@ document.querySelectorAll('[data-active-tab-btn]').forEach(function (b) {
         renderTabs();
       });
 
-      modal.addEventListener('keydown', function (e) {
+           modal.addEventListener('click', function (e) {
+        if (e.target && e.target.id === 'tabsManageCreateBtn') {
+          closeTabsManageModal();
+          openCustomTabModal(null);
+        }
+      });
+ modal.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') closeTabsManageModal();
       });
     })();
