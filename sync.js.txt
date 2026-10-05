@@ -330,6 +330,7 @@
       snippets: read('pgt_v25_snippets', '[]'),
       notes: read('pgt_v25_notes', '[]'),
       templates: read('pgt_v25_templates', '[]'),
+      habits: read('pgt_v25_habits', '[]'),
       prefs: read('pgt_v25_prefs', '{}'),
     };
   }
@@ -345,6 +346,7 @@
       if (Array.isArray(remote.snippets)) localStorage.setItem('pgt_v25_snippets', JSON.stringify(remote.snippets));
       if (Array.isArray(remote.notes)) localStorage.setItem('pgt_v25_notes', JSON.stringify(remote.notes));
       if (Array.isArray(remote.templates)) localStorage.setItem('pgt_v25_templates', JSON.stringify(remote.templates));
+      if (Array.isArray(remote.habits)) localStorage.setItem('pgt_v25_habits', JSON.stringify(remote.habits));
       if (remote.prefs && typeof remote.prefs === 'object') localStorage.setItem('pgt_v25_prefs', JSON.stringify(remote.prefs));
       if (window.__pgtApplyRemoteData) window.__pgtApplyRemoteData();
     } catch (e) { console.warn('[applyRemote]', e); }
@@ -564,7 +566,9 @@
             saveToken(resp.access_token, parseInt(resp.expires_in, 10) || 3600);
             showSignedInUI();
             try { localStorage.setItem('pgt_v25_had_login', '1'); } catch (e) {}
-            finish(true);
+// ↓ добавляем: узнаём, кто это, и запоминаем
+finalizeSignIn(resp).then(function(){ finish(true); }).catch(function(e){ finish(false, e); });
+return;
           } else {
             finish(false, new Error('no token'));
           }
@@ -598,12 +602,15 @@
       if (accessToken && window.google && google.accounts && google.accounts.oauth2) {
         try { google.accounts.oauth2.revoke(accessToken, () => {}); } catch (e) {}
       }
-      accessToken = null;
-      clearToken();
-      try { localStorage.removeItem(CURRENT_USER_KEY); } catch (e) {}
-      try { localStorage.removeItem(USER_EMAIL_KEY); } catch (e) {}
-      folderIds = { root: null, articles: null, books: null };
-      try { localStorage.removeItem(FOLDERS_KEY); } catch (e) {}
+      const _uidForCleanup = (function(){ try { return localStorage.getItem(CURRENT_USER_KEY) || ''; } catch(e){ return ''; } })();
+accessToken = null;
+clearToken();
+try { localStorage.removeItem(CURRENT_USER_KEY); } catch (e) {}
+try { localStorage.removeItem(USER_EMAIL_KEY); } catch (e) {}
+folderIds = { root: null, articles: null, books: null };
+if (_uidForCleanup) {
+  try { localStorage.removeItem(FOLDERS_KEY + '_' + _uidForCleanup); } catch (e) {}
+}
       showSignedOutUI();
       if (typeof window.__pgtOnUserSignedOut === 'function') {
         try { window.__pgtOnUserSignedOut(); } catch (e) {}
