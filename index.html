@@ -2289,7 +2289,10 @@ function waitForLib(name, ms) {
       }
     } catch (e) {}
 	try { const raw = localStorage.getItem('pgt_v25_habits'); if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) state.habits = arr.filter(function (h) { return h && typeof h === 'object' && typeof h.title === 'string'; }).map(function (h) { return { id: h.id || ('h-' + Math.random().toString(36).slice(2)), title: String(h.title).slice(0, 200), icon: String(h.icon || '🎯').slice(0, 4), marks: Array.isArray(h.marks) ? h.marks.filter(function (m) { return typeof m === 'string'; }) : [], createdAt: h.createdAt || Date.now() }; }); } } catch (e) {}
-      state.tabs = mergeTabs(state.tabs);
+           state.tabs = mergeTabs(state.tabs);
+      if (state.ui.tab && state.ui.tab.indexOf('custom:') === 0) {
+        state.customActiveTab = state.ui.tab.slice(7);
+      }
 }
 
             // Debounced сохранения — пишут в localStorage не чаще 250 мс
@@ -4867,13 +4870,306 @@ function autoArchiveOldCompletedTasks() {
     SECTIONS.forEach(function (s) { const view = document.getElementById(s === 'articles' ? 'articlesPanel' : 'booksPanel'); if (!view) return; const sel = view.querySelector('[data-action="set-sort"][data-section="' + s + '"]'); if (sel) sel.value = state.litSort[s] || 'name'; const favBtn = view.querySelector('[data-action="toggle-fav-filter"][data-section="' + s + '"]'); if (favBtn) favBtn.classList.toggle('active', !!state.litFavFilter[s]); applyListVisibility(s); });
    updateNotifBtn();
     syncQuickHint();
-  }  function renderTabs() {
+  }  
+  // === СВОИ ВКЛАДКИ: рендер ===
+  function renderCustomView() {
+    const tab = getActiveCustomTab();
+    const list = document.getElementById('customCardsList');
+    const archiveSec = document.getElementById('customArchiveSection');
+    const archiveList = document.getElementById('customArchiveList');
+    const counter = document.getElementById('customCounter');
+    if (!list) return;
+    if (!tab) { list.innerHTML = '<div class="custom-empty">Вкладка не найдена.</div>'; return; }
+
+    const active = tab.cards.filter(function (c) { return !c.archivedAt; });
+    const archived = tab.cards.filter(function (c) { return !!c.archivedAt; });
+
+    active.sort(function (a, b) {
+      if (a.done !== b.done) return a.done ? 1 : -1;
+      return (b.createdAt || 0) - (a.createdAt || 0);
+    });
+
+    if (counter) {
+      const nc = active.filter(function (c) { return !c.done; }).length;
+      const dc = active.filter(function (c) { return c.done; }).length;
+      counter.textContent = 'Активных: ' + nc + ' · выполнено: ' + dc;
+    }
+
+    if (!active.length) {
+      list.innerHTML = '<div class="custom-empty">Пусто. Нажмите «＋ Добавить карточку», чтобы начать.</div>';
+    } else {
+      list.innerHTML = active.map(renderCustomCard).join('');
+    }
+
+    if (archived.length) {
+      archiveSec.hidden = false;
+      const cnt = document.getElementById('customArchiveCount');
+      if (cnt) cnt.textContent = archived.length;
+      archived.sort(function (a, b) { return (b.archivedAt || 0) - (a.archivedAt || 0); });
+      archiveList.innerHTML = archived.map(renderCustomCard).join('');
+    } else {
+      archiveSec.hidden = true;
+      archiveList.innerHTML = '';
+    }
+  }
+
+  function renderCustomCard(c) {
+    const bodyHtml = c.body ? renderMdText(c.body) : '';
+    const archivedBadge = c.archivedAt ? ' <span style="font-size:10px;color:var(--muted);">📦 архив</span>' : '';
+    const actions = [];
+    if (!c.archivedAt) {
+      actions.push('<button type="button" class="icon-btn" data-action="custom-edit-card" data-card-id="' + escapeHtml(c.id) + '" title="Редактировать">✎</button>');
+      actions.push('<button type="button" class="icon-btn" data-action="custom-archive-card" data-card-id="' + escapeHtml(c.id) + '" title="В архив">📦</button>');
+      actions.push('<button type="button" class="icon-btn" data-action="custom-delete-card" data-card-id="' + escapeHtml(c.id) + '" title="Удалить">✕</button>');
+    } else {
+      actions.push('<button type="button" class="icon-btn" data-action="custom-restore-card" data-card-id="' + escapeHtml(c.id) + '" title="Восстановить">↺</button>');
+      actions.push('<button type="button" class="icon-btn" data-action="custom-delete-card" data-card-id="' + escapeHtml(c.id) + '" title="Удалить">✕</button>');
+    }
+    const checkHtml = c.archivedAt ? '' : '<input type="checkbox" class="custom-card-check" ' + (c.done ? 'checked' : '') + ' data-action="custom-toggle-card" data-card-id="' + escapeHtml(c.id) + '" />';
+    return '<div class="custom-card' + (c.done ? ' done' : '') + '" data-card-id="' + escapeHtml(c.id) + '">' +
+      '<div class="custom-card-head">' +
+        checkHtml +
+        '<div class="custom-card-content">' +
+          '<div class="custom-card-title">' + escapeHtml(c.title || 'Без названия') + archivedBadge + '</div>' +
+          (c.body ? '<div class="custom-card-body">' + bodyHtml + '</div>' : '') +
+        '</div>' +
+        '<div class="custom-card-actions">' + actions.join('') + '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function openCustomTabModal(editId) {
+    const modal = document.getElementById('customTabModal');
+    if (!modal) return;
+    modal.dataset.editId = editId || '';
+    const titleEl = document.getElementById('customTabModalTitle');
+    const iconEl = document.getElementById('customTabIcon');
+    const nameEl = document.getElementById('customTabName');
+    const errEl = document.getElementById('customTabError');
+    errEl.textContent = '';
+    if (editId) {
+      const t = findCustomTab(editId);
+      if (t) {
+        titleEl.textContent = '✎ Переименовать вкладку';
+        iconEl.value = t.icon;
+        nameEl.value = t.label;
+      }
+    } else {
+      titleEl.textContent = '＋ Своя вкладка';
+      iconEl.value = '📌';
+      nameEl.value = '';
+    }
+    modal.hidden = false;
+    setTimeout(function () { nameEl.focus(); }, 50);
+  }
+
+  function closeCustomTabModal() {
+    const modal = document.getElementById('customTabModal');
+    if (modal) modal.hidden = true;
+  }
+
+  function saveCustomTab() {
+    const modal = document.getElementById('customTabModal');
+    if (!modal) return;
+    const editId = modal.dataset.editId || '';
+    const iconEl = document.getElementById('customTabIcon');
+    const nameEl = document.getElementById('customTabName');
+    const errEl = document.getElementById('customTabError');
+    const icon = (iconEl.value || '').trim() || '📌';
+    const label = (nameEl.value || '').trim();
+    if (!label) { errEl.textContent = 'Введите название'; nameEl.focus(); return; }
+    if (editId) {
+      const t = findCustomTab(editId);
+      if (!t) { errEl.textContent = 'Вкладка не найдена'; return; }
+      t.icon = icon.slice(0, 4);
+      t.label = label.slice(0, 60);
+      saveCustomTabs();
+      closeCustomTabModal();
+      renderTabs();
+      showToast('Вкладка обновлена', 'ok');
+    } else {
+      const newTab = {
+        id: 'ct-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        icon: icon.slice(0, 4),
+        label: label.slice(0, 60),
+        createdAt: Date.now(),
+        cards: []
+      };
+      state.customTabs.push(newTab);
+      saveCustomTabs();
+      closeCustomTabModal();
+      renderTabs();
+      switchTab('custom:' + newTab.id);
+      showToast('Вкладка создана', 'ok');
+    }
+  }
+
+  function deleteCustomTab(id) {
+    const t = findCustomTab(id);
+    if (!t) return;
+    pgtConfirm({
+      title: 'Удалить вкладку?',
+      message: 'Вкладка «' + t.label + '» и все её карточки (' + t.cards.length + ') будут удалены безвозвратно.',
+      yesLabel: 'Удалить',
+      onYes: function () {
+        const idx = state.customTabs.indexOf(t);
+        state.customTabs.splice(idx, 1);
+        if (state.customActiveTab === id) state.customActiveTab = null;
+        if (state.ui.tab === 'custom:' + id) state.ui.tab = 'active';
+        saveCustomTabs();
+        savePrefs();
+        renderTabs();
+        showToast('Вкладка удалена', 'ok');
+      }
+    });
+  }
+
+  let _customCardEditId = null;
+  function openCustomCardModal(cardId) {
+    const modal = document.getElementById('customCardModal');
+    if (!modal) return;
+    const tab = getActiveCustomTab();
+    if (!tab) return;
+    _customCardEditId = cardId || null;
+    const titleEl = document.getElementById('customCardModalTitle');
+    const titleInp = document.getElementById('customCardTitle');
+    const bodyInp = document.getElementById('customCardBody');
+    const errEl = document.getElementById('customCardError');
+    errEl.textContent = '';
+    if (cardId) {
+      const c = tab.cards.find(function (x) { return x.id === cardId; });
+      if (!c) return;
+      titleEl.textContent = '✎ Карточка';
+      titleInp.value = c.title;
+      bodyInp.value = c.body;
+    } else {
+      titleEl.textContent = '＋ Новая карточка';
+      titleInp.value = '';
+      bodyInp.value = '';
+    }
+    modal.hidden = false;
+    setTimeout(function () { titleInp.focus(); }, 50);
+  }
+
+  function closeCustomCardModal() {
+    const modal = document.getElementById('customCardModal');
+    if (modal) modal.hidden = true;
+    _customCardEditId = null;
+  }
+
+  function saveCustomCard() {
+    const tab = getActiveCustomTab();
+    if (!tab) return;
+    const titleInp = document.getElementById('customCardTitle');
+    const bodyInp = document.getElementById('customCardBody');
+    const errEl = document.getElementById('customCardError');
+    const title = (titleInp.value || '').trim();
+    const body = (bodyInp.value || '');
+    if (!title && !body.trim()) { errEl.textContent = 'Заполните хотя бы заголовок'; titleInp.focus(); return; }
+    if (_customCardEditId) {
+      const c = tab.cards.find(function (x) { return x.id === _customCardEditId; });
+      if (!c) return;
+      c.title = title || 'Без названия';
+      c.body = body;
+      showToast('Карточка обновлена', 'ok');
+    } else {
+      tab.cards.push({
+        id: 'cc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        title: title || 'Без названия',
+        body: body,
+        done: false,
+        doneAt: null,
+        archivedAt: null,
+        createdAt: Date.now()
+      });
+      showToast('Карточка добавлена', 'ok');
+    }
+    saveCustomTabs();
+    closeCustomCardModal();
+    renderCustomView();
+  }
+
+  function toggleCustomCard(cardId) {
+    const tab = getActiveCustomTab();
+    if (!tab) return;
+    const c = tab.cards.find(function (x) { return x.id === cardId; });
+    if (!c) return;
+    c.done = !c.done;
+    c.doneAt = c.done ? Date.now() : null;
+    saveCustomTabs();
+    if (c.done) {
+      showMolodets();
+      setTimeout(renderCustomView, 700);
+    } else {
+      renderCustomView();
+    }
+  }
+
+  function archiveCustomCard(cardId) {
+    const tab = getActiveCustomTab();
+    if (!tab) return;
+    const c = tab.cards.find(function (x) { return x.id === cardId; });
+    if (!c) return;
+    c.archivedAt = Date.now();
+    saveCustomTabs();
+    renderCustomView();
+    showToast('Карточка в архиве', 'ok');
+  }
+
+  function restoreCustomCard(cardId) {
+    const tab = getActiveCustomTab();
+    if (!tab) return;
+    const c = tab.cards.find(function (x) { return x.id === cardId; });
+    if (!c) return;
+    c.archivedAt = null;
+    saveCustomTabs();
+    renderCustomView();
+    showToast('Карточка восстановлена', 'ok');
+  }
+
+  function deleteCustomCard(cardId) {
+    const tab = getActiveCustomTab();
+    if (!tab) return;
+    const c = tab.cards.find(function (x) { return x.id === cardId; });
+    if (!c) return;
+    pgtConfirm({
+      title: 'Удалить карточку?',
+      message: (c.title || 'Без названия') + ' — будет удалена безвозвратно.',
+      yesLabel: 'Удалить',
+      onYes: function () {
+        tab.cards = tab.cards.filter(function (x) { return x.id !== cardId; });
+        saveCustomTabs();
+        renderCustomView();
+        showToast('Карточка удалена', 'ok');
+      }
+    });
+  }
+
+  let _molodetsTimer = null;
+  function showMolodets() {
+    const ov = document.getElementById('molodetsOverlay');
+    if (!ov) return;
+    clearTimeout(_molodetsTimer);
+    ov.classList.add('show');
+    const text = ov.querySelector('.molodets-text');
+    const emoji = ov.querySelector('.molodets-emoji');
+    if (text) { text.style.animation = 'none'; void text.offsetWidth; text.style.animation = ''; }
+    if (emoji) { emoji.style.animation = 'none'; void emoji.offsetWidth; emoji.style.animation = ''; }
+    _molodetsTimer = setTimeout(function () { ov.classList.remove('show'); }, 1400);
+  }
+
+function renderTabs() {
     if (!Array.isArray(state.tabs)) state.tabs = mergeTabs(null);
 
     // Если текущая вкладка спрятана — переключаемся на первую видимую
-    const visibleIds = state.tabs.filter(function (t) { return t.visible; }).map(function (t) { return t.id; });
-    if (visibleIds.length && visibleIds.indexOf(state.ui.tab) === -1) {
+       const visibleIds = state.tabs.filter(function (t) { return t.visible; }).map(function (t) { return t.id; });
+    const isCustomTab = state.ui.tab && state.ui.tab.indexOf('custom:') === 0;
+    if (!isCustomTab && visibleIds.length && visibleIds.indexOf(state.ui.tab) === -1) {
       state.ui.tab = visibleIds[0];
+    }
+    if (isCustomTab) {
+      const _cid = state.ui.tab.slice(7);
+      if (!findCustomTab(_cid)) state.ui.tab = visibleIds[0] || 'active';
     }
 
     // Рисуем кнопки вкладок
@@ -4890,19 +5186,34 @@ function autoArchiveOldCompletedTasks() {
           counter +
         '</button>';
       }).join('');
+            state.customTabs.forEach(function (t) {
+        const sel = state.ui.tab === ('custom:' + t.id) ? 'true' : 'false';
+        const activeCount = t.cards.filter(function (c) { return !c.archivedAt && !c.done; }).length;
+        html += '<button class="tab" role="tab" data-tab="custom:' + escapeHtml(t.id) + '" aria-selected="' + sel + '">' +
+          '<span class="tab-icon">' + escapeHtml(t.icon) + '</span>' +
+          '<span class="tab-label">' + escapeHtml(t.label) + '</span>' +
+          (activeCount ? '<span class="tab-count">' + activeCount + '</span>' : '') +
+        '</button>';
+      });
       html += '<button type="button" class="tab tab-manage" id="tabsManageBtn" title="Управление вкладками">' +
         '<span class="tab-icon">⚙</span><span class="tab-label">Вкладки</span>' +
+      '</button>';
+      html += '<button type="button" class="tab tab-add-custom" id="tabsAddCustomBtn" title="Создать свою вкладку">' +
+        '<span class="tab-icon">＋</span><span class="tab-label">Своя вкладка</span>' +
       '</button>';
       nav.innerHTML = html;
 
       nav.querySelectorAll('.tab[data-tab]').forEach(function (b) {
         b.addEventListener('click', function () { switchTab(b.dataset.tab); });
       });
-      const mb = document.getElementById('tabsManageBtn');
+            const mb = document.getElementById('tabsManageBtn');
       if (mb) mb.addEventListener('click', openTabsManageModal);
+      const _addCb = document.getElementById('tabsAddCustomBtn');
+      if (_addCb) _addCb.addEventListener('click', function () { openCustomTabModal(null); });
     }
 
     // Показываем только активное «полотно»
+        const isCustom = state.ui.tab.indexOf('custom:') === 0;
     document.getElementById('viewActive').hidden = state.ui.tab !== 'active';
     document.getElementById('viewArchive').hidden = state.ui.tab !== 'archive';
     document.getElementById('viewLiterature').hidden = state.ui.tab !== 'literature';
@@ -4910,6 +5221,8 @@ function autoArchiveOldCompletedTasks() {
     document.getElementById('viewNotes').hidden = state.ui.tab !== 'notes';
     document.getElementById('viewHabits').hidden = state.ui.tab !== 'habits';
     document.getElementById('viewAnalytics').hidden = state.ui.tab !== 'analytics';
+    document.getElementById('viewCustom').hidden = !isCustom;
+    if (isCustom) renderCustomView();
 
     // Подвкладки внутри «Литературы» и «Активных»
     document.querySelectorAll('[data-lit-tab]').forEach(function (b) { b.classList.toggle('active', b.dataset.litTab === state.ui.litTab); });
@@ -7077,6 +7390,73 @@ document.querySelectorAll('[data-active-tab-btn]').forEach(function (b) {
       });
     })();
 
+    // === СВОИ ВКЛАДКИ: обработчики ===
+    const _customTabModal = document.getElementById('customTabModal');
+    if (_customTabModal) {
+      _customTabModal.addEventListener('click', function (e) {
+        if (e.target === this) { closeCustomTabModal(); return; }
+        const el = e.target.closest('[data-action]');
+        if (el && el.dataset.action === 'close-custom-tab') closeCustomTabModal();
+      });
+      _customTabModal.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeCustomTabModal();
+        else if (e.key === 'Enter') { e.preventDefault(); saveCustomTab(); }
+      });
+    }
+    const _customTabSaveBtn = document.getElementById('customTabSaveBtn');
+    if (_customTabSaveBtn) _customTabSaveBtn.addEventListener('click', saveCustomTab);
+
+    const _customCardModal = document.getElementById('customCardModal');
+    if (_customCardModal) {
+      _customCardModal.addEventListener('click', function (e) {
+        if (e.target === this) { closeCustomCardModal(); return; }
+        const el = e.target.closest('[data-action]');
+        if (el && el.dataset.action === 'close-custom-card') closeCustomCardModal();
+      });
+      _customCardModal.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeCustomCardModal();
+        else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveCustomCard(); }
+      });
+    }
+    const _customCardSaveBtn = document.getElementById('customCardSaveBtn');
+    if (_customCardSaveBtn) _customCardSaveBtn.addEventListener('click', saveCustomCard);
+
+    const _customAddBtn = document.getElementById('customAddCardBtn');
+    if (_customAddBtn) _customAddBtn.addEventListener('click', function () { openCustomCardModal(null); });
+
+    const _customView = document.getElementById('viewCustom');
+    if (_customView) {
+      _customView.addEventListener('click', function (e) {
+        const el = e.target.closest('[data-action]');
+        if (!el) return;
+        const action = el.dataset.action;
+        const cardId = el.dataset.cardId;
+        if (action === 'custom-edit-card') openCustomCardModal(cardId);
+        else if (action === 'custom-archive-card') archiveCustomCard(cardId);
+        else if (action === 'custom-restore-card') restoreCustomCard(cardId);
+        else if (action === 'custom-delete-card') deleteCustomCard(cardId);
+      });
+      _customView.addEventListener('change', function (e) {
+        const el = e.target;
+        if (el.matches && el.matches('input[data-action="custom-toggle-card"]')) {
+          toggleCustomCard(el.dataset.cardId);
+        }
+      });
+    }
+    const _archiveShowBtn = document.getElementById('customArchiveShowBtn');
+    const _archiveList = document.getElementById('customArchiveList');
+    if (_archiveShowBtn && _archiveList) {
+      _archiveShowBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (_archiveList.hidden) {
+          _archiveList.hidden = false;
+          _archiveShowBtn.textContent = 'Скрыть';
+        } else {
+          _archiveList.hidden = true;
+          _archiveShowBtn.textContent = 'Показать';
+        }
+      });
+    }
     document.getElementById('massModeToggle').addEventListener('click', toggleMassMode);
     const mgt = document.getElementById('massModeGoalsToggle');
     if (mgt) mgt.addEventListener('click', toggleMassModeGoals);
