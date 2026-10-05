@@ -1036,6 +1036,111 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
 }
 .tabs-manage-row .order-btns button:hover { border-color: var(--accent); }
 .tabs-manage-row .order-btns button:disabled { opacity: 0.3; cursor: default; }
+/* === СВОИ ВКЛАДКИ === */
+.custom-cards { display: grid; gap: 8px; }
+.custom-card {
+  background: var(--card-alt); border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 12px; display: grid; gap: 6px;
+  transition: opacity .3s, transform .3s, border-color .15s;
+}
+.custom-card:hover { border-color: rgba(88,166,255,.5); }
+.custom-card.done { opacity: .55; border-color: rgba(63,185,80,.35); }
+.custom-card.done .custom-card-title { text-decoration: line-through; color: var(--muted); }
+.custom-card.done .custom-card-body { color: var(--muted); }
+.custom-card.fading { opacity: 0; transform: scale(.96); }
+
+.custom-card-head { display: flex; gap: 8px; align-items: flex-start; }
+.custom-card-check {
+  width: 18px; height: 18px; margin-top: 3px; flex: 0 0 auto;
+  accent-color: var(--color-done); cursor: pointer;
+}
+.custom-card-content { flex: 1 1 auto; min-width: 0; }
+.custom-card-title { font-size: 13px; font-weight: 600; word-break: break-word; }
+.custom-card-body {
+  font-size: 12px; color: var(--muted); margin-top: 3px;
+  white-space: pre-wrap; word-break: break-word; line-height: 1.5;
+}
+.custom-card-body h1, .custom-card-body h2, .custom-card-body h3 { font-size: 1.05em; margin: .4em 0 .2em; }
+.custom-card-body p { margin: .3em 0; }
+.custom-card-body code { background: rgba(0,0,0,.2); padding: 1px 5px; border-radius: 3px; font-family: ui-monospace, monospace; font-size: .92em; }
+.custom-card-body a { color: var(--accent); text-decoration: underline; }
+.custom-card-body ul, .custom-card-body ol { padding-left: 1.5em; margin: .3em 0; }
+.custom-card-body blockquote { border-left: 3px solid var(--accent); padding-left: 10px; color: var(--muted); margin: .3em 0; }
+
+.custom-card-actions { display: flex; gap: 4px; flex: 0 0 auto; }
+
+.custom-archive-section {
+  margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--border);
+}
+.custom-archive-head {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--muted); margin-bottom: 8px; cursor: pointer;
+  user-select: none; flex-wrap: wrap;
+}
+.custom-archive-head:hover { color: var(--text); }
+.custom-archive-head button {
+  background: transparent; border: 1px solid var(--border); color: var(--muted);
+  padding: 2px 10px; font-size: 11px; border-radius: 6px; cursor: pointer; font-family: inherit;
+}
+.custom-archive-head button:hover { color: var(--danger); border-color: var(--danger); }
+.custom-archive-head button.restore-arrow { color: var(--accent); border-color: var(--accent); }
+.custom-empty {
+  font-size: 12px; color: var(--muted); padding: 24px 16px; text-align: center;
+  border: 1px dashed var(--border); border-radius: 10px;
+}
+.custom-toolbar {
+  display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+  margin-bottom: 12px;
+}
+.custom-toolbar .spacer { flex: 1 1 auto; }
+
+/* Кнопка "Своя вкладка" в панели */
+.tab.tab-add-custom {
+  margin-top: 4px; border-style: dashed; border-color: var(--accent);
+  color: var(--accent); font-size: 12px;
+}
+.tab.tab-add-custom:hover { background: var(--highlight-bg); }
+
+/* Анимация МОЛОДЕЦ */
+.molodets-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  pointer-events: none; display: flex;
+  align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .25s;
+}
+.molodets-overlay.show { opacity: 1; }
+.molodets-text {
+  font-size: clamp(48px, 12vw, 140px);
+  font-weight: 900; letter-spacing: .02em;
+  background: linear-gradient(135deg, #3fb950, #58a6ff, #f5c518);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  text-shadow: none;
+  transform: scale(.4) rotate(-6deg);
+  animation: molodetsPop .8s cubic-bezier(.22,1.5,.36,1) forwards;
+  filter: drop-shadow(0 6px 18px rgba(88,166,255,.6));
+  padding: 0 20px; text-align: center;
+}
+@keyframes molodetsPop {
+  0%   { transform: scale(.4) rotate(-6deg); }
+  60%  { transform: scale(1.15) rotate(3deg); }
+  100% { transform: scale(1) rotate(-1deg); }
+}
+.molodets-emoji {
+  font-size: clamp(40px, 8vw, 90px); margin-left: 12px;
+  animation: molodetsSpin .9s ease-out;
+  display: inline-block;
+}
+@keyframes molodetsSpin {
+  0% { transform: rotate(-180deg) scale(0); }
+  70% { transform: rotate(20deg) scale(1.2); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+
+/* Модалка создания своей вкладки */
+.custom-tab-form { display: grid; gap: 10px; }
+.custom-tab-form .row-2 { display: grid; grid-template-columns: 64px 1fr; gap: 8px; align-items: center; }
+.custom-tab-form .icon-input { text-align: center; font-size: 22px; padding: 8px 4px; }
 </style>
 </head>
 <body>
@@ -1699,7 +1804,80 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
     </div>
   </div>
 </div>
+<!-- Свои вкладки: пустое полотно -->
+<div id="viewCustom" hidden>
+  <div class="custom-toolbar">
+    <button type="button" id="customAddCardBtn">＋ Добавить карточку</button>
+    <span class="spacer"></span>
+    <span class="muted" style="font-size:11px;" id="customCounter"></span>
+  </div>
+  <div class="custom-cards" id="customCardsList"></div>
+  <div class="custom-archive-section" id="customArchiveSection" hidden>
+    <div class="custom-archive-head" id="customArchiveToggle">
+      <span>📦 Архив (<span id="customArchiveCount">0</span>)</span>
+      <button type="button" class="restore-arrow" id="customArchiveShowBtn">Показать</button>
+    </div>
+    <div class="custom-cards" id="customArchiveList" hidden></div>
+  </div>
+</div>
 
+<!-- Модалка: создание / переименование своей вкладки -->
+<div class="modal-backdrop" id="customTabModal" hidden>
+  <div class="modal modal-sm">
+    <header class="modal-head">
+      <div class="modal-title" id="customTabModalTitle">＋ Своя вкладка</div>
+      <button type="button" class="secondary" data-action="close-custom-tab">✕</button>
+    </header>
+    <div class="modal-body">
+      <div class="custom-tab-form">
+        <div class="row-2">
+          <input type="text" class="icon-input" id="customTabIcon" placeholder="📌" maxlength="4" />
+          <input type="text" id="customTabName" placeholder="Название вкладки" maxlength="40" />
+        </div>
+        <div id="customTabError" style="color:var(--danger); font-size:12px; min-height:16px;"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="secondary" data-action="close-custom-tab">Отмена</button>
+      <button type="button" id="customTabSaveBtn">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка: карточка -->
+<div class="modal-backdrop" id="customCardModal" hidden>
+  <div class="modal modal-sm">
+    <header class="modal-head">
+      <div class="modal-title" id="customCardModalTitle">✎ Карточка</div>
+      <button type="button" class="secondary" data-action="close-custom-card">✕</button>
+    </header>
+    <div class="modal-body">
+      <div class="custom-tab-form">
+        <div>
+          <label for="customCardTitle">Заголовок</label>
+          <input type="text" id="customCardTitle" placeholder="Короткое название" maxlength="200" />
+        </div>
+        <div>
+          <label for="customCardBody">Текст (можно Markdown и формулы $...$)</label>
+          <textarea id="customCardBody" rows="8" placeholder="Подробности, расчёты, ссылки…"></textarea>
+        </div>
+        <div id="customCardError" style="color:var(--danger); font-size:12px; min-height:16px;"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="secondary" data-action="close-custom-card">Отмена</button>
+      <button type="button" id="customCardSaveBtn">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Оверлей "МОЛОДЕЦ!" -->
+<div class="molodets-overlay" id="molodetsOverlay">
+  <div>
+    <span class="molodets-text">МОЛОДЕЦ!</span>
+    <span class="molodets-emoji">🎉</span>
+  </div>
+</div>
 <div class="toast-container" id="toastContainer"></div>
 <button type="button" class="kbd-hint-fab" id="kbdHelpBtn" title="Горячие клавиши (?)">?</button>
 <!-- Модалка установки/смены PIN -->
