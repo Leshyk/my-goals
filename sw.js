@@ -1,8 +1,8 @@
 // Service Worker — Мои цели и задачи
 // Чтобы «выпустить обновление» — поменяй CACHE_VERSION (например, pgt-v25-32)
 
-const CACHE_VERSION = 'pgt-v25-44';
-const RUNTIME_CACHE = 'pgt-runtime-v25-44';
+const CACHE_VERSION = 'pgt-v25-49';
+const RUNTIME_CACHE = 'pgt-runtime-v25-49';
 
 const PRECACHE = [
   './',
@@ -64,6 +64,24 @@ self.addEventListener('fetch', function (event) {
       return;
     }
     // Остальное (иконки, манифест) — cache-first, это статика, она редко меняется
+    // sync.js — network-first, потому что мы его часто правим
+    if (url.pathname.endsWith('/sync.js') || url.pathname.endsWith('sync.js')) {
+      event.respondWith(
+        fetch(req).then(function (res) {
+          if (res && res.status === 200 && res.type === 'basic') {
+            const clone = res.clone();
+            caches.open(CACHE_VERSION).then(function (c) { c.put(req, clone); });
+          }
+          return res;
+        }).catch(function () {
+          return caches.match(req).then(function (c) {
+            return c || new Response('Офлайн', { status: 503, statusText: 'Offline' });
+          });
+        })
+      );
+      return;
+    }
+
     event.respondWith(
       caches.match(req).then(function (cached) {
         if (cached) return cached;

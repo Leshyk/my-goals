@@ -6,7 +6,8 @@
   'use strict';
 
   const CLIENT_ID = '358788438808-j3duf0p7pfec636k6oscv0dtv14ffacu.apps.googleusercontent.com';
-  const SCOPE = [
+   const SCOPE = [
+    'openid',
     'https://www.googleapis.com/auth/drive.appdata',
     'https://www.googleapis.com/auth/drive.file'
   ].join(' ');
@@ -15,13 +16,80 @@
   const APP_FOLDER_NAME = 'Мои цели и задачи';
   const TOKEN_KEY = 'pgt_v25_google_token';
   const FOLDERS_KEY = 'pgt_v25_drive_folders'; // { root, articles, books }
-  const LOCAL_SAVED_AT = 'pgt_v25_local_saved_at';
+    const LOCAL_SAVED_AT = 'pgt_v25_local_saved_at';
+  const CURRENT_USER_KEY = 'pgt_v25_current_user';
+  const USER_EMAIL_KEY = 'pgt_v25_user_email';
+ const KNOWN_USERS_KEY = 'pgt_v25_known_users';
   const SECTIONS = ['articles', 'books'];
 
   let tokenClient = null;
   let accessToken = null;
   let busy = false;
   let folderIds = { root: null, articles: null, books: null };
+  async function fetchUserInfo() {
+    if (!accessToken) return null;
+    try {
+      const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: 'Bearer ' + accessToken }
+      });
+      if (!r.ok) return null;
+      return await r.json();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function finalizeSignIn(resp) {
+    if (resp && resp.access_token) {
+      accessToken = resp.access_token;
+      saveToken(resp.access_token, parseInt(resp.expires_in, 10) || 3600);
+    }
+    if (!accessToken) return;
+
+    try { localStorage.setItem('pgt_v25_had_login', '1'); } catch (e) {}
+
+    const info = await fetchUserInfo();
+    if (info && info.sub) {
+      try { localStorage.setItem(CURRENT_USER_KEY, info.sub); } catch (e) {}
+      try { localStorage.setItem(USER_EMAIL_KEY, info.email || ''); } catch (e) {}
+      rememberUser(info);
+    }
+
+    loadFolderIds();
+
+    showSignedInUI();
+    setStatus('☁️ Готово', 'ok');
+    setTimeout(function () { setStatus(''); }, 2000);
+
+    if (typeof window.__pgtOnUserReady === 'function') {
+      try { window.__pgtOnUserReady(); } catch (e) { console.warn('[onUserReady]', e); }
+    }
+
+    bootstrap().catch(function (e) { console.warn('[bootstrap]', e); });
+  }
+
+  function getKnownUsers() {
+    try {
+      const raw = localStorage.getItem(KNOWN_USERS_KEY);
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+
+  function rememberUser(info) {
+    if (!info || !info.sub) return;
+    const list = getKnownUsers().filter(function (u) { return u.sub !== info.sub; });
+    list.push({
+      sub: info.sub,
+      email: info.email || '',
+      name: info.name || '',
+      picture: info.picture || '',
+      lastLogin: Date.now()
+    });
+    list.sort(function (a, b) { return b.lastLogin - a.lastLogin; });
+    try { localStorage.setItem(KNOWN_USERS_KEY, JSON.stringify(list)); } catch (e) {}
+  }
 
   // ---------- Пропуск (токен) ----------
   function saveToken(token, expiresInSec) {
@@ -83,16 +151,9 @@
     tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
       scope: SCOPE,
-      callback: function (resp) {
+            callback: function (resp) {
         if (resp && resp.access_token) {
-          accessToken = resp.access_token;
-          saveToken(resp.access_token, parseInt(resp.expires_in, 10) || 3600);
-		  try { localStorage.setItem('pgt_v25_had_login', '1'); } catch (e) {}
-          showSignedInUI();
-          setStatus('☁️ Готово', 'ok');
-          setTimeout(function () { setStatus(''); }, 2000);
-          // Первый вход — сразу создаём папки и синхронизируем
-          bootstrap().catch(function (e) { console.warn('[bootstrap]', e); });
+          finalizeSignIn(resp).catch(function (e) { console.warn('[finalize]', e); });
         } else {
           setStatus('✗ Вход не удался', 'error');
         }
@@ -105,11 +166,48 @@
     });
     return true;
   }
-  function signInUser() {
+    function signInUser(emailHint) {
     if (!tokenClient) {
       if (!initAuth()) { setStatus('Google не загружен', 'error'); return; }
     }
-    tokenClient.requestAccessToken({ prompt: 'consent' });
+    const opts = { prompt: 'select_account' };
+    if (emailHint) opts.login_hint = emailHint;
+    tokenClient.requestAccessToken(opts);
+  }
+
+  function signInSilentForKnownUser(emailHint) {
+    if (!tokenClient) {
+      if (!initAuth()) return Promise.reject(new Error('Google не загружен'));
+    }
+    return new Promise(function (resolve, reject) {
+      let done = false;
+      const prevCb = tokenClient.callback;
+      const prevErrCb = tokenClient.error_callback;
+      const finish = function (ok, err) {
+        if (done) return;
+        done = true;
+        tokenClient.callback = prevCb;
+        tokenClient.error_callback = prevErrCb;
+        if (ok) resolve(true); else reject(err || new Error('silent failed'));
+      };
+      setTimeout(function () { finish(false, new Error('timeout')); }, 5000);
+              tokenClient.callback = function (resp) {
+          if (resp && resp.access_token) {
+            finalizeSignIn(resp)
+              .then(function () { finish(true); })
+              .catch(function (e) { finish(false, e); });
+          } else {
+            finish(false, new Error('no token'));
+          }
+        };
+      tokenClient.error_callback = function (err) {
+        finish(false, err || new Error('silent error'));
+      };
+      const opts = { prompt: 'none' };
+      if (emailHint) opts.login_hint = emailHint;
+      try { tokenClient.requestAccessToken(opts); }
+      catch (e) { finish(false, e); }
+    });
   }
 
   // ---------- Drive: общие запросы ----------
@@ -232,6 +330,7 @@
       snippets: read('pgt_v25_snippets', '[]'),
       notes: read('pgt_v25_notes', '[]'),
       templates: read('pgt_v25_templates', '[]'),
+      habits: read('pgt_v25_habits', '[]'),
       prefs: read('pgt_v25_prefs', '{}'),
     };
   }
@@ -247,6 +346,7 @@
       if (Array.isArray(remote.snippets)) localStorage.setItem('pgt_v25_snippets', JSON.stringify(remote.snippets));
       if (Array.isArray(remote.notes)) localStorage.setItem('pgt_v25_notes', JSON.stringify(remote.notes));
       if (Array.isArray(remote.templates)) localStorage.setItem('pgt_v25_templates', JSON.stringify(remote.templates));
+      if (Array.isArray(remote.habits)) localStorage.setItem('pgt_v25_habits', JSON.stringify(remote.habits));
       if (remote.prefs && typeof remote.prefs === 'object') localStorage.setItem('pgt_v25_prefs', JSON.stringify(remote.prefs));
       if (window.__pgtApplyRemoteData) window.__pgtApplyRemoteData();
     } catch (e) { console.warn('[applyRemote]', e); }
@@ -466,7 +566,9 @@
             saveToken(resp.access_token, parseInt(resp.expires_in, 10) || 3600);
             showSignedInUI();
             try { localStorage.setItem('pgt_v25_had_login', '1'); } catch (e) {}
-            finish(true);
+// ↓ добавляем: узнаём, кто это, и запоминаем
+finalizeSignIn(resp).then(function(){ finish(true); }).catch(function(e){ finish(false, e); });
+return;
           } else {
             finish(false, new Error('no token'));
           }
@@ -496,14 +598,36 @@
       });
     },
     signIn: signInUser,
-    signOut: function () {
+     signOut: function () {
       if (accessToken && window.google && google.accounts && google.accounts.oauth2) {
         try { google.accounts.oauth2.revoke(accessToken, () => {}); } catch (e) {}
       }
       accessToken = null;
       clearToken();
+      try { localStorage.removeItem(CURRENT_USER_KEY); } catch (e) {}
+      try { localStorage.removeItem(USER_EMAIL_KEY); } catch (e) {}
+      folderIds = { root: null, articles: null, books: null };
+      try { localStorage.removeItem(FOLDERS_KEY); } catch (e) {}
       showSignedOutUI();
+      if (typeof window.__pgtOnUserSignedOut === 'function') {
+        try { window.__pgtOnUserSignedOut(); } catch (e) {}
+      }
     },
+    getUserId: function () {
+      try { return localStorage.getItem(CURRENT_USER_KEY) || null; } catch (e) { return null; }
+    },
+    getUserEmail: function () {
+      try { return localStorage.getItem(USER_EMAIL_KEY) || ''; } catch (e) { return ''; }
+    },
+    getKnownUsers: getKnownUsers,
+    removeKnownUser: function (sub) {
+      const list = getKnownUsers().filter(function (u) { return u.sub !== sub; });
+      try { localStorage.setItem(KNOWN_USERS_KEY, JSON.stringify(list)); } catch (e) {}
+    },
+    signInAs: function (emailHint) {
+      signInUser(emailHint);
+    },
+    signInSilentForKnownUser: signInSilentForKnownUser,
     // Скачать конкретный файл из Drive и записать локально
     downloadFile: async function (section, name, driveId) {
       if (!accessToken) accessToken = loadToken();
@@ -540,21 +664,28 @@
   // ---------- Запуск ----------
   function bind() {
     loadFolderIds();
-    const signBtn = document.getElementById('googleSignInBtn');
+       const signBtn = document.getElementById('googleSignInBtn');
     const syncBtn = document.getElementById('syncBtn');
-    if (signBtn) signBtn.addEventListener('click', signInUser);
+    if (signBtn) signBtn.addEventListener('click', function () { signInUser(); });
     if (syncBtn) syncBtn.addEventListener('click', function () { syncAll(false); });
 
-    const saved = loadToken();
+       const saved = loadToken();
     if (saved) {
       accessToken = saved;
-	  try { localStorage.setItem('pgt_v25_had_login', '1'); } catch (e) {}
-      showSignedInUI();
-      setStatus('☁️ Готово', 'ok');
-      // доготовим папки в фоне
-      bootstrap().catch(e => console.warn('[bootstrap]', e));
+      finalizeSignIn(null).catch(function (e) {
+        console.warn('[finalize from saved]', e);
+        accessToken = null;
+        clearToken();
+        showSignedOutUI();
+        if (typeof window.__pgtOnUserSignedOut === 'function') {
+          try { window.__pgtOnUserSignedOut(); } catch (e2) {}
+        }
+      });
     } else {
       showSignedOutUI();
+      if (typeof window.__pgtOnUserSignedOut === 'function') {
+        try { window.__pgtOnUserSignedOut(); } catch (e) {}
+      }
     }
 
     let tries = 0;
