@@ -433,6 +433,17 @@
   .search-result-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
   .search-result mark { background: rgba(88,166,255,.4); color: inherit; padding: 0 2px; border-radius: 2px; }
 
+.cmd-palette-backdrop { position: fixed; inset: 0; z-index: 4000; background: rgba(3,8,16,.65); backdrop-filter: blur(4px); display: flex; align-items: flex-start; justify-content: center; padding: 12vh 16px 16px; }
+.cmd-palette-backdrop[hidden] { display: none; }
+.cmd-palette { background: var(--card); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 30px 80px rgba(0,0,0,.75); width: min(640px, 100%); display: flex; flex-direction: column; max-height: 70vh; overflow: hidden; }
+.cmd-palette input { width: 100%; background: transparent; border: 0; border-bottom: 1px solid var(--border); color: var(--text); padding: 16px 20px; font-size: 16px; font-family: inherit; outline: none; }
+.cmd-palette-list { overflow-y: auto; padding: 6px; }
+.cmd-item { display: flex; gap: 10px; padding: 10px 14px; border-radius: 8px; cursor: pointer; align-items: center; color: var(--text); font-size: 13px; }
+.cmd-item:hover, .cmd-item.active { background: var(--highlight-bg); }
+.cmd-item .cmd-icon { font-size: 16px; width: 22px; text-align: center; flex: 0 0 auto; }
+.cmd-item .cmd-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmd-item .cmd-hint { font-size: 10px; color: var(--muted); flex: 0 0 auto; }
+.cmd-empty { padding: 20px; text-align: center; color: var(--muted); font-size: 13px; }
 .mini-tasks-btn { position: relative; }
 .mini-tasks-count { background: var(--danger); color: #fff; border-radius: 999px; padding: 0 6px; font-size: 10px; font-weight: 700; margin-left: 4px; min-width: 16px; text-align: center; display: inline-block; }
 .mini-tasks-count.zero { background: var(--color-total); }
@@ -2059,6 +2070,12 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
       <button type="button" class="secondary" data-action="close-custom-card">Отмена</button>
       <button type="button" data-action="save-custom-card">💾 Сохранить</button>
     </div>
+  </div>
+</div>
+<div class="cmd-palette-backdrop" id="cmdPalette" hidden>
+  <div class="cmd-palette">
+    <input type="text" id="cmdInput" placeholder="Команда или задача… (например: задача купить молоко)" autocomplete="off" />
+    <div class="cmd-palette-list" id="cmdList"></div>
   </div>
 </div>
 <div class="toast-container" id="toastContainer"></div>
@@ -9048,7 +9065,8 @@ function tickLiveClock() {
       const anyModal = document.querySelector('.modal-backdrop:not([hidden])');
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z' || e.key === 'я' || e.key === 'Я')) { if (!inField) { e.preventDefault(); performUndo(); return; } }
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'S' || e.key === 's' || e.key === 'Ы' || e.key === 'ы')) { if (state.ui.tab === 'literature') { e.preventDefault(); saveSelectionAsSnippet(); } return; }
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K' || e.key === 'л' || e.key === 'Л')) { e.preventDefault(); toggleCalendar(); return; }
+            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'k' || e.key === 'K' || e.key === 'л' || e.key === 'Л')) { e.preventDefault(); openCommandPalette(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'k' || e.key === 'K' || e.key === 'л' || e.key === 'Л')) { e.preventDefault(); toggleCalendar(); return; }
       if ((e.ctrlKey || e.metaKey) && (e.key === '/' || e.key === '.')) { e.preventDefault(); openGlobalSearch(); return; }
       // Alt + 1..9 — переключение на первые 9 видимых вкладок
       if (e.altKey && !e.ctrlKey && !e.metaKey && !inField && !anyModal) {
@@ -9530,6 +9548,124 @@ applyQuickInputVisibility();
     updateMiniTasksBadge();
     setInterval(updateMiniTasksBadge, 60000);
   }, 300);
+  // === FEATURE 2: COMMAND PALETTE (Ctrl+K) ===
+  const commandPalette = { el: null, input: null, list: null, items: [], activeIdx: 0 };
+
+  function openCommandPalette() {
+    if (!commandPalette.el) initCommandPalette();
+    commandPalette.el.hidden = false;
+    commandPalette.input.value = '';
+    renderCommandPalette('');
+    setTimeout(function () { commandPalette.input.focus(); }, 30);
+  }
+  function closeCommandPalette() {
+    if (commandPalette.el) commandPalette.el.hidden = true;
+  }
+  function initCommandPalette() {
+    const bd = document.getElementById('cmdPalette');
+    if (!bd) return;
+    commandPalette.el = bd;
+    commandPalette.input = document.getElementById('cmdInput');
+    commandPalette.list = document.getElementById('cmdList');
+    bd.addEventListener('click', function (e) { if (e.target === bd) closeCommandPalette(); });
+    commandPalette.input.addEventListener('input', function () { renderCommandPalette(this.value); });
+    commandPalette.input.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); moveCmdActive(1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); moveCmdActive(-1); }
+      else if (e.key === 'Enter') { e.preventDefault(); runCmdActive(); }
+      else if (e.key === 'Escape') { e.preventDefault(); closeCommandPalette(); }
+    });
+    commandPalette.list.addEventListener('click', function (e) {
+      const it = e.target.closest('.cmd-item'); if (!it) return;
+      const idx = +it.dataset.idx; if (isNaN(idx)) return;
+      commandPalette.activeIdx = idx; runCmdActive();
+    });
+  }
+  function moveCmdActive(dir) {
+    const n = commandPalette.items.length; if (!n) return;
+    commandPalette.activeIdx = (commandPalette.activeIdx + dir + n) % n;
+    refreshCmdActive();
+  }
+  function refreshCmdActive() {
+    const items = commandPalette.list.querySelectorAll('.cmd-item');
+    items.forEach(function (el, i) { el.classList.toggle('active', i === commandPalette.activeIdx); });
+    const cur = items[commandPalette.activeIdx];
+    if (cur) cur.scrollIntoView({ block: 'nearest' });
+  }
+  function runCmdActive() {
+    const c = commandPalette.items[commandPalette.activeIdx];
+    if (!c) return;
+    closeCommandPalette();
+    try { c.run(); } catch (e) { showToast('Ошибка: ' + e.message, 'error'); }
+  }
+  function getCommands() {
+    const cmds = [
+      { icon: '✓', label: 'Новая задача', hint: 'N', keywords: 'задача task', run: function(){ switchTab('active'); switchActiveTab('tasks'); setTimeout(function(){ document.getElementById('taskText').focus(); }, 100); } },
+      { icon: '🎯', label: 'Новая цель', hint: 'G', keywords: 'цель goal', run: function(){ switchTab('active'); switchActiveTab('goals'); setTimeout(function(){ document.getElementById('goalTitle').focus(); }, 100); } },
+      { icon: '📝', label: 'Новая заметка', keywords: 'заметка note', run: function(){ switchTab('notes'); addNote({ title: 'Новая заметка', body: '' }); } },
+      { icon: '📅', label: 'Дневник на сегодня', keywords: 'дневник daily note', run: function(){ openDailyNote(); } },
+      { icon: '🔍', label: 'Глобальный поиск', hint: 'Ctrl+/', keywords: 'поиск search find', run: openGlobalSearch },
+      { icon: '📅', label: 'Переключить календарь', hint: 'Ctrl+Shift+K', keywords: 'календарь calendar', run: toggleCalendar },
+      { icon: '⚙', label: 'Настройки', keywords: 'настройки settings', run: function(){ document.getElementById('settingsModal').hidden = false; syncToolbarInputs(); renderBackupList(); renderCacheStats(); refreshDriveSettingsUI(); } },
+      { icon: '⌨', label: 'Горячие клавиши', hint: '?', keywords: 'клавиши hotkeys', run: openKbdHelp },
+      { icon: '🔒', label: 'Заблокировать', keywords: 'lock блок', run: function(){ if (hasPin()) lockNow(); else showToast('PIN не установлен', 'warn'); } }
+    ];
+    state.tabs.forEach(function (t) {
+      if (!t.visible) return;
+      cmds.push({ icon: t.icon, label: 'Открыть: ' + t.label, keywords: 'вкладка tab ' + t.label, run: function(){ switchTab(t.id); } });
+    });
+    state.customTabs.forEach(function (t) {
+      cmds.push({ icon: t.icon || '⭐', label: 'Открыть: ' + t.label, keywords: 'вкладка tab ' + t.label, run: function(){ switchTab(t.id); } });
+    });
+    visibleGoals().slice(0, 40).forEach(function (g) {
+      cmds.push({ icon: '🎯', label: g.title, hint: 'цель', keywords: 'цель goal ' + g.title, run: function(){ switchTab('active'); switchActiveTab('goals'); state.collapsed[g.id] = false; savePrefs(); renderGoals(); setTimeout(function(){ const el = document.querySelector('.goal[data-goal-id="' + CSS.escape(g.id) + '"]'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100); } });
+    });
+    return cmds;
+  }
+  function renderCommandPalette(query) {
+    const q = (query || '').trim().toLowerCase();
+    const all = getCommands();
+    let items;
+    if (!q) {
+      items = all.slice(0, 30);
+    } else {
+      const m = q.match(/^(задача|task|цель|goal|заметка|note)\s+(.+)$/i);
+      if (m) {
+        const kind = m[1].toLowerCase();
+        const text = m[2];
+        const quick = {
+          icon: '⚡', label: 'Создать: ' + text, hint: kind,
+          run: function () {
+            if (/^задача|^task/.test(kind)) { addTask(null, { text: text, priority: 'medium', deadline: state.calSelectedDate || '' }); showToast('Задача создана', 'ok'); }
+            else if (/^цель|^goal/.test(kind)) { addGoal({ title: text, priority: 'medium', deadline: state.calSelectedDate || '' }); showToast('Цель создана', 'ok'); }
+            else if (/^заметка|^note/.test(kind)) { addNote({ title: text, body: '' }); switchTab('notes'); showToast('Заметка создана', 'ok'); }
+          }
+        };
+        items = [quick].concat(all.filter(function (c) {
+          return (c.label + ' ' + (c.keywords || '')).toLowerCase().indexOf(text) !== -1;
+        }).slice(0, 20));
+      } else {
+        items = all.filter(function (c) {
+          return (c.label + ' ' + (c.keywords || '')).toLowerCase().indexOf(q) !== -1;
+        }).slice(0, 30);
+      }
+    }
+    commandPalette.items = items;
+    commandPalette.activeIdx = 0;
+    if (!items.length) {
+      commandPalette.list.innerHTML = '<div class="cmd-empty">Ничего не найдено. Попробуй: <code>задача купить молоко</code></div>';
+      return;
+    }
+    commandPalette.list.innerHTML = items.map(function (c, i) {
+      return '<div class="cmd-item' + (i === 0 ? ' active' : '') + '" data-idx="' + i + '">' +
+        '<span class="cmd-icon">' + escapeHtml(c.icon || '•') + '</span>' +
+        '<span class="cmd-label">' + escapeHtml(c.label) + '</span>' +
+        (c.hint ? '<span class="cmd-hint">' + escapeHtml(c.hint) + '</span>' : '') +
+      '</div>';
+    }).join('');
+  }
+  // Разбудить палитру при загрузке
+  setTimeout(function () { initCommandPalette(); }, 300);
 })();
 </script>
 </body>
