@@ -7033,7 +7033,98 @@ function tickLiveClock() {
       showToast('Задача добавлена', 'ok');
     });
 
-    // Обработчики списков задач и целей
+        // Обработчики списков задач и целей (делегирование)
+    function attachTaskListHandlers(container) {
+      if (!container || container.dataset.bound === '1') return;
+      container.dataset.bound = '1';
+
+      container.addEventListener('click', function (e) {
+        const el = e.target.closest('[data-action]');
+        if (!el) return;
+        const action = el.dataset.action;
+        const gid = el.dataset.goalId;
+        const tid = el.dataset.taskId;
+        const subId = el.dataset.subId;
+
+        if (action === 'toggle-goal') { toggleGoalCollapse(gid); return; }
+        if (action === 'pin-goal') { togglePinGoal(gid); return; }
+        if (action === 'edit-goal') { openEditGoal(gid); return; }
+        if (action === 'archive-goal') { archiveGoal(gid); return; }
+        if (action === 'delete-goal') {
+          const g = findGoal(gid);
+          pgtConfirm({ title: 'Удалить цель?', message: g ? ('«' + g.title + '» и все её задачи будут удалены безвозвратно.') : 'Цель будет удалена безвозвратно.', yesLabel: 'Да, удалить', onYes: function(){ deleteGoal(gid); } });
+          return;
+        }
+        if (action === 'pin-task') { togglePinTask(gid, tid); return; }
+        if (action === 'edit-task') { openEditTask(gid, tid); return; }
+        if (action === 'archive-task') { archiveTask(gid, tid); return; }
+        if (action === 'delete-task') {
+          const g = findGoal(gid); const t = g ? g.tasks.find(function(x){return x.id===tid;}) : null;
+          pgtConfirm({ title: 'Удалить задачу?', message: t ? t.text : 'Задача будет удалена безвозвратно.', yesLabel: 'Да, удалить', onYes: function(){ deleteTask(gid, tid); } });
+          return;
+        }
+        if (action === 'add-subtask-inline') {
+          const inp = container.querySelector('[data-subtask-input][data-goal-id="' + CSS.escape(gid) + '"][data-task-id="' + CSS.escape(tid) + '"]');
+          const v = inp ? inp.value.trim() : '';
+          if (v) { addSubtask(gid, tid, v); if (inp) inp.value = ''; }
+          return;
+        }
+        if (action === 'edit-subtask') { editSubtask(gid, tid, subId); return; }
+        if (action === 'delete-subtask') { deleteSubtask(gid, tid, subId); return; }
+        if (action === 'mass-check-goal') { toggleMassCheckGoal(gid); return; }
+        if (action === 'mass-goals-archive') { massActionGoals('archive'); return; }
+        if (action === 'mass-goals-delete') { massActionGoals('delete'); return; }
+        if (action === 'mass-check') { toggleMassCheck(gid, tid); return; }
+        if (action === 'mass-done') { massAction('done'); return; }
+        if (action === 'mass-archive') { massAction('archive'); return; }
+        if (action === 'mass-export') { massAction('export'); return; }
+        if (action === 'mass-delete') { massAction('delete'); return; }
+        if (action === 'clear-date-filter') { clearDateFilter(); return; }
+        if (action === 'filter-tag-click') { state.tagFilter = el.dataset.tag; savePrefs(); renderTagFilterSelect(); renderTasks(); return; }
+        if (action === 'filter-goal-tag') { state.tagFilter = el.dataset.tag; savePrefs(); renderTagFilterSelect(); renderTasks(); return; }
+        if (action === 'open-snippet-from-goal') { openSnippetsModal(); state.editingSnippetId = el.dataset.id; renderSnippetsList(); return; }
+        if (action === 'open-note-from-goal') { switchTab('notes'); state.editingNoteId = el.dataset.id; renderNotesList(); renderNoteEditor(); return; }
+        if (action === 'kanban-open-task') { openEditTask(gid, tid); return; }
+      });
+
+      container.addEventListener('change', function (e) {
+        const el = e.target;
+        if (!el.matches) return;
+        if (el.matches('input[data-action="toggle-task"]')) { toggleTask(el.dataset.goalId, el.dataset.taskId); return; }
+        if (el.matches('input[data-action="toggle-subtask"]')) { toggleSubtask(el.dataset.goalId, el.dataset.taskId, el.dataset.subId); return; }
+        if (el.matches('input[data-action="kanban-toggle-task"]')) { toggleTask(el.dataset.goalId, el.dataset.taskId); return; }
+        if (el.matches('input[data-action="mass-check"]')) { toggleMassCheck(el.dataset.goalId, el.dataset.taskId); return; }
+        if (el.matches('input[data-action="mass-check-goal"]')) { toggleMassCheckGoal(el.dataset.goalId); return; }
+      });
+
+      container.addEventListener('submit', function (e) {
+        const form = e.target.closest('.inline-task-form');
+        if (!form) return;
+        e.preventDefault();
+        const gid = form.dataset.goalId;
+        const inp = form.querySelector('input[type="text"]');
+        const dateInp = form.querySelector('input[type="date"]');
+        const text = inp ? inp.value.trim() : '';
+        if (!text) return;
+        const deadline = dateInp && dateInp.value ? dateInp.value : (state.calSelectedDate || '');
+        addTask(gid, { text: text, deadline: deadline });
+        refocusInlineTaskFor = gid;
+        renderGoals();
+      });
+
+      container.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') return;
+        const inp = e.target.closest('[data-subtask-input]');
+        if (!inp) return;
+        e.preventDefault();
+        const gid = inp.dataset.goalId;
+        const tid = inp.dataset.taskId;
+        const v = inp.value.trim();
+        if (!v) return;
+        addSubtask(gid, tid, v);
+        inp.value = '';
+      });
+    }
     attachTaskListHandlers(document.getElementById('goalsList'));
     attachTaskListHandlers(document.getElementById('tasksColumn'));
 
