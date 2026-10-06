@@ -8699,6 +8699,26 @@ function tickLiveClock() {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'S' || e.key === 's' || e.key === 'Ы' || e.key === 'ы')) { if (state.ui.tab === 'literature') { e.preventDefault(); saveSelectionAsSnippet(); } return; }
       if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K' || e.key === 'л' || e.key === 'Л')) { e.preventDefault(); toggleCalendar(); return; }
       if ((e.ctrlKey || e.metaKey) && (e.key === '/' || e.key === '.')) { e.preventDefault(); openGlobalSearch(); return; }
+      // Alt + 1..9 — переключение на первые 9 видимых вкладок
+      if (e.altKey && !e.ctrlKey && !e.metaKey && !inField && !anyModal) {
+        const m = String(e.key).match(/^([1-9])$/);
+        if (m) {
+          e.preventDefault();
+          const digit = parseInt(m[1], 10); // 1..9
+          // Берём видимые вкладки в порядке отображения
+          const visibleIds = state.tabOrder.filter(function (id) {
+            const std = state.tabs.find(function (t) { return t.id === id; });
+            if (std) return std.visible;
+            const ct = (state.customTabs || []).find(function (t) { return t.id === id; });
+            return !!ct;
+          });
+          const targetId = visibleIds[digit - 1];
+          if (targetId && targetId !== state.ui.tab) {
+            switchTab(targetId);
+          }
+          return;
+        }
+      }
       if (e.key === 'Escape') {
         if (anyModal) { anyModal.hidden = true;
           if (anyModal.id === 'editTaskModal') { state.editingTaskId = null; state.editingTaskGoalId = null; }
