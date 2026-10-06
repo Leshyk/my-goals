@@ -2123,7 +2123,7 @@ const DEFAULT_TABS = [
         massMode: false, massSelected: {}, tasksGrouping: 'kanban', tagFilter: '',
 notesFilter: 'all',
     density: 'normal',
-          tabs: null, customTabs: [], quickInputVisible: true, advancedToolsVisible: false,
+                    tabs: null, customTabs: [], customArchiveOpen: {}, quickInputVisible: true, advancedToolsVisible: false,
      ui: { search: '', filter: 'all', sort: 'deadline', tab: 'active', activeTab: 'goals', litTab: 'articles', litSearch: { articles: '', books: '' }, snippetsSearch: '', snippetsSort: 'new', snippetsTagFilter: '', snippetsGroup: 'flat', notesSearch: '' }
   };
 
@@ -2355,6 +2355,7 @@ function waitForLib(name, ms) {
           if (typeof p.density === 'string') state.density = p.density;
  	  if (Array.isArray(p.tabs)) state.tabs = p.tabs;
       if (Array.isArray(p.customTabs)) state.customTabs = p.customTabs.filter(function(t){ return t && typeof t.id === 'string'; });
+          if (p.customArchiveOpen && typeof p.customArchiveOpen === 'object') state.customArchiveOpen = p.customArchiveOpen;
           if (typeof p.quickInputVisible === 'boolean') state.quickInputVisible = p.quickInputVisible;
  if (typeof p.advancedToolsVisible === 'boolean') state.advancedToolsVisible = p.advancedToolsVisible;
           if (p.ui && typeof p.ui === 'object') state.ui = Object.assign({}, state.ui, p.ui);
@@ -2410,7 +2411,7 @@ scheduleDiskWrite();
     clearTimeout(_savePrefsTimer);
     _savePrefsTimer = setTimeout(function () {
       try {
-        const json = JSON.stringify({ collapsed: state.collapsed, colorTotal: state.colorTotal, colorDone: state.colorDone, calendarVisible: state.calendarVisible, notificationsEnabled: state.notificationsEnabled, tasksGrouping: state.tasksGrouping, tagFilter: state.tagFilter, allCollapsedSnapshot: state.allCollapsedSnapshot, notesFilter: state.notesFilter, density: state.density, tabs: state.tabs, customTabs: state.customTabs, quickInputVisible: state.quickInputVisible,  advancedToolsVisible: state.advancedToolsVisible, ui: state.ui, favorites: state.favorites, readingPos: state.readingPos, pdfPage: state.pdfPage, pdfZoom: state.pdfZoom, pdfInvert: state.pdfInvert, litSort: state.litSort, litFavFilter: state.litFavFilter, listHidden: state.listHidden });
+        const json = JSON.stringify({ collapsed: state.collapsed, colorTotal: state.colorTotal, colorDone: state.colorDone, calendarVisible: state.calendarVisible, notificationsEnabled: state.notificationsEnabled, tasksGrouping: state.tasksGrouping, tagFilter: state.tagFilter, allCollapsedSnapshot: state.allCollapsedSnapshot, notesFilter: state.notesFilter, density: state.density, ttabs: state.tabs, customTabs: state.customTabs, customArchiveOpen: state.customArchiveOpen || {}, quickInputVisible: state.quickInputVisible,  advancedToolsVisible: state.advancedToolsVisible, ui: state.ui, favorites: state.favorites, readingPos: state.readingPos, pdfPage: state.pdfPage, pdfZoom: state.pdfZoom, pdfInvert: state.pdfInvert, litSort: state.litSort, litFavFilter: state.litFavFilter, listHidden: state.listHidden });
         if (json === _lastPrefsHash) return;
         _lastPrefsHash = json;
         localStorage.setItem(PREFS_KEY, json);
@@ -5077,12 +5078,15 @@ if (visibleIds.length && visibleIds.indexOf(state.ui.tab) === -1) {
           counter +
         '</button>';
       }).join('');
-            if (Array.isArray(state.customTabs)) {
+                        if (Array.isArray(state.customTabs)) {
         state.customTabs.forEach(function (t) {
           const sel = state.ui.tab === t.id ? 'true' : 'false';
+          const n = (t.cards || []).filter(function (c) { return !c.done; }).length;
+          const counter = n > 0 ? '<span class="tab-count">' + n + '</span>' : '';
           html += '<button class="tab" role="tab" data-tab="' + escapeHtml(t.id) + '" aria-selected="' + sel + '">' +
             '<span class="tab-icon">' + escapeHtml(t.icon || '⭐') + '</span>' +
             '<span class="tab-label">' + escapeHtml(t.label) + '</span>' +
+            counter +
           '</button>';
         });
       }
@@ -7248,6 +7252,7 @@ let _confirmDeleteCustomTabId = null;
     }
     savePrefs();
     renderCustomView(tab.id);
+  updateCustomTabCounters();
     closeCustomCardModal();
     if (due) {
       renderCalendar();
@@ -7268,16 +7273,57 @@ let _confirmDeleteCustomTabId = null;
       showToast('🎉 МОЛОДЕЦ! Дело сделано', 'ok', null, null, 3500);
     }
   }
-  function deleteCustomCard(tabId, cardId) {
-    const tab = findCustomTab(tabId); if (!tab || !Array.isArray(tab.cards)) return;
-    tab.cards = tab.cards.filter(function (c) { return c.id !== cardId; });
-    savePrefs();
+    function deleteCustomCard(tabId, cardId) {
+    const tab = findCustomTab(tabId);
+    if (!tab || !Array.isArray(tab.cards)) return;
+    const idx = tab.cards.findIndex(function (c) { return c.id === cardId; });
+    if (idx === -1) return;
+    const snapshot = JSON.parse(JSON.stringify(tab.cards[idx]));
+
+    tab.cards.splice(idx, 1);
+        savePrefs();
     renderCustomView(tabId);
+    updateCustomTabCounters();
+    if (becameDone) {
+      showToast('🎉 МОЛОДЕЦ! Дело сделано', 'ok', null, null, 3500);
+    }
+
+    let undone = false;
+    showToast('Карточка удалена', 'warn', 'Отменить', function () {
+      if (undone) return;
+      undone = true;
+      const t = findCustomTab(tabId);
+      if (!t) return;
+      if (!Array.isArray(t.cards)) t.cards = [];
+      t.cards.splice(Math.min(idx, t.cards.length), 0, snapshot);
+      savePrefs();
+      renderCustomView(tabId);
+      updateCustomTabCounters();
+      showToast('Карточка восстановлена', 'ok');
+    }, 6000);
   }
 
-    let _customArchiveOpen = false;
+  function updateCustomTabCounters() {
+    if (!Array.isArray(state.customTabs)) return;
+    state.customTabs.forEach(function (t) {
+      const btn = document.querySelector('.tab[data-tab="' + CSS.escape(t.id) + '"]');
+      if (!btn) return;
+      let counterEl = btn.querySelector('.tab-count');
+      const n = (t.cards || []).filter(function (c) { return !c.done; }).length;
+      if (n > 0) {
+        if (!counterEl) {
+          counterEl = document.createElement('span');
+          counterEl.className = 'tab-count';
+          btn.appendChild(counterEl);
+        }
+        counterEl.textContent = String(n);
+      } else if (counterEl) {
+        counterEl.remove();
+      }
+    });
+  }
 
-  function renderCustomView(tabId) {
+      function renderCustomView(tabId) {
     const view = document.getElementById('viewCustom');
     if (!view) return;
     const tab = findCustomTab(tabId);
@@ -7318,9 +7364,9 @@ let _confirmDeleteCustomTabId = null;
       ? '<div class="custom-archive">' +
           '<div class="custom-archive-head" data-action="custom-archive-toggle">' +
             '<span>📦 Выполнено (' + archived.length + ')</span>' +
-            '<span class="custom-archive-arrow">' + (_customArchiveOpen ? '▾' : '▸') + '</span>' +
+                     '<span class="custom-archive-arrow">' + (state.customArchiveOpen && state.customArchiveOpen[tabId] ? '▾' : '▸') + '</span>' +
           '</div>' +
-          '<div class="custom-archive-body"' + (_customArchiveOpen ? '' : ' hidden') + '>' +
+          '<div class="custom-archive-body"' + (state.customArchiveOpen && state.customArchiveOpen[tabId] ? '' : ' hidden') + '>' +
             '<div class="custom-cards">' + archived.map(renderCard).join('') + '</div>' +
           '</div>' +
         '</div>'
@@ -7353,7 +7399,12 @@ let _confirmDeleteCustomTabId = null;
       else if (action === 'custom-card-delete') { _confirmDeleteCustomCardId = el.dataset.cardId; renderCustomView(tabId); }
       else if (action === 'custom-card-delete-yes') { _confirmDeleteCustomCardId = null; deleteCustomCard(tabId, el.dataset.cardId); }
       else if (action === 'custom-card-delete-no') { _confirmDeleteCustomCardId = null; renderCustomView(tabId); }
-      else if (action === 'custom-archive-toggle') { _customArchiveOpen = !_customArchiveOpen; renderCustomView(tabId); }
+            else if (action === 'custom-archive-toggle') {
+        if (!state.customArchiveOpen) state.customArchiveOpen = {};
+        state.customArchiveOpen[tabId] = !state.customArchiveOpen[tabId];
+        savePrefs();
+        renderCustomView(tabId);
+      }
       else if (action === 'custom-tab-edit') openCustomTabModal(tabId);
       else if (action === 'custom-tab-delete') deleteCustomTab(tabId);
     });
@@ -7664,6 +7715,7 @@ function tickLiveClock() {
             state.customTabs = state.customTabs.filter(function (t) { return t.id !== ctId; });
             if (state.ui.tab === ctId) state.ui.tab = 'active';
             savePrefs(); renderTabsManageList(); renderTabs(); render();
+ updateCustomTabCounters();
             showToast('Вкладка удалена', 'ok');
           } else if (action === 'custom-tab-delete-cancel') {
             _confirmDeleteCustomTabId = null;
