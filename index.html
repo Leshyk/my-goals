@@ -5098,20 +5098,25 @@ function autoArchiveOldCompletedTasks() {
     }, true);
 
     // === ДВОЙНОЙ КЛИК — ПЕРЕИМЕНОВАНИЕ ===
-    function startInlineTabRename(tabEl, stdTab, ct) {
+      function startInlineTabRename(tabEl, stdTab, ct) {
       const isCustom = !!ct;
       const currentIcon = isCustom ? (ct.icon || '⭐') : (stdTab ? stdTab.icon : '⭐');
       const currentLabel = isCustom ? (ct.label || '') : (stdTab ? stdTab.label : '');
+      const iconId = 'tab-rename-icon-' + Date.now().toString(36);
 
       tabEl.innerHTML =
-        '<input type="text" class="tab-rename-icon" value="' + escapeHtml(currentIcon) + '" maxlength="4" />' +
+        '<input type="text" id="' + iconId + '" class="tab-rename-icon" value="' + escapeHtml(currentIcon) + '" maxlength="4" readonly title="Клик — выбрать эмодзи" style="cursor:pointer;" />' +
         '<input type="text" class="tab-rename-label" value="' + escapeHtml(currentLabel) + '" maxlength="30" />';
 
       const iconInput = tabEl.querySelector('.tab-rename-icon');
       const labelInput = tabEl.querySelector('.tab-rename-label');
-      setTimeout(function () { iconInput.focus(); iconInput.select(); }, 20);
 
       let finished = false;
+      let pickerOpen = false;
+
+      // Фокус — сразу на название, текст выделен
+      setTimeout(function () { labelInput.focus(); labelInput.select(); }, 20);
+
       function finish(save) {
         if (finished) return;
         finished = true;
@@ -5132,26 +5137,46 @@ function autoArchiveOldCompletedTasks() {
         renderTabs();
       }
 
-      iconInput.addEventListener('keydown', function (ev) {
-        if (ev.key === 'Enter') { ev.preventDefault(); labelInput.focus(); labelInput.select(); }
-        else if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
+      // ─── клик по иконке → пикер эмодзи ───
+      iconInput.addEventListener('mousedown', function (ev) {
+        // не даём пикеру украсть фокус с поля названия раньше времени
+        ev.preventDefault();
       });
-      labelInput.addEventListener('keydown', function (ev) {
+      iconInput.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        ev.preventDefault();
+        pickerOpen = true;
+        openEmojiPicker(iconId);
+      });
+
+      // ─── ждём закрытия пикера, потом возвращаем фокус на название ───
+      const watchId = setInterval(function () {
+        if (!pickerOpen) { clearInterval(watchId); return; }
+        const modal = document.getElementById('emojiPickerModal');
+        if (modal && modal.hidden) {
+          pickerOpen = false;
+          clearInterval(watchId);
+          if (!finished) {
+            setTimeout(function () { if (!finished) labelInput.focus(); }, 30);
+          }
+        }
+      }, 100);
+
+      // ─── клавиши ───
+      function handleKey(ev) {
         if (ev.key === 'Enter') { ev.preventDefault(); finish(true); }
         else if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
-      });
-      iconInput.addEventListener('input', function () {
-        const filtered = keepOnlyEmoji(this.value);
-        if (this.value !== filtered) this.value = filtered;
-      });
-      iconInput.addEventListener('blur', function () {
-        setTimeout(function () {
-          if (document.activeElement === labelInput) return;
-          finish(true);
-        }, 120);
-      });
+      }
+      labelInput.addEventListener('keydown', handleKey);
+      iconInput.addEventListener('keydown', handleKey);
+
+      // ─── blur = клик мимо = сохранить (но не когда открыт пикер) ───
       labelInput.addEventListener('blur', function () {
-        setTimeout(function () { if (!finished) finish(true); }, 120);
+        setTimeout(function () {
+          if (finished || pickerOpen) return;
+          if (document.activeElement === iconInput) return;
+          finish(true);
+        }, 150);
       });
     }
 
@@ -5238,8 +5263,15 @@ function autoArchiveOldCompletedTasks() {
       '</button>';
       nav.innerHTML = html;
 
-      nav.querySelectorAll('.tab[data-tab]').forEach(function (b) {
-        b.addEventListener('click', function () { switchTab(b.dataset.tab); });
+            nav.querySelectorAll('.tab[data-tab]').forEach(function (b) {
+        b.addEventListener('click', function (ev) {
+          // если в этой вкладке активен режим переименования — не переключаемся
+          if (b.querySelector('.tab-rename-icon')) {
+            ev.stopPropagation();
+            return;
+          }
+          switchTab(b.dataset.tab);
+        });
       });
       const mb = document.getElementById('tabsManageBtn');
       if (mb) mb.addEventListener('click', openTabsManageModal);
