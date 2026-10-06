@@ -1115,6 +1115,50 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
   align-items: center;
   gap: 8px;
 }
+.custom-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 11px;
+}
+.custom-card-meta .badge {
+  background: var(--bar-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 8px;
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  color: var(--muted);
+}
+.custom-card-meta .badge.price { color: var(--gold); border-color: rgba(245,197,24,.35); }
+.custom-card-meta .badge.address { color: var(--accent); border-color: rgba(88,166,255,.35); }
+.custom-card-meta .badge.date { color: var(--color-done); border-color: rgba(88,166,255,.35); }
+
+.custom-archive {
+  margin-top: 22px;
+  border-top: 1px dashed var(--border);
+  padding-top: 10px;
+}
+.custom-archive-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  padding: 6px 4px;
+  user-select: none;
+  border-radius: 6px;
+}
+.custom-archive-head:hover { color: var(--accent); background: var(--bar-bg); }
+.custom-archive-arrow { font-size: 14px; }
+.custom-archive-body { margin-top: 10px; }
+
 .custom-tab-empty {
   padding: 40px 20px;
   text-align: center;
@@ -1752,6 +1796,22 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
     <div class="login-gate-status" id="loginGateStatus"></div>
   </div>
 </div>
+
+<!-- Пикер эмодзи -->
+<div class="modal-backdrop" id="emojiPickerModal" hidden>
+  <div class="modal modal-sm">
+    <header class="modal-head">
+      <div class="modal-title">😀 Выбор эмодзи</div>
+      <button type="button" class="secondary" data-action="close-emoji-picker">✕</button>
+    </header>
+    <div class="modal-body" style="max-height:65vh; overflow-y:auto;">
+      <input type="search" id="emojiPickerSearch" placeholder="Поиск: смех, дом, еда, спорт…" style="margin-bottom:10px;" />
+      <div id="emojiPickerGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(44px, 1fr)); gap:4px;"></div>
+    </div>
+  </div>
+</div>
+
+
 <!-- Универсальное подтверждение -->
 <div class="modal-backdrop" id="pgtConfirmModal" hidden>
   <div class="modal modal-sm">
@@ -1799,8 +1859,11 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
     <div class="modal-body">
       <div style="display:grid; gap:10px;">
         <div>
-          <label for="customTabIcon">Иконка (эмодзи)</label>
-          <input type="text" id="customTabIcon" maxlength="4" placeholder="⭐" style="text-align:center; font-size:20px;" />
+                    <label for="customTabIcon">Иконка (эмодзи)</label>
+          <div style="display:flex; gap:6px;">
+            <input type="text" id="customTabIcon" maxlength="8" placeholder="⭐" inputmode="text" autocomplete="off" style="text-align:center; font-size:22px; flex:1;" />
+            <button type="button" class="secondary" id="customTabIconPickBtn" title="Выбрать эмодзи" style="flex:0 0 auto; padding:0 14px; font-size:20px;">😀</button>
+          </div>
         </div>
         <div>
           <label for="customTabLabel">Название</label>
@@ -1822,9 +1885,26 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
       <div class="modal-title" id="customCardModalTitle">Карточка</div>
       <button type="button" class="secondary" data-action="close-custom-card">✕</button>
     </header>
-    <div class="modal-body">
-      <label for="customCardText">Текст</label>
-      <textarea id="customCardText" rows="4" placeholder="Что записать?"></textarea>
+        <div class="modal-body" style="display:grid; gap:10px;">
+      <div>
+        <label for="customCardText">Текст</label>
+        <textarea id="customCardText" rows="3" placeholder="Что записать?"></textarea>
+      </div>
+      <div>
+        <label for="customCardDue">📅 Дата (необязательно)</label>
+        <input type="date" id="customCardDue" />
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+        <div>
+          <label for="customCardPrice">💰 Цена / стоимость</label>
+          <input type="text" id="customCardPrice" placeholder="1500 ₽" maxlength="60" />
+        </div>
+        <div>
+          <label for="customCardAddress">📍 Адрес</label>
+          <input type="text" id="customCardAddress" placeholder="ул. Ленина, 1" maxlength="300" />
+        </div>
+      </div>
+    </div>
     </div>
     <div class="modal-foot">
       <button type="button" class="secondary" data-action="close-custom-card">Отмена</button>
@@ -1953,6 +2033,42 @@ const DATA_FOLDER_FILENAME = 'pgt_v25_local.json';
   const VALID_PRIORITIES = ['high', 'medium', 'low'];
   const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
   const MAX_BACKUPS = 7;
+
+  // === Набор эмодзи для пикера ===
+  const EMOJI_SET = (
+    '😀😃😄😁😆😅😂🤣😊😇🙂🙃😉😌😍🥰😘😗😙😚😋😛😝😜🤪🤨🧐🤓😎🤩🥳😏😒😞😔😟😕🙁☹️😣😖😫😩🥺😢😭😤😠😡🤬🤯😳🥵🥶😱😨😰😥😓🤗🤔🤭🤫🤥😶😐😑😬🙄😯😦😧😮😲🥱😴🤤😪😵🤐🥴🤢🤮🤧😷🤒🤕🤑🤠😈👿👹👺🤡💩👻💀☠️👽👾🤖🎃😺😸😹😻😼😽🙀😿😾' +
+    '👋🤚🖐✋🖖👌🤌🤏✌️🤞🤟🤘🤙👈👉👆🖕👇☝️👍👎👊✊🤛🤜👏🙌👐🤲🤝🙏💪🦾🦿🦵🦶👂🦻👃🧠🦷🦴👀👁👅👄' +
+    '❤️🧡💛💚💙💜🖤🤍🤎💔❣️💕💞💓💗💖💘💝💟' +
+    '⭐🌟✨⚡🔥💥💫💦💨💬💭💤' +
+    '🐶🐱🐭🐹🐰🦊🐻🐼🐨🐯🦁🐮🐷🐸🐵🐒🐔🐧🐦🐤🦆🦅🦉🦇🐺🐗🐴🦄🐝🐛🦋🐌🐞🐜🦟🦗🕷🕸🦂🐢🐍🦎🦖🦕🐙🦑🦐🦞🦀🐡🐠🐟🐬🐳🐋🦈🐊🐅🐆🦓🦍🐘🦛🦏🐪🐫🦒🦘🐃🐂🐄🐎🐖🐏🐑🦙🐐🦌🐕🐈🐓🦃🦚🦜🦢🦩🕊🐇🦝🦨🦡🦦🦥🐁🐀🐿🦔' +
+    '🌸💮🏵🌹🥀🌺🌻🌼🌷🌱🌲🌳🌴🌵🌾🌿☘️🍀🍃🍂🍁🍄🌰🌍🌎🌏🌕🌖🌗🌘🌑🌒🌓🌔🌙🌚🌝🌞☄️🪐🌠🌌⛅⛈🌤🌥🌦🌧🌨🌩🌪🌫🌈☀️' +
+    '🍏🍎🍐🍊🍋🍌🍉🍇🍓🍈🍒🍑🥭🍍🥥🥝🍅🍆🥑🥦🥬🥒🌶🌽🥕🧄🧅🥔🍠🥐🥯🍞🥖🥨🧀🥚🍳🧈🥞🧇🥓🥩🍗🍖🦴🌭🍔🍟🍕🥪🥙🧆🌮🌯🥗🥘🍝🍜🍲🍛🍣🍱🥟🍤🍙🍚🍘🍢🍡🍧🍨🍦🥧🧁🍰🎂🍮🍭🍬🍫🍿🍩🍪🥜🍯🥛🍼☕🍵🧃🥤🍶🍺🍻🥂🍷🥃🍸🍹🍾🧊' +
+    '🚗🚕🚙🚌🚎🏎🚓🚑🚒🚐🚚🚛🚜🛴🚲🛵🏍🚨🚔🚍🚘🚖🚡🚠🚟🚃🚋🚞🚝🚄🚅🚈🚂🚆🚇🚊🚉✈️🛫🛬💺🛰🚀🛸🚁🛶⛵🚤🛥🛳⛴🚢⚓⛽🚧🚦🚥🚏' +
+    '🏠🏡🏘🏚🏗🏭🏢🏬🏣🏤🏥🏦🏨🏪🏫🏩💒🏛⛪🕌🕍🛕🕋⛩🗾🎑🏞🌅🌄🌇🌆🏙🌃🌉🌁🗿🗽🗼🏰🏯🏟🎡🎢🎠⛲⛱🏖🏝🏜🌋⛰🏔🗻🏕⛺' +
+    '⌚📱📲💻⌨️🖥🖨🖱🖲🕹🗜💽💾💿📀📼📷📸📹🎥📽🎞📞☎️📟📠📺📻🎙🎚🎛🧭⏱⏲⏰🕰⌛⏳📡🔋🔌💡🔦🕯🧯🛢💸💵💴💶💷💰💳💎⚖️🧰🔧🔨🛠⛏🔩⚙️🧱⛓🧲🔫💣🧨🪓🔪🗡⚔️🛡🚬⚰️🪦⚱️🏺🔮📿🧿💈⚗️🔭🔬🩹🩺💊💉🩸🧬🦠🧫🧪🌡🧹🧺🧻🚽🚰🚿🛁🛀🧼🧽🧴🛎🔑🗝🚪🪑🛋🛏🛌🧸🖼🛍🛒' +
+    '🎁🎈🎏🎀🎊🎉🎎🏮🎐🧧✉️📩📨📧💌📥📤📦🏷📪📫📬📭📮📯📜📃📄📑📊📈📉🗒🗓📆📅📇🗃🗳🗄📋📁📂🗂🗞📰📓📔📒📕📗📘📙📚📖🔖🧷🔗📎🖇📐📏🧮📌📍✂️🖊🖋✒️🖌🖍📝✏️🔍🔎🔏🔐🔒🔓' +
+    '✅❌⭕🛑⛔🚫💯❗❓⚠️♻️🔰⚜️🔱'
+  ).match(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F1E6}-\u{1F1FF}]/gu) || [];
+
+  // Оставляет только эмодзи. Буквы, цифры, пробелы, пунктуация отбрасываются.
+  function keepOnlyEmoji(s) {
+    const arr = Array.from(String(s || ''));
+    const out = [];
+    for (let i = 0; i < arr.length && out.length < 2; i++) {
+      const ch = arr[i];
+      const cp = ch.codePointAt(0);
+      let ok = false;
+      if (cp >= 0x1F000 && cp <= 0x1FAFF) ok = true;
+      else if (cp >= 0x2600 && cp <= 0x27BF) ok = true;
+      else if (cp >= 0x1F1E6 && cp <= 0x1F1FF) ok = true;
+      else if (cp >= 0x1F900 && cp <= 0x1F9FF) ok = true;
+      else if (cp === 0x2764 || cp === 0x2B50 || cp === 0x2705 || cp === 0x274C || cp === 0x2714 || cp === 0x2716 || cp === 0x2049 || cp === 0x203C) ok = true;
+      else if (cp === 0xFE0F || cp === 0x200D) ok = true;
+      if (ok) out.push(ch);
+    }
+    return out.join('');
+  }
+
 // === ОПИСАНИЕ ВКЛАДОК ===
 // Каждый раз, когда ты (разработчик) добавляешь новую вкладку — впиши её сюда.
 // У пользователей она появится автоматически ВИДИМОЙ.
@@ -5047,6 +5163,37 @@ function renderKanbanHtml(items) {
       return;
     }
 
+    // Если выбрана конкретная дата — покажем карточки своих вкладок на эту дату
+    if (selectedDate) {
+      const cardsOnDate = [];
+      if (Array.isArray(state.customTabs)) {
+        state.customTabs.forEach(function (tab) {
+          (tab.cards || []).forEach(function (c) {
+            if (c.done) return;
+            if (c.dueDate === selectedDate) cardsOnDate.push({ tab: tab, card: c });
+          });
+        });
+      }
+      if (cardsOnDate.length) {
+        let cardsHtml = '<div class="tasks-group"><div class="tasks-group-title">🗂 Карточки (' + cardsOnDate.length + ')</div>';
+        cardsOnDate.forEach(function (it) {
+          const c = it.card, tab = it.tab;
+          const meta = [];
+          meta.push('<span class="tag">' + escapeHtml((tab.icon || '⭐') + ' ' + (tab.label || '')) + '</span>');
+          if (c.price) meta.push('💰 ' + escapeHtml(c.price));
+          if (c.address) meta.push('📍 ' + escapeHtml(c.address));
+          cardsHtml += '<div class="task" data-tab-id="' + escapeHtml(tab.id) + '" data-card-id="' + escapeHtml(c.id) + '">' +
+            '<div class="task-content"><div class="task-text">' + escapeHtml(c.text) + '</div><div class="task-meta">' + meta.join(' • ') + '</div></div>' +
+            '<div class="task-actions">' +
+              '<button type="button" class="icon-btn" data-action="custom-card-open-from-tasks" data-tab-id="' + escapeHtml(tab.id) + '" data-card-id="' + escapeHtml(c.id) + '" title="Открыть">✎</button>' +
+            '</div>' +
+          '</div>';
+        });
+        cardsHtml += '</div>';
+        list.innerHTML = cardsHtml + (items.length ? '<div class="tasks-group"><div class="tasks-group-title">✓ Задачи (' + items.length + ')</div></div>' : '');
+      }
+    }
+
     if (!items.length) {
       if (selectedDate) {
         const hasOther = allItems.length > 0;
@@ -5227,7 +5374,32 @@ function renderKanbanHtml(items) {
     if (statsEl) statsEl.textContent = 'За ' + year + ' год: ' + total + ' задач · Макс. в месяц: ' + max;
   }
 
-  // === ШПАРГАЛКА ГОРЯЧИХ КЛАВИШ ===
+    // === ПИКЕР ЭМОДЗИ ===
+  let _emojiPickerTarget = null;
+  function openEmojiPicker(targetInputId) {
+    _emojiPickerTarget = targetInputId;
+    const modal = document.getElementById('emojiPickerModal');
+    if (!modal) return;
+    const grid = document.getElementById('emojiPickerGrid');
+    if (grid && !grid.dataset.built) {
+      grid.innerHTML = EMOJI_SET.map(function (e) {
+        return '<button type="button" class="emoji-cell" data-emoji="' + e + '" style="font-size:22px; padding:6px 0; background:transparent; border:1px solid var(--border); border-radius:8px; cursor:pointer; line-height:1;">' + e + '</button>';
+      }).join('');
+      grid.dataset.built = '1';
+    }
+    const search = document.getElementById('emojiPickerSearch');
+    if (search) search.value = '';
+    if (grid) grid.querySelectorAll('.emoji-cell').forEach(function (b) { b.style.display = ''; });
+    modal.hidden = false;
+    setTimeout(function () { if (search) search.focus(); }, 50);
+  }
+  function closeEmojiPicker() {
+    const modal = document.getElementById('emojiPickerModal');
+    if (modal) modal.hidden = true;
+    _emojiPickerTarget = null;
+  }
+
+// === ШПАРГАЛКА ГОРЯЧИХ КЛАВИШ ===
   function openKbdHelp() { document.getElementById('kbdHelpModal').hidden = false; }
   function closeKbdHelp() { document.getElementById('kbdHelpModal').hidden = true; }
 
@@ -5341,6 +5513,18 @@ function renderKanbanHtml(items) {
     const overdue = all.filter(function (it) { return isOverdue(it.task); });
     const today = all.filter(function (it) { return !it.task.done && it.task.deadline === todayISO; });
     const doing = all.filter(function (it) { return !it.task.done && it.task.status === 'doing' && it.task.deadline !== todayISO && !isOverdue(it.task); });
+
+    // Карточки своих вкладок на сегодня
+    const cardsToday = [];
+    if (Array.isArray(state.customTabs)) {
+      state.customTabs.forEach(function (tab) {
+        (tab.cards || []).forEach(function (c) {
+          if (c.done) return;
+          if (c.dueDate === todayISO) cardsToday.push({ tab: tab, card: c });
+        });
+      });
+    }
+
     const goalsWithDeadline = state.goals
       .filter(function (g) { return !g.archivedAt && !g.isInbox && g.deadline; })
       .sort(function (a, b) { return (a.deadline || '').localeCompare(b.deadline || ''); })
@@ -5385,6 +5569,24 @@ function renderKanbanHtml(items) {
       html += '<div class="dash-block"><div class="dash-block-head"><span class="dash-block-title">⚡ В работе</span><span class="dash-block-count">' + doing.length + '</span></div>';
       doing.slice(0, 5).forEach(function (it) { html += renderTaskRow(it); });
       if (doing.length > 5) html += '<div class="dash-empty">…и ещё ' + (doing.length - 5) + '</div>';
+      html += '</div>';
+    }
+
+
+    // Карточки на сегодня
+    if (cardsToday.length) {
+      html += '<div class="dash-block"><div class="dash-block-head"><span class="dash-block-title">🗂 Карточки на сегодня</span><span class="dash-block-count">' + cardsToday.length + '</span></div>';
+      cardsToday.forEach(function (it) {
+        const c = it.card, tab = it.tab;
+        const meta = [];
+        meta.push('<span class="tag">' + escapeHtml((tab.icon || '⭐') + ' ' + (tab.label || '')) + '</span>');
+        if (c.price) meta.push('💰 ' + escapeHtml(c.price));
+        if (c.address) meta.push('📍 ' + escapeHtml(c.address));
+        html += '<div class="dash-item" data-action="dash-open-card" data-tab-id="' + escapeHtml(tab.id) + '" data-card-id="' + escapeHtml(c.id) + '">' +
+          '<input type="checkbox" data-action="dash-toggle-card" data-tab-id="' + escapeHtml(tab.id) + '" data-card-id="' + escapeHtml(c.id) + '" />' +
+          '<div><div class="dash-item-text">' + escapeHtml(c.text) + '</div><div class="dash-item-meta">' + meta.join(' • ') + '</div></div>' +
+        '</div>';
+      });
       html += '</div>';
     }
 
@@ -5615,6 +5817,19 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
     });
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const todayISO = dateToISO(today);
+
+    // Карточки своих вкладок с датой
+    if (Array.isArray(state.customTabs)) {
+      state.customTabs.forEach(function (tab) {
+        (tab.cards || []).forEach(function (c) {
+          if (!c.dueDate || c.done) return;
+          if (!byDate[c.dueDate]) byDate[c.dueDate] = { goals: 0, tasks: 0, overdue: 0 };
+          byDate[c.dueDate].tasks++;
+          if (c.dueDate < todayISO) byDate[c.dueDate].overdue++;
+        });
+      });
+    }
+
     const cells = [];
     ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].forEach(function (dow) { cells.push('<div class="cal-dow">' + dow + '</div>'); });
     for (let i = 0; i < startDow; i++) cells.push('<div class="cal-cell empty"></div>');
@@ -5662,7 +5877,7 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
     const m = document.getElementById('tabsManageModal');
     if (m) m.hidden = true;
   }
-    function renderTabsManageList() {
+     function renderTabsManageList() {
     const box = document.getElementById('tabsManageList');
     if (!box) return;
     let html = state.tabs.map(function (t, i) {
@@ -5681,7 +5896,7 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
 
     if (Array.isArray(state.customTabs) && state.customTabs.length) {
       html += '<div style="font-size:11px;font-weight:700;color:var(--muted);padding:14px 0 6px;text-transform:uppercase;letter-spacing:.05em;">✨ Свои вкладки</div>';
-           html += state.customTabs.map(function (t) {
+      html += state.customTabs.map(function (t) {
         const isConfirming = _confirmDeleteCustomTabId === t.id;
         let delButtons;
         if (isConfirming) {
@@ -6734,7 +6949,7 @@ let _confirmDeleteCustomTabId = null;
     return null;
   }
 
-  function openCustomTabModal(editId) {
+    function openCustomTabModal(editId) {
     _editingCustomTabId = editId || null;
     const t = editId ? findCustomTab(editId) : null;
     document.getElementById('customTabModalTitle').textContent = t ? '✎ Своя вкладка' : '＋ Своя вкладка';
@@ -6748,17 +6963,18 @@ let _confirmDeleteCustomTabId = null;
     _editingCustomTabId = null;
   }
   function saveCustomTab() {
-    const icon = (document.getElementById('customTabIcon').value || '').trim() || '⭐';
+    const iconRaw = document.getElementById('customTabIcon').value || '';
+    const icon = keepOnlyEmoji(iconRaw) || '⭐';
     const label = (document.getElementById('customTabLabel').value || '').trim();
     if (!label) { showToast('Введите название', 'warn'); return; }
     if (_editingCustomTabId) {
       const t = findCustomTab(_editingCustomTabId);
-      if (t) { t.icon = icon.slice(0, 4); t.label = label.slice(0, 30); }
+      if (t) { t.icon = icon; t.label = label.slice(0, 30); }
       showToast('Вкладка обновлена', 'ok');
     } else {
       const id = 'ct-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       if (!Array.isArray(state.customTabs)) state.customTabs = [];
-      state.customTabs.push({ id: id, icon: icon.slice(0, 4), label: label.slice(0, 30), cards: [], createdAt: Date.now() });
+      state.customTabs.push({ id: id, icon: icon, label: label.slice(0, 30), cards: [], createdAt: Date.now() });
       state.ui.tab = id;
       showToast('Вкладка создана', 'ok');
     }
@@ -6781,8 +6997,9 @@ let _confirmDeleteCustomTabId = null;
     });
   }
 
-   let _confirmDeleteCustomCardId = null;
-function openCustomCardModal(tabId, cardId) {
+     let _confirmDeleteCustomCardId = null;
+
+  function openCustomCardModal(tabId, cardId) {
     _editingCustomCardTabId = tabId;
     _editingCustomCardId = cardId || null;
     const tab = findCustomTab(tabId); if (!tab) return;
@@ -6792,6 +7009,9 @@ function openCustomCardModal(tabId, cardId) {
     }
     document.getElementById('customCardModalTitle').textContent = card ? '✎ Карточка' : '＋ Карточка';
     document.getElementById('customCardText').value = card ? (card.text || '') : '';
+    document.getElementById('customCardDue').value = card ? (card.dueDate || '') : (state.calSelectedDate || '');
+    document.getElementById('customCardPrice').value = card ? (card.price || '') : '';
+    document.getElementById('customCardAddress').value = card ? (card.address || '') : '';
     document.getElementById('customCardModal').hidden = false;
     setTimeout(function () { document.getElementById('customCardText').focus(); }, 50);
   }
@@ -6800,25 +7020,54 @@ function openCustomCardModal(tabId, cardId) {
     _editingCustomCardId = null;
     _editingCustomCardTabId = null;
   }
-  function saveCustomCard() {
+    function saveCustomCard() {
     const text = (document.getElementById('customCardText').value || '').trim();
     if (!text) { showToast('Введите текст', 'warn'); return; }
+    const due = (document.getElementById('customCardDue').value || '');
+    const price = (document.getElementById('customCardPrice').value || '').trim().slice(0, 60);
+    const address = (document.getElementById('customCardAddress').value || '').trim().slice(0, 300);
     const tab = findCustomTab(_editingCustomCardTabId); if (!tab) { closeCustomCardModal(); return; }
     if (!Array.isArray(tab.cards)) tab.cards = [];
     if (_editingCustomCardId) {
-      for (let i = 0; i < tab.cards.length; i++) if (tab.cards[i].id === _editingCustomCardId) { tab.cards[i].text = text.slice(0, 2000); break; }
+      for (let i = 0; i < tab.cards.length; i++) if (tab.cards[i].id === _editingCustomCardId) {
+        tab.cards[i].text = text.slice(0, 2000);
+        tab.cards[i].dueDate = due;
+        tab.cards[i].price = price;
+        tab.cards[i].address = address;
+        break;
+      }
     } else {
-      tab.cards.push({ id: 'cc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), text: text.slice(0, 2000), done: false, createdAt: Date.now() });
+      tab.cards.push({
+        id: 'cc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        text: text.slice(0, 2000),
+        dueDate: due,
+        price: price,
+        address: address,
+        done: false,
+        createdAt: Date.now()
+      });
     }
     savePrefs();
     renderCustomView(tab.id);
     closeCustomCardModal();
+    if (due) {
+      renderCalendar();
+      if (state.ui.tab === 'today') renderDashboard();
+    }
   }
-  function toggleCustomCardDone(tabId, cardId) {
+    function toggleCustomCardDone(tabId, cardId) {
     const tab = findCustomTab(tabId); if (!tab || !Array.isArray(tab.cards)) return;
-    for (let i = 0; i < tab.cards.length; i++) if (tab.cards[i].id === cardId) { tab.cards[i].done = !tab.cards[i].done; break; }
+    let becameDone = false;
+    for (let i = 0; i < tab.cards.length; i++) if (tab.cards[i].id === cardId) {
+      tab.cards[i].done = !tab.cards[i].done;
+      if (tab.cards[i].done) becameDone = true;
+      break;
+    }
     savePrefs();
     renderCustomView(tabId);
+    if (becameDone) {
+      showToast('🎉 МОЛОДЕЦ! Дело сделано', 'ok', null, null, 3500);
+    }
   }
   function deleteCustomCard(tabId, cardId) {
     const tab = findCustomTab(tabId); if (!tab || !Array.isArray(tab.cards)) return;
@@ -6827,28 +7076,57 @@ function openCustomCardModal(tabId, cardId) {
     renderCustomView(tabId);
   }
 
+    let _customArchiveOpen = false;
+
   function renderCustomView(tabId) {
     const view = document.getElementById('viewCustom');
     if (!view) return;
     const tab = findCustomTab(tabId);
     if (!tab) { view.innerHTML = '<div class="custom-tab-empty">Вкладка не найдена.</div>'; return; }
     const cards = Array.isArray(tab.cards) ? tab.cards : [];
-    const cardsHtml = cards.length ? cards.map(function (c) {
+    const active = cards.filter(function (c) { return !c.done; });
+    const archived = cards.filter(function (c) { return c.done; });
+
+    function renderCard(c) {
+      const isConfirming = _confirmDeleteCustomCardId === c.id;
+      let actions;
+      if (isConfirming) {
+        actions =
+          '<button type="button" class="icon-btn" style="color:var(--danger); border-color:var(--danger);" data-action="custom-card-delete-yes" data-card-id="' + escapeHtml(c.id) + '" title="Да, удалить">✓</button>' +
+          '<button type="button" class="icon-btn" data-action="custom-card-delete-no" data-card-id="' + escapeHtml(c.id) + '" title="Отмена">✕</button>';
+      } else {
+        actions =
+          '<button type="button" class="icon-btn" data-action="custom-card-edit" data-card-id="' + escapeHtml(c.id) + '" title="Редактировать">✎</button>' +
+          '<button type="button" class="icon-btn" data-action="custom-card-delete" data-card-id="' + escapeHtml(c.id) + '" title="Удалить">✕</button>';
+      }
+      const meta = [];
+      if (c.dueDate) meta.push('<span class="badge date">📅 ' + formatDate(c.dueDate) + '</span>');
+      if (c.price) meta.push('<span class="badge price">💰 ' + escapeHtml(c.price) + '</span>');
+      if (c.address) meta.push('<span class="badge address">📍 ' + escapeHtml(c.address) + '</span>');
+      const metaHtml = meta.length ? '<div class="custom-card-meta">' + meta.join('') + '</div>' : '';
       return '<div class="custom-card' + (c.done ? ' done' : '') + '" data-custom-card-id="' + escapeHtml(c.id) + '">' +
         '<input type="checkbox" ' + (c.done ? 'checked' : '') + ' data-action="custom-card-toggle" data-card-id="' + escapeHtml(c.id) + '" />' +
-        '<div class="custom-card-body"><div class="custom-card-text">' + escapeHtml(c.text) + '</div></div>' +
-        '<div class="custom-card-actions">' +
-          '<button type="button" class="icon-btn" data-action="custom-card-edit" data-card-id="' + escapeHtml(c.id) + '" title="Редактировать">✎</button>' +
-                    (function () {
-            if (_confirmDeleteCustomCardId === c.id) {
-              return '<button type="button" class="icon-btn" style="color:var(--danger);border-color:var(--danger);" data-action="custom-card-delete-yes" data-card-id="' + escapeHtml(c.id) + '" title="Да, удалить">✓</button>' +
-                     '<button type="button" class="icon-btn" data-action="custom-card-delete-no" data-card-id="' + escapeHtml(c.id) + '" title="Отмена">✕</button>';
-            }
-            return '<button type="button" class="icon-btn" data-action="custom-card-delete" data-card-id="' + escapeHtml(c.id) + '" title="Удалить">✕</button>';
-          })() +
-        '</div>' +
+        '<div class="custom-card-body"><div class="custom-card-text">' + escapeHtml(c.text) + '</div>' + metaHtml + '</div>' +
+        '<div class="custom-card-actions">' + actions + '</div>' +
       '</div>';
-    }).join('') : '<div class="custom-tab-empty">Пока нет карточек. Нажмите «＋ Добавить карточку», чтобы создать первую.</div>';
+    }
+
+    const activeHtml = active.length
+      ? active.map(renderCard).join('')
+      : '<div class="custom-tab-empty">Пока нет карточек. Нажмите «＋ Добавить карточку», чтобы создать первую.</div>';
+
+    const archiveHtml = archived.length
+      ? '<div class="custom-archive">' +
+          '<div class="custom-archive-head" data-action="custom-archive-toggle">' +
+            '<span>📦 Выполнено (' + archived.length + ')</span>' +
+            '<span class="custom-archive-arrow">' + (_customArchiveOpen ? '▾' : '▸') + '</span>' +
+          '</div>' +
+          '<div class="custom-archive-body"' + (_customArchiveOpen ? '' : ' hidden') + '>' +
+            '<div class="custom-cards">' + archived.map(renderCard).join('') + '</div>' +
+          '</div>' +
+        '</div>'
+      : '';
+
     view.innerHTML =
       '<div class="custom-tab-head">' +
         '<h2>' + escapeHtml(tab.icon || '⭐') + ' ' + escapeHtml(tab.label) + '</h2>' +
@@ -6858,7 +7136,8 @@ function openCustomCardModal(tabId, cardId) {
           '<button type="button" class="danger" data-action="custom-tab-delete">🗑 Удалить вкладку</button>' +
         '</div>' +
       '</div>' +
-      '<div class="custom-cards">' + cardsHtml + '</div>';
+      '<div class="custom-cards">' + activeHtml + '</div>' +
+      archiveHtml;
   }
 
   (function bindCustomView() {
@@ -6875,6 +7154,7 @@ function openCustomCardModal(tabId, cardId) {
       else if (action === 'custom-card-delete') { _confirmDeleteCustomCardId = el.dataset.cardId; renderCustomView(tabId); }
       else if (action === 'custom-card-delete-yes') { _confirmDeleteCustomCardId = null; deleteCustomCard(tabId, el.dataset.cardId); }
       else if (action === 'custom-card-delete-no') { _confirmDeleteCustomCardId = null; renderCustomView(tabId); }
+      else if (action === 'custom-archive-toggle') { _customArchiveOpen = !_customArchiveOpen; renderCustomView(tabId); }
       else if (action === 'custom-tab-edit') openCustomTabModal(tabId);
       else if (action === 'custom-tab-delete') deleteCustomTab(tabId);
     });
@@ -7105,7 +7385,11 @@ function tickLiveClock() {
         if (action === 'filter-goal-tag') { state.tagFilter = el.dataset.tag; savePrefs(); renderTagFilterSelect(); renderTasks(); return; }
         if (action === 'open-snippet-from-goal') { openSnippetsModal(); state.editingSnippetId = el.dataset.id; renderSnippetsList(); return; }
         if (action === 'open-note-from-goal') { switchTab('notes'); state.editingNoteId = el.dataset.id; renderNotesList(); renderNoteEditor(); return; }
-        if (action === 'kanban-open-task') { openEditTask(gid, tid); return; }
+                if (action === 'custom-card-open-from-tasks') {
+          openCustomCardModal(el.dataset.tabId, el.dataset.cardId);
+          return;
+        }
+	if (action === 'kanban-open-task') { openEditTask(gid, tid); return; }
       });
 
       container.addEventListener('change', function (e) {
@@ -7227,6 +7511,44 @@ function tickLiveClock() {
         if (!tab) return;
         if (el.dataset.action === 'tab-icon') { tab.icon = el.value.slice(0, 4); savePrefs(); renderTabs(); }
         else if (el.dataset.action === 'tab-label') { tab.label = el.value.slice(0, 30); savePrefs(); renderTabs(); }
+      });
+    }
+
+    // === ЭМОДЗИ-ПИКЕР ===
+    const _epm = document.getElementById('emojiPickerModal');
+    if (_epm) {
+      _epm.addEventListener('click', function (e) {
+        if (e.target === this) { closeEmojiPicker(); return; }
+        const cell = e.target.closest('.emoji-cell');
+        if (cell) {
+          const emoji = cell.dataset.emoji;
+          if (_emojiPickerTarget) {
+            const inp = document.getElementById(_emojiPickerTarget);
+            if (inp) { inp.value = emoji; }
+          }
+          closeEmojiPicker();
+          return;
+        }
+        const el = e.target.closest('[data-action]');
+        if (el && el.dataset.action === 'close-emoji-picker') closeEmojiPicker();
+      });
+    }
+    const _eps = document.getElementById('emojiPickerSearch');
+    if (_eps) _eps.addEventListener('input', function () {
+      const q = (this.value || '').trim().toLowerCase();
+      const grid = document.getElementById('emojiPickerGrid');
+      if (!grid) return;
+      grid.querySelectorAll('.emoji-cell').forEach(function (btn) {
+        btn.style.display = !q ? '' : 'none';
+      });
+    });
+    const _ctPick = document.getElementById('customTabIconPickBtn');
+    if (_ctPick) _ctPick.addEventListener('click', function () { openEmojiPicker('customTabIcon'); });
+    const _ctIcon = document.getElementById('customTabIcon');
+    if (_ctIcon) {
+      _ctIcon.addEventListener('input', function () {
+        const filtered = keepOnlyEmoji(this.value);
+        if (this.value !== filtered) this.value = filtered;
       });
     }
 
@@ -7612,20 +7934,29 @@ function tickLiveClock() {
     });
 
     // Дашборд
-    const _dc = document.getElementById('dashContent');
+        const _dc = document.getElementById('dashContent');
     if (_dc) {
       _dc.addEventListener('click', function (e) {
         const el = e.target.closest('[data-action]'); if (!el) return;
         const action = el.dataset.action;
         const gid = el.dataset.goalId; const tid = el.dataset.taskId;
+        const tabId = el.dataset.tabId; const cardId = el.dataset.cardId;
         if (action === 'dash-open-task' && gid && tid) openEditTask(gid, tid);
         else if (action === 'dash-open-goal' && gid) openEditGoal(gid);
+        else if (action === 'dash-open-card' && tabId && cardId) {
+          switchTab(tabId);
+          setTimeout(function () { openCustomCardModal(tabId, cardId); }, 120);
+        }
       });
       _dc.addEventListener('change', function (e) {
         const el = e.target;
         if (!el.matches) return;
         if (el.matches('input[data-action="dash-toggle-task"]')) {
           toggleTask(el.dataset.goalId, el.dataset.taskId);
+          setTimeout(renderDashboard, 50);
+        }
+        if (el.matches('input[data-action="dash-toggle-card"]')) {
+          toggleCustomCardDone(el.dataset.tabId, el.dataset.cardId);
           setTimeout(renderDashboard, 50);
         }
       });
