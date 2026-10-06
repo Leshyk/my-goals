@@ -988,7 +988,57 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
   .analytics-streak { flex-direction: column; align-items: flex-start; gap: 8px; }
 }
 /* === УПРАВЛЕНИЕ ВКЛАДКАМИ === */
-  .tab input.tab-rename-icon,
+   .tab.renaming {
+    flex-wrap: wrap;
+    cursor: default;
+  }
+  .tab .tab-rename-actions {
+    display: flex;
+    gap: 3px;
+    flex: 0 0 auto;
+  }
+  .tab .tab-rename-actions button {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    font-family: inherit;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    flex: 0 0 auto;
+  }
+  .tab .tab-rename-actions button.ok {
+    color: var(--color-total);
+    border-color: var(--color-total);
+    background: rgba(63,185,80,.1);
+  }
+  .tab .tab-rename-actions button.ok:hover {
+    background: var(--color-total);
+    color: #fff;
+  }
+  .tab .tab-rename-actions button.cancel {
+    color: var(--muted);
+  }
+  .tab .tab-rename-actions button.cancel:hover {
+    color: var(--danger);
+    border-color: var(--danger);
+  }
+  .tab input.tab-rename-icon[readonly] {
+    cursor: pointer;
+  }
+  .tab input.tab-rename-icon[readonly]:hover {
+    border-color: var(--gold);
+  }
+ .tab input.tab-rename-icon,
   .tab input.tab-rename-label {
     background: var(--input-bg);
     border: 1px solid var(--accent);
@@ -5098,24 +5148,31 @@ function autoArchiveOldCompletedTasks() {
     }, true);
 
     // === ДВОЙНОЙ КЛИК — ПЕРЕИМЕНОВАНИЕ ===
-      function startInlineTabRename(tabEl, stdTab, ct) {
+          function startInlineTabRename(tabEl, stdTab, ct) {
       const isCustom = !!ct;
       const currentIcon = isCustom ? (ct.icon || '⭐') : (stdTab ? stdTab.icon : '⭐');
       const currentLabel = isCustom ? (ct.label || '') : (stdTab ? stdTab.label : '');
       const iconId = 'tab-rename-icon-' + Date.now().toString(36);
 
+      tabEl.classList.add('renaming');
       tabEl.innerHTML =
-        '<input type="text" id="' + iconId + '" class="tab-rename-icon" value="' + escapeHtml(currentIcon) + '" maxlength="4" readonly title="Клик — выбрать эмодзи" style="cursor:pointer;" />' +
-        '<input type="text" class="tab-rename-label" value="' + escapeHtml(currentLabel) + '" maxlength="30" />';
+        '<input type="text" id="' + iconId + '" class="tab-rename-icon" value="' + escapeHtml(currentIcon) + '" maxlength="4" readonly title="Клик — выбрать эмодзи" />' +
+        '<input type="text" class="tab-rename-label" value="' + escapeHtml(currentLabel) + '" maxlength="30" />' +
+        '<span class="tab-rename-actions">' +
+          '<button type="button" class="ok" title="Сохранить">✓</button>' +
+          '<button type="button" class="cancel" title="Отмена">✕</button>' +
+        '</span>';
 
       const iconInput = tabEl.querySelector('.tab-rename-icon');
       const labelInput = tabEl.querySelector('.tab-rename-label');
+      const okBtn = tabEl.querySelector('.tab-rename-actions .ok');
+      const cancelBtn = tabEl.querySelector('.tab-rename-actions .cancel');
 
       let finished = false;
       let pickerOpen = false;
 
-      // Фокус — сразу на название, текст выделен
-      setTimeout(function () { labelInput.focus(); labelInput.select(); }, 20);
+      // сразу фокус на название, текст выделен — можно печатать
+      setTimeout(function () { labelInput.focus(); labelInput.select(); }, 30);
 
       function finish(save) {
         if (finished) return;
@@ -5137,19 +5194,33 @@ function autoArchiveOldCompletedTasks() {
         renderTabs();
       }
 
-      // ─── клик по иконке → пикер эмодзи ───
-      iconInput.addEventListener('mousedown', function (ev) {
-        // не даём пикеру украсть фокус с поля названия раньше времени
-        ev.preventDefault();
+      // ── кнопки ✓ и ✕ ──
+      // preventDefault на pointerdown — чтобы кнопка НЕ забирала фокус у поля
+      // (иначе сработает blur поля и редактор закроется раньше времени)
+      okBtn.addEventListener('pointerdown', function (e) { e.preventDefault(); e.stopPropagation(); });
+      okBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        e.preventDefault();
+        finish(true);
       });
-      iconInput.addEventListener('click', function (ev) {
-        ev.stopPropagation();
-        ev.preventDefault();
+
+      cancelBtn.addEventListener('pointerdown', function (e) { e.preventDefault(); e.stopPropagation(); });
+      cancelBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        e.preventDefault();
+        finish(false);
+      });
+
+      // ── клик по иконке → пикер эмодзи ──
+      iconInput.addEventListener('pointerdown', function (e) { e.preventDefault(); e.stopPropagation(); });
+      iconInput.addEventListener('click', function (e) {
+        e.stopPropagation();
+        e.preventDefault();
         pickerOpen = true;
         openEmojiPicker(iconId);
       });
 
-      // ─── ждём закрытия пикера, потом возвращаем фокус на название ───
+      // ждём закрытия пикера и возвращаем фокус в название
       const watchId = setInterval(function () {
         if (!pickerOpen) { clearInterval(watchId); return; }
         const modal = document.getElementById('emojiPickerModal');
@@ -5162,7 +5233,7 @@ function autoArchiveOldCompletedTasks() {
         }
       }, 100);
 
-      // ─── клавиши ───
+      // ── клавиши для десктопа ──
       function handleKey(ev) {
         if (ev.key === 'Enter') { ev.preventDefault(); finish(true); }
         else if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
@@ -5170,28 +5241,20 @@ function autoArchiveOldCompletedTasks() {
       labelInput.addEventListener('keydown', handleKey);
       iconInput.addEventListener('keydown', handleKey);
 
-      // ─── blur = клик мимо = сохранить (но не когда открыт пикер) ───
+      // ── клик мимо вкладки → сохранить (аккуратно, чтобы не мешало кнопкам) ──
       labelInput.addEventListener('blur', function () {
         setTimeout(function () {
           if (finished || pickerOpen) return;
-          if (document.activeElement === iconInput) return;
+          const ae = document.activeElement;
+          // если фокус всё ещё внутри нашей вкладки (кнопка/иконка) — не сохраняем
+          if (ae && tabEl.contains(ae)) return;
           finish(true);
-        }, 150);
+        }, 180);
       });
     }
 
-    nav.addEventListener('dblclick', function (e) {
-      const tab = e.target.closest('.tab[data-tab]');
-      if (!tab) return;
-      if (e.target.closest('.tab-manage')) return;
-      if (tab.querySelector('.tab-rename-icon')) return;
-      const id = tab.dataset.tab;
-      const stdTab = state.tabs.find(function (x) { return x.id === id; });
-      const ct = !stdTab ? findCustomTab(id) : null;
-      if (!stdTab && !ct) return;
-      startInlineTabRename(tab, stdTab, ct);
-    });
-  }
+}
+
 
   function renderTabs() {
     if (!Array.isArray(state.tabs)) state.tabs = mergeTabs(null);
