@@ -1126,6 +1126,17 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
 .tabs-manage-row .order-btns button:disabled { opacity: 0.3; cursor: default; }
 /* === СВОИ ВКЛАДКИ === */
 /* === СВОИ ВКЛАДКИ: КАРТОЧКИ В СТИЛЕ KANBAN === */
+.custom-card {
+  touch-action: pan-y;
+}
+.custom-card.dragging-card {
+  opacity: 0.35;
+  border-style: dashed;
+  border-color: var(--accent);
+}
+.custom-card.dragging-ghost-card {
+  pointer-events: none;
+}
 .custom-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -7714,7 +7725,240 @@ function findCustomTab(id) {
       archiveHtml;
   }
 
-  (function bindCustomView() {
+    // === ПЕРЕТАСКИВАНИЕ КАРТОЧЕК ВНУТРИ ОДНОЙ ВКЛАДКИ ===
+  function initCustomCardsDnD() {
+    const view = document.getElementById('viewCustom');
+    if (!view || view.dataset.dndBound === '1') return;
+    view.dataset.dndBound = '1';
+
+    let dragging = null;
+    let tabId = null;
+    let startX = 0, startY = 0;
+    let grabDX = 0, grabDY = 0;
+    let started = false;
+    let ghost = null;
+    let activePointerId = null;
+    let longPressTimer = null;
+    let blockNextClick = false;
+    const THRESHOLD = 8;
+    const LONG_PRESS_MS = 300;
+
+    function activeContainer() {
+      // Первая .custom-cards — это активные карточки.
+      // Архивные лежат внутри .custom-archive-body.
+      return view.querySelector('.custom-cards');
+    }
+
+    function captureRects() {
+      const rects = new Map();
+      const c = activeContainer();
+      if (!c) return rects;
+      c.querySelectorAll('.custom-card').forEach(function (el) {
+        rects.set(el.dataset.customCardId, el.getBoundingClientRect());
+      });
+      return rects;
+    }
+
+    function playFlip(oldRects) {
+      const c = activeContainer();
+      if (!c) return;
+      c.querySelectorAll('.custom-card').forEach(function (el) {
+        const id = el.dataset.customCardId;
+        const oldR = oldRects.get(id);
+        if (!oldR) return;
+        const newR = el.getBoundingClientRect();
+        const dx = oldR.left - newR.left;
+        const dy = oldR.top - newR.top;
+        if (dx === 0 && dy === 0) return;
+        el.style.transition = 'none';
+        el.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
+        requestAnimationFrame(function () {
+          el.style.transition = 'transform 200ms cubic-bezier(0.22, 0.61, 0.36, 1)';
+          el.style.transform = '';
+          setTimeout(function () {
+            el.style.transition = '';
+            el.style.transform = '';
+          }, 240);
+        });
+      });
+    }
+
+    function startDrag(x, y) {
+      if (started || !dragging) return;
+      started = true;
+
+      const r = dragging.getBoundingClientRect();
+      ghost = dragging.cloneNode(true);
+      ghost.classList.add('dragging-ghost-card');
+      ghost.style.position = 'fixed';
+      ghost.style.left = r.left + 'px';
+      ghost.style.top = r.top + 'px';
+      ghost.style.width = r.width + 'px';
+      ghost.style.zIndex = '9999';
+      ghost.style.pointerEvents = 'none';
+      ghost.style.margin = '0';
+      ghost.style.transform = 'scale(1.03) rotate(1.5deg)';
+      ghost.style.opacity = '0.95';
+      ghost.style.boxShadow = '0 12px 32px rgba(0,0,0,.6), 0 0 0 2px rgba(88,166,255,.5)';
+      document.body.appendChild(ghost);
+
+      dragging.classList.add('dragging-card');
+      document.body.classList.add('pgt-dragging');
+      if (navigator.vibrate) { try { navigator.vibrate(15); } catch (err) {} }
+    }
+
+    function endDrag(e) {
+      if (!dragging || (e && e.pointerId !== activePointerId)) return;
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+
+      if (ghost) {
+        const target = dragging.getBoundingClientRect();
+        ghost.style.transition = 'left .2s cubic-bezier(0.22,0.61,0.36,1), top .2s cubic-bezier(0.22,0.61,0.36,1), width .2s, transform .2s, opacity .2s';
+        ghost.style.left = target.left + 'px';
+        ghost.style.top = target.top + 'px';
+        ghost.style.width = target.width + 'px';
+        ghost.style.transform = 'scale(1)';
+        ghost.style.opacity = '0';
+        const g = ghost;
+        setTimeout(function () { if (g && g.parentNode) g.parentNode.removeChild(g); }, 220);
+        ghost = null;
+      }
+
+      if (dragging) dragging.classList.remove('dragging-card');
+      document.body.classList.remove('pgt-dragging');
+
+      if (started) {
+        blockNextClick = true;
+        setTimeout(function () { blockNextClick = false; }, 60);
+        // Сохранить новый порядок в state
+        if (state.ui.tab === tabId) {
+          applyNewOrder();
+        }
+      }
+
+      dragging = null;
+      tabId = null;
+      started = false;
+      activePointerId = null;
+    }
+
+    function applyNewOrder() {
+      const tab = findCustomTab(tabId);
+      if (!tab || !Array.isArray(tab.cards)) return;
+      const c = activeContainer();
+      if (!c) return;
+
+      const newIds = Array.from(c.querySelectorAll('.custom-card')).map(function (el) {
+        return el.dataset.customCardId;
+      });
+
+      const newActive = [];
+      newIds.forEach(function (id) {
+        const card = tab.cards.find(function (x) { return x.id === id; });
+        if (card && !card.done) newActive.push(card);
+      });
+      const newDone = tab.cards.filter(function (x) { return x.done; });
+
+      tab.cards = newActive.concat(newDone);
+      savePrefs();
+    }
+
+    view.addEventListener('pointerdown', function (e) {
+      if (e.button && e.button !== 0) return;
+      const card = e.target.closest('.custom-card');
+      if (!card) return;
+      if (e.target.closest('input, button, textarea, select')) return;
+      if (card.classList.contains('done')) return;
+      if (card.closest('.custom-archive-body')) return;
+
+      dragging = card;
+      tabId = state.ui.tab;
+      startX = e.clientX;
+      startY = e.clientY;
+      const r = card.getBoundingClientRect();
+      grabDX = e.clientX - r.left;
+      grabDY = e.clientY - r.top;
+      started = false;
+      activePointerId = e.pointerId;
+
+      if (e.pointerType === 'touch') {
+        const x0 = e.clientX, y0 = e.clientY;
+        longPressTimer = setTimeout(function () { startDrag(x0, y0); }, LONG_PRESS_MS);
+      }
+    });
+
+    document.addEventListener('pointermove', function (e) {
+      if (!dragging || e.pointerId !== activePointerId) return;
+      if (state.ui.tab !== tabId) { endDrag(e); return; }
+
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (!started) {
+        if (e.pointerType === 'touch') {
+          if (dist > 12) { clearTimeout(longPressTimer); longPressTimer = null; dragging = null; activePointerId = null; }
+          return;
+        }
+        if (dist < THRESHOLD) return;
+        startDrag(e.clientX, e.clientY);
+        if (!started) return;
+      }
+
+      if (ghost) {
+        ghost.style.left = (e.clientX - grabDX) + 'px';
+        ghost.style.top = (e.clientY - grabDY) + 'px';
+      }
+
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      if (!el) return;
+      const targetCard = el.closest('.custom-card');
+      if (!targetCard || targetCard === dragging) return;
+      if (targetCard.closest('.custom-archive-body')) return;
+      const c = activeContainer();
+      if (!c || !c.contains(targetCard)) return;
+
+      const targetR = targetCard.getBoundingClientRect();
+      const before = (e.clientY < targetR.top + targetR.height / 2);
+
+      const children = Array.from(c.querySelectorAll('.custom-card'));
+      const dragIdx = children.indexOf(dragging);
+      const targetIdx = children.indexOf(targetCard);
+      if (dragIdx === -1 || targetIdx === -1) return;
+
+      let insertAt = before ? targetIdx : targetIdx + 1;
+      if (insertAt > dragIdx) insertAt--;
+      if (insertAt === dragIdx) return;
+
+      const oldRects = captureRects();
+      if (before) {
+        c.insertBefore(dragging, targetCard);
+      } else {
+        c.insertBefore(dragging, targetCard.nextSibling);
+      }
+      playFlip(oldRects);
+    });
+
+    document.addEventListener('pointerup', endDrag);
+    document.addEventListener('pointercancel', endDrag);
+
+    // На мобильных: как только начали drag — гасим скролл
+    document.addEventListener('touchmove', function (e) {
+      if (started && dragging) e.preventDefault();
+    }, { passive: false });
+
+    // Блокируем click после drag (чтобы чекбокс/кнопка не сработали)
+    view.addEventListener('click', function (e) {
+      if (blockNextClick) {
+        e.stopPropagation();
+        e.preventDefault();
+        blockNextClick = false;
+      }
+    }, true);
+  }
+
+(function bindCustomView() {
     const view = document.getElementById('viewCustom');
     if (!view || view.dataset.bound === '1') return;
     view.dataset.bound = '1';
@@ -7744,6 +7988,8 @@ function findCustomTab(id) {
       }
     });
   })();
+
+  initCustomCardsDnD();
 
   (function bindCustomModals() {
     const ct = document.getElementById('customTabModal');
