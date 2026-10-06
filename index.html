@@ -988,6 +988,19 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
   .analytics-streak { flex-direction: column; align-items: flex-start; gap: 8px; }
 }
 /* === УПРАВЛЕНИЕ ВКЛАДКАМИ === */
+  .tab input.tab-rename-icon,
+  .tab input.tab-rename-label {
+    background: var(--input-bg);
+    border: 1px solid var(--accent);
+    color: var(--text);
+    border-radius: 4px;
+    font-family: inherit;
+    outline: none;
+    padding: 3px 6px;
+    font-size: 12px;
+  }
+  .tab input.tab-rename-icon { width: 38px; text-align: center; font-size: 15px; flex: 0 0 auto; }
+  .tab input.tab-rename-label { flex: 1 1 auto; min-width: 0; }
 .tab.tab-manage {
   margin-top: 4px;
   border-style: dashed;
@@ -2123,7 +2136,7 @@ const DEFAULT_TABS = [
         massMode: false, massSelected: {}, tasksGrouping: 'kanban', tagFilter: '',
 notesFilter: 'all',
     density: 'normal',
-                    tabs: null, customTabs: [], customArchiveOpen: {}, quickInputVisible: true, advancedToolsVisible: false,
+    tabOrder: null, tabs: null, customTabs: [], customArchiveOpen: {}, quickInputVisible: true, advancedToolsVisible: false,
      ui: { search: '', filter: 'all', sort: 'deadline', tab: 'active', activeTab: 'goals', litTab: 'articles', litSearch: { articles: '', books: '' }, snippetsSearch: '', snippetsSort: 'new', snippetsTagFilter: '', snippetsGroup: 'flat', notesSearch: '' }
   };
 
@@ -2354,6 +2367,7 @@ function waitForLib(name, ms) {
           if (typeof p.notesFilter === 'string') state.notesFilter = p.notesFilter;
           if (typeof p.density === 'string') state.density = p.density;
  	  if (Array.isArray(p.tabs)) state.tabs = p.tabs;
+          if (Array.isArray(p.tabOrder)) state.tabOrder = p.tabOrder;
       if (Array.isArray(p.customTabs)) state.customTabs = p.customTabs.filter(function(t){ return t && typeof t.id === 'string'; });
           if (p.customArchiveOpen && typeof p.customArchiveOpen === 'object') state.customArchiveOpen = p.customArchiveOpen;
           if (typeof p.quickInputVisible === 'boolean') state.quickInputVisible = p.quickInputVisible;
@@ -2411,7 +2425,7 @@ scheduleDiskWrite();
     clearTimeout(_savePrefsTimer);
     _savePrefsTimer = setTimeout(function () {
       try {
-        const json = JSON.stringify({ collapsed: state.collapsed, colorTotal: state.colorTotal, colorDone: state.colorDone, calendarVisible: state.calendarVisible, notificationsEnabled: state.notificationsEnabled, tasksGrouping: state.tasksGrouping, tagFilter: state.tagFilter, allCollapsedSnapshot: state.allCollapsedSnapshot, notesFilter: state.notesFilter, density: state.density, tabs: state.tabs, customTabs: state.customTabs, customArchiveOpen: state.customArchiveOpen || {}, quickInputVisible: state.quickInputVisible,  advancedToolsVisible: state.advancedToolsVisible, ui: state.ui, favorites: state.favorites, readingPos: state.readingPos, pdfPage: state.pdfPage, pdfZoom: state.pdfZoom, pdfInvert: state.pdfInvert, litSort: state.litSort, litFavFilter: state.litFavFilter, listHidden: state.listHidden });
+        const json = JSON.stringify({ collapsed: state.collapsed, colorTotal: state.colorTotal, colorDone: state.colorDone, calendarVisible: state.calendarVisible, notificationsEnabled: state.notificationsEnabled, tasksGrouping: state.tasksGrouping, tagFilter: state.tagFilter, allCollapsedSnapshot: state.allCollapsedSnapshot, notesFilter: state.notesFilter, density: state.density, tabOrder: state.tabOrder, tabs: state.tabs, customTabs: state.customTabs, customArchiveOpen: state.customArchiveOpen || {}, quickInputVisible: state.quickInputVisible,  advancedToolsVisible: state.advancedToolsVisible, ui: state.ui, favorites: state.favorites, readingPos: state.readingPos, pdfPage: state.pdfPage, pdfZoom: state.pdfZoom, pdfInvert: state.pdfInvert, litSort: state.litSort, litFavFilter: state.litFavFilter, listHidden: state.listHidden });
         if (json === _lastPrefsHash) return;
         _lastPrefsHash = json;
         localStorage.setItem(PREFS_KEY, json);
@@ -4990,13 +5004,13 @@ function autoArchiveOldCompletedTasks() {
       const over = el ? el.closest('.tab[data-tab]') : null;
       if (!over || over === dragging) return;
 
-      const arr = findArr(dragType);
-      const ia = arr.findIndex(function (t) { return t.id === dragId; });
-      const ib = arr.findIndex(function (t) { return t.id === over.dataset.tab; });
+            if (!Array.isArray(state.tabOrder)) state.tabOrder = [];
+      const ia = state.tabOrder.indexOf(dragId);
+      const ib = state.tabOrder.indexOf(over.dataset.tab);
       if (ia === -1 || ib === -1 || ia === ib) return;
 
       const oldRects = captureRects();
-      const tmp = arr[ia]; arr[ia] = arr[ib]; arr[ib] = tmp;
+      const tmp = state.tabOrder[ia]; state.tabOrder[ia] = state.tabOrder[ib]; state.tabOrder[ib] = tmp;
       renderTabs();
       playFlip(oldRects);
 
@@ -5043,53 +5057,147 @@ function autoArchiveOldCompletedTasks() {
     document.addEventListener('pointerup', endDrag);
     document.addEventListener('pointercancel', endDrag);
 
-    nav.addEventListener('click', function (e) {
+        nav.addEventListener('click', function (e) {
       if (blockNextClick) {
         e.stopPropagation();
         e.preventDefault();
         blockNextClick = false;
       }
     }, true);
+
+    // === ДВОЙНОЙ КЛИК — ПЕРЕИМЕНОВАНИЕ ===
+    function startInlineTabRename(tabEl, stdTab, ct) {
+      const isCustom = !!ct;
+      const currentIcon = isCustom ? (ct.icon || '⭐') : (stdTab ? stdTab.icon : '⭐');
+      const currentLabel = isCustom ? (ct.label || '') : (stdTab ? stdTab.label : '');
+
+      tabEl.innerHTML =
+        '<input type="text" class="tab-rename-icon" value="' + escapeHtml(currentIcon) + '" maxlength="4" />' +
+        '<input type="text" class="tab-rename-label" value="' + escapeHtml(currentLabel) + '" maxlength="30" />';
+
+      const iconInput = tabEl.querySelector('.tab-rename-icon');
+      const labelInput = tabEl.querySelector('.tab-rename-label');
+      setTimeout(function () { iconInput.focus(); iconInput.select(); }, 20);
+
+      let finished = false;
+      function finish(save) {
+        if (finished) return;
+        finished = true;
+        if (save) {
+          const newIcon = keepOnlyEmoji(iconInput.value) || currentIcon || '⭐';
+          const newLabel = labelInput.value.trim();
+          if (newLabel) {
+            if (isCustom && ct) {
+              ct.icon = newIcon;
+              ct.label = newLabel.slice(0, 30);
+            } else if (stdTab) {
+              stdTab.icon = newIcon;
+              stdTab.label = newLabel.slice(0, 30);
+            }
+            savePrefs();
+          }
+        }
+        renderTabs();
+      }
+
+      iconInput.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') { ev.preventDefault(); labelInput.focus(); labelInput.select(); }
+        else if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
+      });
+      labelInput.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') { ev.preventDefault(); finish(true); }
+        else if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
+      });
+      iconInput.addEventListener('input', function () {
+        const filtered = keepOnlyEmoji(this.value);
+        if (this.value !== filtered) this.value = filtered;
+      });
+      iconInput.addEventListener('blur', function () {
+        setTimeout(function () {
+          if (document.activeElement === labelInput) return;
+          finish(true);
+        }, 120);
+      });
+      labelInput.addEventListener('blur', function () {
+        setTimeout(function () { if (!finished) finish(true); }, 120);
+      });
+    }
+
+    nav.addEventListener('dblclick', function (e) {
+      const tab = e.target.closest('.tab[data-tab]');
+      if (!tab) return;
+      if (e.target.closest('.tab-manage')) return;
+      if (tab.querySelector('.tab-rename-icon')) return;
+      const id = tab.dataset.tab;
+      const stdTab = state.tabs.find(function (x) { return x.id === id; });
+      const ct = !stdTab ? findCustomTab(id) : null;
+      if (!stdTab && !ct) return;
+      startInlineTabRename(tab, stdTab, ct);
+    });
   }
 
-function renderTabs() {
+  function renderTabs() {
     if (!Array.isArray(state.tabs)) state.tabs = mergeTabs(null);
 
-    // Если текущая вкладка спрятана — переключаемся на первую видимую
-   const visibleIds = state.tabs.filter(function (t) { return t.visible; }).map(function (t) { return t.id; });
-if (Array.isArray(state.customTabs)) {
-  state.customTabs.forEach(function (t) { visibleIds.push(t.id); });
-}
-if (visibleIds.length && visibleIds.indexOf(state.ui.tab) === -1) {
-  state.ui.tab = visibleIds[0];
-}
+    // Собираем все ID (стандартные + свои)
+    const stdIds = state.tabs.map(function (t) { return t.id; });
+    const customIds = (state.customTabs || []).map(function (t) { return t.id; });
+    const allIds = stdIds.concat(customIds);
 
-    // Рисуем кнопки вкладок
+    // Инициализируем tabOrder при первом запуске
+    if (!Array.isArray(state.tabOrder) || !state.tabOrder.length) {
+      state.tabOrder = DEFAULT_TABS.map(function (t) { return t.id; });
+    }
+    // Добавляем недостающие
+    allIds.forEach(function (id) {
+      if (state.tabOrder.indexOf(id) === -1) state.tabOrder.push(id);
+    });
+    // Убираем удалённые
+    const validSet = {};
+    allIds.forEach(function (id) { validSet[id] = true; });
+    state.tabOrder = state.tabOrder.filter(function (id) { return validSet[id]; });
+
+    // Видимые для переключения
+    const visibleIds = state.tabOrder.filter(function (id) {
+      const std = state.tabs.find(function (t) { return t.id === id; });
+      if (std) return std.visible;
+      const ct = (state.customTabs || []).find(function (t) { return t.id === id; });
+      return !!ct;
+    });
+    if (visibleIds.length && visibleIds.indexOf(state.ui.tab) === -1) {
+      state.ui.tab = visibleIds[0];
+    }
+
     const nav = document.getElementById('tabsNav');
     if (nav) {
-      let html = state.tabs.filter(function (t) { return t.visible; }).map(function (t) {
-        const sel = state.ui.tab === t.id ? 'true' : 'false';
-        const counter = (t.hasCounter && t.counterId)
-          ? '<span class="tab-count" id="' + t.counterId + '">0</span>'
-          : '';
-        return '<button class="tab" role="tab" data-tab="' + escapeHtml(t.id) + '" aria-selected="' + sel + '">' +
-          '<span class="tab-icon">' + escapeHtml(t.icon) + '</span>' +
-          '<span class="tab-label">' + escapeHtml(t.label) + '</span>' +
-          counter +
-        '</button>';
-      }).join('');
-                        if (Array.isArray(state.customTabs)) {
-        state.customTabs.forEach(function (t) {
+      let html = '';
+      state.tabOrder.forEach(function (id) {
+        const t = state.tabs.find(function (x) { return x.id === id; });
+        if (t) {
+          if (!t.visible) return;
           const sel = state.ui.tab === t.id ? 'true' : 'false';
-          const n = (t.cards || []).filter(function (c) { return !c.done; }).length;
-          const counter = n > 0 ? '<span class="tab-count">' + n + '</span>' : '';
+          const counter = (t.hasCounter && t.counterId)
+            ? '<span class="tab-count" id="' + t.counterId + '">0</span>'
+            : '';
           html += '<button class="tab" role="tab" data-tab="' + escapeHtml(t.id) + '" aria-selected="' + sel + '">' +
-            '<span class="tab-icon">' + escapeHtml(t.icon || '⭐') + '</span>' +
+            '<span class="tab-icon">' + escapeHtml(t.icon) + '</span>' +
             '<span class="tab-label">' + escapeHtml(t.label) + '</span>' +
             counter +
           '</button>';
-        });
-      }
+          return;
+        }
+        const ct = (state.customTabs || []).find(function (x) { return x.id === id; });
+        if (ct) {
+          const sel = state.ui.tab === ct.id ? 'true' : 'false';
+          const n = (ct.cards || []).filter(function (c) { return !c.done; }).length;
+          const counter = n > 0 ? '<span class="tab-count">' + n + '</span>' : '';
+          html += '<button class="tab" role="tab" data-tab="' + escapeHtml(ct.id) + '" aria-selected="' + sel + '">' +
+            '<span class="tab-icon">' + escapeHtml(ct.icon || '⭐') + '</span>' +
+            '<span class="tab-label">' + escapeHtml(ct.label) + '</span>' +
+            counter +
+          '</button>';
+        }
+      });
       html += '<button type="button" class="tab tab-manage" id="customTabAddBtn" title="Создать свою вкладку">' +
         '<span class="tab-icon">＋</span><span class="tab-label">Своя вкладка</span>' +
       '</button>';
@@ -5107,7 +5215,6 @@ if (visibleIds.length && visibleIds.indexOf(state.ui.tab) === -1) {
       if (ctab) ctab.addEventListener('click', function () { openCustomTabModal(null); });
     }
 
-    // Показываем только активное «полотно»
     document.getElementById('viewActive').hidden = state.ui.tab !== 'active';
     document.getElementById('viewArchive').hidden = state.ui.tab !== 'archive';
     document.getElementById('viewLiterature').hidden = state.ui.tab !== 'literature';
@@ -5119,7 +5226,6 @@ if (visibleIds.length && visibleIds.indexOf(state.ui.tab) === -1) {
     document.getElementById('viewCustom').hidden = !customActive;
     if (customActive) renderCustomView(state.ui.tab);
 
-    // Подвкладки внутри «Литературы» и «Активных»
     document.querySelectorAll('[data-lit-tab]').forEach(function (b) { b.classList.toggle('active', b.dataset.litTab === state.ui.litTab); });
     document.getElementById('articlesPanel').hidden = state.ui.litTab !== 'articles';
     document.getElementById('booksPanel').hidden = state.ui.litTab !== 'books';
@@ -7177,7 +7283,9 @@ let _confirmDeleteCustomTabId = null;
     } else {
       const id = 'ct-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       if (!Array.isArray(state.customTabs)) state.customTabs = [];
-      state.customTabs.push({ id: id, icon: icon, label: label.slice(0, 30), cards: [], createdAt: Date.now() });
+            state.customTabs.push({ id: id, icon: icon, label: label.slice(0, 30), cards: [], createdAt: Date.now() });
+      if (!Array.isArray(state.tabOrder)) state.tabOrder = [];
+      state.tabOrder.push(id);
       state.ui.tab = id;
       showToast('Вкладка создана', 'ok');
     }
@@ -7190,8 +7298,9 @@ let _confirmDeleteCustomTabId = null;
       title: 'Удалить вкладку?',
       message: 'Вкладка и все её карточки будут удалены безвозвратно.',
       yesLabel: 'Удалить',
-      onYes: function () {
+           onYes: function () {
         state.customTabs = state.customTabs.filter(function (t) { return t.id !== id; });
+        if (Array.isArray(state.tabOrder)) state.tabOrder = state.tabOrder.filter(function (x) { return x !== id; });
         if (state.ui.tab === id) state.ui.tab = 'active';
         savePrefs();
         renderTabs();
@@ -7707,9 +7816,10 @@ function tickLiveClock() {
           if (action === 'custom-tab-delete-ask') {
             _confirmDeleteCustomTabId = ctId;
             renderTabsManageList();
-          } else if (action === 'custom-tab-delete-confirm') {
+                    } else if (action === 'custom-tab-delete-confirm') {
             _confirmDeleteCustomTabId = null;
             state.customTabs = state.customTabs.filter(function (t) { return t.id !== ctId; });
+            if (Array.isArray(state.tabOrder)) state.tabOrder = state.tabOrder.filter(function (x) { return x !== ctId; });
             if (state.ui.tab === ctId) state.ui.tab = 'active';
             savePrefs(); renderTabsManageList(); renderTabs(); render();
  updateCustomTabCounters();
@@ -7724,11 +7834,21 @@ function tickLiveClock() {
         const tabId = row.dataset.tabId;
         const idx = state.tabs.findIndex(function (t) { return t.id === tabId; });
         if (idx === -1) return;
-        if (action === 'tab-move-up' && idx > 0) {
+               if (action === 'tab-move-up' && idx > 0) {
           const tmp = state.tabs[idx - 1]; state.tabs[idx - 1] = state.tabs[idx]; state.tabs[idx] = tmp;
+          if (Array.isArray(state.tabOrder)) {
+            const idA = state.tabs[idx - 1].id, idB = state.tabs[idx].id;
+            const oA = state.tabOrder.indexOf(idA), oB = state.tabOrder.indexOf(idB);
+            if (oA !== -1 && oB !== -1) { state.tabOrder[oA] = idB; state.tabOrder[oB] = idA; }
+          }
           savePrefs(); renderTabsManageList(); renderTabs();
         } else if (action === 'tab-move-down' && idx < state.tabs.length - 1) {
           const tmp = state.tabs[idx + 1]; state.tabs[idx + 1] = state.tabs[idx]; state.tabs[idx] = tmp;
+          if (Array.isArray(state.tabOrder)) {
+            const idA = state.tabs[idx + 1].id, idB = state.tabs[idx].id;
+            const oA = state.tabOrder.indexOf(idA), oB = state.tabOrder.indexOf(idB);
+            if (oA !== -1 && oB !== -1) { state.tabOrder[oA] = idB; state.tabOrder[oB] = idA; }
+          }
           savePrefs(); renderTabsManageList(); renderTabs();
         }
       });
