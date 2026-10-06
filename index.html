@@ -1245,6 +1245,29 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
 .custom-archive-arrow { font-size: 14px; }
 .custom-archive-body { margin-top: 10px; }
 
+.custom-total {
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: var(--bar-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  text-align: right;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.custom-total .label { text-align: left; }
+.custom-total b {
+  color: var(--gold);
+  font-size: 18px;
+  font-weight: 700;
+  margin-left: 6px;
+}
+.custom-total .muted { font-size: 11px; }
 .custom-tab-empty {
   padding: 40px 20px;
   text-align: center;
@@ -7379,7 +7402,23 @@ function initKanbanDnD() {
   let _editingCustomCardTabId = null;
 let _confirmDeleteCustomTabId = null;
 
-  function findCustomTab(id) {
+    // Извлекает число из строки с ценой. Понимает «1500 ₽», «1 500,00», «500р», «1500.50».
+  function parsePriceValue(str) {
+    if (!str) return 0;
+    // Убираем всё лишнее, оставляем цифры, точку, запятую. Запятую → точку.
+    let s = String(str).replace(/\s+/g, '').replace(/,/g, '.');
+    // Оставляем только первую группу цифр (с точкой)
+    const m = s.match(/\d+(\.\d+)?/);
+    if (!m) return 0;
+    const n = parseFloat(m[0]);
+    return isNaN(n) ? 0 : n;
+  }
+
+  function formatPriceTotal(n) {
+    // 15420 → "15 420"
+    return n.toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+  }
+function findCustomTab(id) {
     if (!Array.isArray(state.customTabs)) return null;
     for (let i = 0; i < state.customTabs.length; i++) if (state.customTabs[i].id === id) return state.customTabs[i];
     return null;
@@ -7593,6 +7632,20 @@ let _confirmDeleteCustomTabId = null;
       ? active.map(renderCard).join('')
       : '<div class="custom-tab-empty">Пока нет карточек. Нажмите «＋ Добавить карточку», чтобы создать первую.</div>';
 
+    // Считаем сумму активных карточек с ценой
+    let totalSum = 0;
+    let cardsWithPrice = 0;
+    active.forEach(function (c) {
+      const v = parsePriceValue(c.price);
+      if (v > 0) { totalSum += v; cardsWithPrice++; }
+    });
+    const totalHtml = cardsWithPrice > 0
+      ? '<div class="custom-total">' +
+          '<span class="label">💰 Итого по активным:</span>' +
+          '<span><b>' + formatPriceTotal(totalSum) + ' ₽</b> <span class="muted">(' + cardsWithPrice + ' из ' + active.length + ')</span></span>' +
+        '</div>'
+      : '';
+
     const archiveHtml = archived.length
       ? '<div class="custom-archive">' +
           '<div class="custom-archive-head" data-action="custom-archive-toggle">' +
@@ -7614,7 +7667,8 @@ let _confirmDeleteCustomTabId = null;
           '<button type="button" class="danger" data-action="custom-tab-delete">🗑 Удалить вкладку</button>' +
         '</div>' +
       '</div>' +
-      '<div class="custom-cards">' + activeHtml + '</div>' +
+            '<div class="custom-cards">' + activeHtml + '</div>' +
+      totalHtml +
       archiveHtml;
   }
 
