@@ -3658,16 +3658,58 @@ if (hasUser && hasToken) {
     showLoginGate();
     updateUserBadge();
   };
-  function checkNotifications() {
+    function checkNotifications() {
     if (!state.notificationsEnabled) return;
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
     const now = Date.now();
     if (now - state.lastNotifCheck < 15 * 60 * 1000) return;
     state.lastNotifCheck = now;
     const todayISO = dateToISO(new Date());
-    const overdue = [];
-    state.goals.forEach(function (g) { if (g.archivedAt) return; g.tasks.forEach(function (t) { if (t.archivedAt || t.done) return; if (t.deadline === todayISO) overdue.push(t); }); });
-    if (overdue.length) { try { new Notification('⏰ Задачи на сегодня: ' + overdue.length, { body: overdue.slice(0, 3).map(function (t) { return '• ' + t.text; }).join('\n') + (overdue.length > 3 ? '\n…и ещё ' + (overdue.length - 3) : '') }); } catch (e) {} }
+
+    // === 1. Задачи на сегодня ===
+    const tasksToday = [];
+    state.goals.forEach(function (g) {
+      if (g.archivedAt) return;
+      g.tasks.forEach(function (t) {
+        if (t.archivedAt || t.done) return;
+        if (t.deadline === todayISO) tasksToday.push(t);
+      });
+    });
+    if (tasksToday.length) {
+      try {
+        new Notification('⏰ Задачи на сегодня: ' + tasksToday.length, {
+          body: tasksToday.slice(0, 3).map(function (t) { return '• ' + t.text; }).join('\n') +
+                (tasksToday.length > 3 ? '\n…и ещё ' + (tasksToday.length - 3) : ''),
+          tag: 'pgt-tasks-today'   // одно уведомление на тему, не плодим дубли
+        });
+      } catch (e) {}
+    }
+
+    // === 2. Карточки на сегодня (из своих вкладок) ===
+    const cardsToday = [];
+    if (Array.isArray(state.customTabs)) {
+      state.customTabs.forEach(function (tab) {
+        (tab.cards || []).forEach(function (c) {
+          if (c.done) return;
+          if (c.dueDate === todayISO) {
+            cardsToday.push({ card: c, tab: tab });
+          }
+        });
+      });
+    }
+    if (cardsToday.length) {
+      try {
+        const bodyLines = cardsToday.slice(0, 3).map(function (it) {
+          const icon = it.tab.icon || '⭐';
+          return icon + ' ' + it.card.text;
+        }).join('\n');
+        const tail = cardsToday.length > 3 ? '\n…и ещё ' + (cardsToday.length - 3) : '';
+        new Notification('🗂 Карточки на сегодня: ' + cardsToday.length, {
+          body: bodyLines + tail,
+          tag: 'pgt-cards-today'
+        });
+      } catch (e) {}
+    }
   }
 
   // === БЭКАПЫ ===
@@ -8730,6 +8772,8 @@ applyQuickInputVisibility();
   updateNotifBtn();
    bootApp();
   setTimeout(checkBackup, 3000);
+  setInterval(checkNotifications, 5 * 60 * 1000);
+ setTimeout(checkNotifications, 30000);
  setTimeout(initDataFolder, 500);
  setTimeout(autoArchiveOldCompletedTasks, 1500);
  initTaskSwipe();
