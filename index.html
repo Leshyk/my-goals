@@ -384,6 +384,7 @@
   .reader-body .reader-msg.error { color: var(--danger); font-style: normal; }
   .lit-reader-pane.fullscreen { position: fixed; inset: 6px; z-index: 1000; height: auto; max-height: none; }
 
+#emojiPickerModal { z-index: 2700 !important; }
  #pgtConfirmModal { z-index: 2600 !important; }
   #pinSetupModal { z-index: 2600 !important; }
   .modal-backdrop { position: fixed; inset: 0; z-index: 2000; background: rgba(3,8,16,.72); display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(3px); }
@@ -1008,6 +1009,16 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
   color: var(--muted);
   font-size: 12px;
 }
+  .tab { cursor: grab; }
+  .tab.dragging-tab {
+    opacity: 0.4;
+    cursor: grabbing;
+    border-color: var(--accent);
+    border-style: dashed;
+    background: rgba(88,166,255,.12);
+  }
+  body.tabs-dragging { user-select: none; cursor: grabbing; }
+  body.tabs-dragging .tab:hover { border-color: var(--border); }
 .tab.tab-manage:hover {
   color: var(--accent);
   border-color: var(--accent);
@@ -4852,7 +4863,113 @@ function autoArchiveOldCompletedTasks() {
     SECTIONS.forEach(function (s) { const view = document.getElementById(s === 'articles' ? 'articlesPanel' : 'booksPanel'); if (!view) return; const sel = view.querySelector('[data-action="set-sort"][data-section="' + s + '"]'); if (sel) sel.value = state.litSort[s] || 'name'; const favBtn = view.querySelector('[data-action="toggle-fav-filter"][data-section="' + s + '"]'); if (favBtn) favBtn.classList.toggle('active', !!state.litFavFilter[s]); applyListVisibility(s); });
    updateNotifBtn();
     syncQuickHint();
-  }  function renderTabs() {
+  }  
+
+  // === ПЕРЕТАСКИВАНИЕ ВКЛАДОК МЫШЬЮ / ПАЛЬЦЕМ ===
+  function initTabsDragAndDrop() {
+    const nav = document.getElementById('tabsNav');
+    if (!nav || nav.dataset.dndBound === '1') return;
+    nav.dataset.dndBound = '1';
+
+    let dragging = null;
+    let dragType = null;      // 'std' | 'custom'
+    let activePointerId = null;
+    let startX = 0, startY = 0;
+    let started = false;
+    let blockNextClick = false;
+    const THRESHOLD = 8;
+
+    function findArr(type) {
+      return type === 'std' ? state.tabs : state.customTabs;
+    }
+
+    function swapTabs(idA, idB, type) {
+      const arr = findArr(type);
+      if (!Array.isArray(arr)) return false;
+      const ia = arr.findIndex(function (t) { return t.id === idA; });
+      const ib = arr.findIndex(function (t) { return t.id === idB; });
+      if (ia === -1 || ib === -1 || ia === ib) return false;
+      const tmp = arr[ia]; arr[ia] = arr[ib]; arr[ib] = tmp;
+      return true;
+    }
+
+    nav.addEventListener('pointerdown', function (e) {
+      if (e.button && e.button !== 0) return;
+      const tab = e.target.closest('.tab[data-tab]');
+      if (!tab) return;
+      if (e.target.closest('.tab-manage')) return;
+      const tabId = tab.dataset.tab;
+      const isStd = Array.isArray(state.tabs) && state.tabs.some(function (t) { return t.id === tabId; });
+      const isCustom = Array.isArray(state.customTabs) && state.customTabs.some(function (t) { return t.id === tabId; });
+      if (!isStd && !isCustom) return;
+      dragging = tab;
+      dragType = isStd ? 'std' : 'custom';
+      activePointerId = e.pointerId;
+      startX = e.clientX;
+      startY = e.clientY;
+      started = false;
+    });
+
+    document.addEventListener('pointermove', function (e) {
+      if (!dragging || e.pointerId !== activePointerId) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (!started) {
+        if (dist < THRESHOLD) return;
+        started = true;
+        dragging.classList.add('dragging-tab');
+        document.body.classList.add('tabs-dragging');
+      }
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const over = el ? el.closest('.tab[data-tab]') : null;
+      if (!over || over === dragging) return;
+      // Меняем только внутри своего типа (стандартные со стандартными, свои — со своими)
+      const overId = over.dataset.tab;
+      const overIsStd = Array.isArray(state.tabs) && state.tabs.some(function (t) { return t.id === overId; });
+      const overIsCustom = Array.isArray(state.customTabs) && state.customTabs.some(function (t) { return t.id === overId; });
+      const overType = overIsStd ? 'std' : (overIsCustom ? 'custom' : null);
+      if (overType !== dragType) return;
+      const dragId = dragging.dataset.tab;
+      if (!swapTabs(dragId, overId, dragType)) return;
+      renderTabs();
+      // после перерисовки — переподхватываем новый DOM-элемент
+      const newEl = document.querySelector('.tab[data-tab="' + CSS.escape(dragId) + '"]');
+      if (newEl) {
+        newEl.classList.add('dragging-tab');
+        dragging = newEl;
+      }
+    });
+
+    function endDrag(e) {
+      if (!dragging || (e && e.pointerId !== activePointerId)) return;
+      if (started) {
+        blockNextClick = true;
+        setTimeout(function () { blockNextClick = false; }, 60);
+        savePrefs();
+      }
+      if (dragging) dragging.classList.remove('dragging-tab');
+      document.body.classList.remove('tabs-dragging');
+      dragging = null;
+      dragType = null;
+      started = false;
+      activePointerId = null;
+    }
+
+    document.addEventListener('pointerup', endDrag);
+    document.addEventListener('pointercancel', endDrag);
+
+    // Блокируем обычный клик после перетаскивания
+    nav.addEventListener('click', function (e) {
+      if (blockNextClick) {
+        e.stopPropagation();
+        e.preventDefault();
+        blockNextClick = false;
+      }
+    }, true);
+  }
+
+function renderTabs() {
     if (!Array.isArray(state.tabs)) state.tabs = mergeTabs(null);
 
     // Если текущая вкладка спрятана — переключаемся на первую видимую
@@ -8171,6 +8288,7 @@ initLoginGate();
 applyQuickInputVisibility();
   applyAdvancedToolsVisibility();
   bindEvents();
+ initTabsDragAndDrop();
   resetGoalForm();
   resetTaskForm();
   render();
