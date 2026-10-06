@@ -36,6 +36,7 @@
     --input-bg: rgba(13, 21, 37, 0.8);
     --bar-bg: rgba(255, 255, 255, 0.06);
     --color-total: #3fb950; --color-done: #58a6ff;
+    --success: #3fb950; --success-glow: rgba(63, 185, 80, 0.35);
     --gold: #f5c518; --pdf-bg: #525659;
     --bg-overlay: rgba(7, 16, 31, 0.85);
     --shadow: 0 10px 28px rgba(0,0,0,0.4);
@@ -51,6 +52,7 @@
     --border: rgba(140, 155, 175, 0.4);
     --input-bg: #f6f8fa; --bar-bg: rgba(0,0,0,0.04);
     --color-total: #1f883d; --color-done: #0969da;
+    --success: #1f883d; --success-glow: rgba(31, 136, 61, 0.3);
     --gold: #bf8700; --pdf-bg: #d0d0d0;
     --bg-overlay: rgba(250, 252, 255, 0.9);
     --shadow: 0 6px 20px rgba(0,0,0,0.1);
@@ -60,7 +62,7 @@
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
-              body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: var(--text); padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); line-height: 1.5; min-height: 100vh; background: #0a1420; }
+              body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: var(--text); padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); line-height: 1.5; min-height: 100vh; background: #0a1420; -webkit-text-size-adjust: 100%; }
     :root[data-theme="light"] body { background: #eef1f5; }
   .container { max-width: 1600px; margin: 0 auto; }
   h1, h2 { margin: 0 0 8px; } h1 { font-size: 22px; } h2 { font-size: 15px; }
@@ -70,7 +72,7 @@
   .app-header-left { min-width: 0; flex: 1 1 auto; }
   .app-header-right { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   .live-clock { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; padding: 4px 10px; border-radius: 6px; background: var(--bar-bg); font-family: ui-monospace, monospace; letter-spacing: .03em; }
-  .save-indicator { font-size: 11px; color: var(--color-total); opacity: 0; transition: opacity .3s ease; padding: 4px 10px; border-radius: 6px; background: rgba(63, 185, 80, 0.12); border: 1px solid var(--color-total); }
+  .save-indicator { font-size: 11px; color: var(--success); opacity: 0; transition: opacity .3s ease; padding: 4px 10px; border-radius: 6px; background: var(--success-glow); border: 1px solid var(--success); }
   .save-indicator.show { opacity: 1; }
     .sync-status {
     font-size: 11px;
@@ -98,7 +100,7 @@
     flex: 0 0 auto;
   }
   .sync-dot.active { background: var(--accent); opacity: 1; animation: syncPulse 1s infinite; }
-  .sync-dot.ok { background: var(--color-total); opacity: 1; animation: none; }
+  .sync-dot.ok { background: var(--success); opacity: 1; animation: none; }
   .sync-dot.error { background: var(--danger); opacity: 1; animation: none; }
   .sync-dot.auth { background: var(--gold); opacity: 1; animation: none; }
   @keyframes syncPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
@@ -1139,20 +1141,9 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
   color: var(--muted);
   font-size: 12px;
 }
-  .tab { cursor: grab; }
-  .tab.dragging-tab {
-    opacity: 0.4;
-    cursor: grabbing;
-    border-color: var(--accent);
-    border-style: dashed;
-    background: rgba(88,166,255,.12);
-  }
-  body.tabs-dragging { user-select: none; cursor: grabbing; }
-  body.tabs-dragging .tab:hover { border-color: var(--border); }
-  /* === ПЕРЕТАСКИВАНИЕ ВКЛАДОК С АНИМАЦИЕЙ === */
   .tab { cursor: grab; user-select: none; }
   .tab.dragging-tab {
-    opacity: 0.25;
+    opacity: .25;
     border-style: dashed;
     border-color: var(--accent);
     background: rgba(88,166,255,.08);
@@ -1380,6 +1371,23 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
   border-radius: 10px;
   grid-column: 1 / -1;
 }
+
+  /* === УВАЖАЕМ «УМЕНЬШИТЬ ДВИЖЕНИЕ» ===
+     Отключаем анимации и плавные переходы для тех, у кого в системе включено
+     «уменьшить движение»: мигающие индикаторы и «пульсирующие» кнопки у таких
+     пользователей вызывают дискомфорт. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* === КОНТРАСТ ФОКУСА В СВЕТЛОЙ ТЕМЕ ===
+     Синяя рамка #0969da на белом фоне видна хуже, чем на тёмном. */
+  :root[data-theme="light"] :focus-visible { outline: 2px solid #0550ae; outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -2726,6 +2734,42 @@ tags: normalizeTags(g.tags),
     for (let i = 0; i < state.goals.length; i++) { if (state.goals[i].isInbox && !state.goals[i].archivedAt) { inbox = state.goals[i]; break; } }
     if (!inbox) { inbox = { id: uid(), title: 'Быстрые задачи', description: 'Задачи без привязки к цели.', priority: 'medium', deadline: '', isInbox: true, archivedAt: null, createdAt: Date.now(), pinned: false, journal: [], tasks: [] }; state.goals.push(inbox); saveData(); }
     return inbox;
+  }
+
+  // === ДОСТУПНОСТЬ: ИМЕНА ДЛЯ КНОПОК-ИКОНОК ===
+  // В интерфейсе много кнопок вида «✎», «✕», «📌»: визуально понятно, а
+  // скринридер озвучивает только сам символ. Берём подпись из title (он уже
+  // заполнен у большинства кнопок), иначе — из видимого текста, и выставляем
+  // aria-label. Функция идемпотентна: повторный вызов ничего не портит.
+  function applyA11yLabels(root) {
+    const scope = root || document;
+    const silent = { '✕': 'Удалить', '✎': 'Редактировать', '📌': 'Закрепить', '✓': 'Выполнено', '⋯': 'Дополнительно', '⋯ Дополнительно': 'Дополнительно', '☑ Выбрать': 'Выбрать несколько', '★': 'В избранном', '☆': 'В избранное', '🗑': 'Удалить', '📋': 'Копировать', '▾': 'Развернуть', '▸': 'Свернуть' };
+    let nodes;
+    try { nodes = scope.querySelectorAll('button, [role="button"]'); } catch (e) { return; }
+    // Дешёвая проверка «уже размечали и кнопок не прибавилось» — чтобы не
+    // перебирать сотни элементов на каждую перерисовку списка.
+    if (scope === document && nodes.length === applyA11yLabels._lastCount && !applyA11yLabels._dirty) return;
+    for (let i = 0; i < nodes.length; i++) {
+      const el = nodes[i];
+      if (el.hasAttribute('aria-label') || el.hasAttribute('aria-labelledby')) continue;
+      const title = (el.getAttribute('title') || '').trim();
+      const visible = (el.textContent || '').replace(/\s+/g, ' ').trim();
+      // Кнопка из одного символа или эмодзи считается «немой» и требует подписи.
+      const isIconOnly = visible.length <= 2 || /^[\p{Extended_Pictographic}\p{Emoji_Presentation}\uFE0F\u200D\s]+$/u.test(visible);
+      if (!isIconOnly) continue;
+      const label = title || silent[visible] || visible;
+      if (label) el.setAttribute('aria-label', label);
+    }
+    if (scope === document) { applyA11yLabels._lastCount = nodes.length; applyA11yLabels._dirty = false; }
+  }
+
+  // Активный элемент — поле ввода или contenteditable: пользователь печатает.
+  // Нужно, чтобы фоновые перерисовки не выдёргивали каретку и не стирали набранное.
+  function isTypingNow() {
+    const ae = document.activeElement;
+    if (!ae) return false;
+    const tag = (ae.tagName || '').toUpperCase();
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || ae.isContentEditable === true;
   }
 
   function pushUndo(fn, label) { undoStack.push({ fn: fn, label: label, ts: Date.now() }); if (undoStack.length > 20) undoStack.shift(); }
@@ -5572,7 +5616,7 @@ function autoArchiveOldCompletedTasks() {
     if (tab === 'archive') renderArchive();
  if (tab === 'analytics') renderAnalytics();
     if (tab === 'literature') { SECTIONS.forEach(function (s) { renderMeta(s); renderList(s); applyListVisibility(s); }); }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
   }
   function switchActiveTab(t) {
     state.ui.activeTab = t;
@@ -7174,6 +7218,10 @@ function toggleCalendar() { state.calendarVisible = !state.calendarVisible; save
   }
 
    function render() {
+    // Если пользователь прямо сейчас печатает — не перерисовываем DOM целиком:
+    // полная перерисовка выдёргивает каретку и может стереть недописанное.
+    // Отложенная перерисовка (scheduleDeferredRender) догонит изменения позже.
+    if (isTypingNow()) { scheduleDeferredRender(); return; }
     // Быстрый рендер — то, что видно сразу
     renderTabs();
     renderTagsDatalist(); renderTagFilterSelect();
@@ -9210,15 +9258,31 @@ function tickLiveClock() {
       if (window.speechSynthesis) window.speechSynthesis.cancel();
     });
 
-    // Синхронизация между вкладками браузера
+    // Синхронизация между вкладками браузера.
+    // Раньше здесь безусловно вызывался loadState() + render(): если во второй
+    // вкладке что-то сохранилось, первая молча перечитывала данные и теряла
+    // недописанный текст в открытом редакторе. Теперь при активном вводе
+    // показываем предупреждение с кнопкой «Обновить» и ждём решения человека.
     window.addEventListener('storage', function (e) {
       if (!e.key) return;
       const bases = [DATA_KEY, PREFS_KEY, SNIPPETS_KEY, NOTES_KEY, TEMPLATES_KEY];
       const hit = bases.some(function (b) { return e.key === b || e.key.indexOf(b + '_') === 0; });
-      if (hit) {
-        loadState(); _searchIndexDirty = true;
-        applyTheme(); applyColors(); syncToolbarInputs(); applyCalendarVisibility(); render();
+      if (!hit) return;
+      if (isTypingNow()) {
+        if (!document._pgtRemoteChangeNotified) {
+          document._pgtRemoteChangeNotified = true;
+          showToast('Данные изменились в другой вкладке', 'warn', 'Обновить', function () {
+            document._pgtRemoteChangeNotified = false;
+            loadState(); _searchIndexDirty = true;
+            applyTheme(); applyColors(); syncToolbarInputs(); applyCalendarVisibility();
+            render();
+          }, 12000);
+        }
+        return;
       }
+      document._pgtRemoteChangeNotified = false;
+      loadState(); _searchIndexDirty = true;
+      applyTheme(); applyColors(); syncToolbarInputs(); applyCalendarVisibility(); render();
     });
   } 
 
@@ -9235,6 +9299,23 @@ applyQuickInputVisibility();
   resetGoalForm();
   resetTaskForm();
   render();
+  // Подписи для кнопок-иконок + повторная разметка после каждой перерисовки
+  // списков (goals/tasks/notes/literature строятся через innerHTML).
+  applyA11yLabels();
+  (function watchA11y() {
+    if (typeof MutationObserver !== 'function') return;
+    let scheduled = false;
+    const observer = new MutationObserver(function () {
+      if (scheduled) return;
+      scheduled = true;
+      setTimeout(function () {
+        scheduled = false;
+        applyA11yLabels._dirty = true;
+        applyA11yLabels();
+      }, 200);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  })();
   SECTIONS.forEach(renderReaderEmpty);
   updateSnippetsBadges();
   tryRestoreHandles();
@@ -10227,8 +10308,7 @@ setTimeout(function() {
     // При загрузке — убедимся, что у каждой цели есть массив milestones
     state.goals.forEach(function (g) { if (!Array.isArray(g.milestones)) g.milestones = []; });
 
-    bindMilestoneEvents();
-    renderGoals();
+      renderGoals();
   }, 500);
 })();
 </script>
