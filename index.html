@@ -1037,18 +1037,91 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
 .tabs-manage-row .order-btns button:hover { border-color: var(--accent); }
 .tabs-manage-row .order-btns button:disabled { opacity: 0.3; cursor: default; }
 /* === СВОИ ВКЛАДКИ === */
-.custom-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
-.custom-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; display: flex; gap: 8px; align-items: flex-start; transition: border-color .15s; }
-.custom-card:hover { border-color: var(--accent); }
-.custom-card.done { opacity: .65; }
-.custom-card.done .custom-card-text { text-decoration: line-through; color: var(--muted); }
-.custom-card input[type="checkbox"] { margin-top: 3px; width: 15px; height: 15px; accent-color: var(--color-done); cursor: pointer; flex: 0 0 auto; }
+/* === СВОИ ВКЛАДКИ: КАРТОЧКИ В СТИЛЕ KANBAN === */
+.custom-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.custom-card {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  padding: 12px 12px 10px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  box-shadow: 0 2px 6px rgba(0,0,0,.15);
+  transition: transform .15s, border-color .15s, box-shadow .15s;
+}
+.custom-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,.3);
+}
+.custom-card.done {
+  opacity: .55;
+  border-left-color: var(--color-total);
+}
+.custom-card.done .custom-card-text {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+.custom-card input[type="checkbox"] {
+  margin-top: 2px;
+  width: 16px; height: 16px;
+  accent-color: var(--color-total);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
 .custom-card-body { flex: 1 1 auto; min-width: 0; }
-.custom-card-text { font-size: 13px; word-break: break-word; }
-.custom-card-actions { display: flex; gap: 4px; flex: 0 0 auto; }
-.custom-tab-empty { padding: 40px 20px; text-align: center; color: var(--muted); font-size: 13px; border: 1px dashed var(--border); border-radius: 10px; }
-.custom-tab-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-.custom-tab-head h2 { font-size: 16px; margin: 0; }
+.custom-card-text {
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-word;
+  white-space: pre-wrap;
+  color: var(--text);
+}
+.custom-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 0 0 auto;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.custom-card:hover .custom-card-actions { opacity: 1; }
+.custom-card-actions .icon-btn { padding: 2px 6px; font-size: 11px; }
+
+.custom-tab-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.custom-tab-head h2 {
+  font-size: 18px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.custom-tab-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  grid-column: 1 / -1;
+}
 </style>
 </head>
 <body>
@@ -4665,10 +4738,13 @@ function autoArchiveOldCompletedTasks() {
     if (!Array.isArray(state.tabs)) state.tabs = mergeTabs(null);
 
     // Если текущая вкладка спрятана — переключаемся на первую видимую
-    const visibleIds = state.tabs.filter(function (t) { return t.visible; }).map(function (t) { return t.id; });
-    if (visibleIds.length && visibleIds.indexOf(state.ui.tab) === -1) {
-      state.ui.tab = visibleIds[0];
-    }
+   const visibleIds = state.tabs.filter(function (t) { return t.visible; }).map(function (t) { return t.id; });
+if (Array.isArray(state.customTabs)) {
+  state.customTabs.forEach(function (t) { visibleIds.push(t.id); });
+}
+if (visibleIds.length && visibleIds.indexOf(state.ui.tab) === -1) {
+  state.ui.tab = visibleIds[0];
+}
 
     // Рисуем кнопки вкладок
     const nav = document.getElementById('tabsNav');
@@ -5583,15 +5659,15 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
     const m = document.getElementById('tabsManageModal');
     if (m) m.hidden = true;
   }
-  function renderTabsManageList() {
+    function renderTabsManageList() {
     const box = document.getElementById('tabsManageList');
     if (!box) return;
-    box.innerHTML = state.tabs.map(function (t, i) {
+    let html = state.tabs.map(function (t, i) {
       const upDis = i === 0 ? ' disabled' : '';
       const dnDis = i === state.tabs.length - 1 ? ' disabled' : '';
       return '<div class="tabs-manage-row" data-tab-id="' + escapeHtml(t.id) + '">' +
         '<input type="checkbox" data-action="tab-toggle-visible" ' + (t.visible ? 'checked' : '') + ' title="Показывать вкладку" />' +
-        '<input type="text" class="icon-input" data-action="tab-icon" value="' + escapeHtml(t.icon) + '" maxlength="4" title="Иконка (эмодзи)" />' +
+        '<input type="text" class="icon-input" data-action="tab-icon" value="' + escapeHtml(t.icon) + '" maxlength="4" title="Иконка" />' +
         '<input type="text" class="label-input" data-action="tab-label" value="' + escapeHtml(t.label) + '" maxlength="30" title="Название" />' +
         '<div class="order-btns">' +
           '<button type="button" data-action="tab-move-up" title="Выше"' + upDis + '>↑</button>' +
@@ -5599,10 +5675,37 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
         '</div>' +
       '</div>';
     }).join('');
+
+    if (Array.isArray(state.customTabs) && state.customTabs.length) {
+      html += '<div style="font-size:11px;font-weight:700;color:var(--muted);padding:14px 0 6px;text-transform:uppercase;letter-spacing:.05em;">✨ Свои вкладки</div>';
+      html += state.customTabs.map(function (t) {
+        return '<div class="tabs-manage-row" data-custom-tab-id="' + escapeHtml(t.id) + '">' +
+          '<span style="display:inline-block;width:18px;text-align:center;color:var(--muted);">⭐</span>' +
+          '<input type="text" class="icon-input" data-action="custom-tab-icon" value="' + escapeHtml(t.icon || '⭐') + '" maxlength="4" />' +
+          '<input type="text" class="label-input" data-action="custom-tab-label" value="' + escapeHtml(t.label || '') + '" maxlength="30" />' +
+          '<div class="order-btns">' +
+            '<button type="button" class="danger" data-action="custom-tab-remove" title="Удалить вкладку" style="padding:4px 10px;">🗑</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+    box.innerHTML = html;
   }
-  function findTabIndexById(id) {
-    for (let i = 0; i < state.tabs.length; i++) if (state.tabs[i].id === id) return i;
-    return -1;
+
+    if (Array.isArray(state.customTabs) && state.customTabs.length) {
+      html += '<div style="font-size:11px;font-weight:700;color:var(--muted);padding:14px 0 6px;text-transform:uppercase;letter-spacing:.05em;">✨ Свои вкладки</div>';
+      html += state.customTabs.map(function (t) {
+        return '<div class="tabs-manage-row" data-custom-tab-id="' + escapeHtml(t.id) + '">' +
+          '<span style="display:inline-block;width:18px;text-align:center;color:var(--muted);">⭐</span>' +
+          '<input type="text" class="icon-input" data-action="custom-tab-icon" value="' + escapeHtml(t.icon || '⭐') + '" maxlength="4" />' +
+          '<input type="text" class="label-input" data-action="custom-tab-label" value="' + escapeHtml(t.label || '') + '" maxlength="30" />' +
+          '<div class="order-btns">' +
+            '<button type="button" class="danger" data-action="custom-tab-remove" title="Удалить вкладку" style="padding:4px 10px;">🗑</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+    box.innerHTML = html;
   }
 
 function toggleCalendar() { state.calendarVisible = !state.calendarVisible; savePrefs(); applyCalendarVisibility(); if (state.calendarVisible) renderCalendar(); syncQuickHint(); }
@@ -6848,7 +6951,891 @@ function tickLiveClock() {
 
   window.__pgtAutoSyncDone = function (ok) { _autoSyncInFlight = false; };
   
-    initLoginGate();
+     // ============================================================
+  // BIND EVENTS — все обработчики приложения
+  // ============================================================
+  function bindEvents() {
+    // Часы
+    tickLiveClock();
+    setInterval(tickLiveClock, 1000);
+
+    // Шапка
+    const _sb = document.getElementById('settingsBtn');
+    if (_sb) _sb.addEventListener('click', function () {
+      document.getElementById('settingsModal').hidden = false;
+      syncToolbarInputs();
+      renderBackupList();
+      renderCacheStats();
+      refreshDriveSettingsUI();
+    });
+    const _gsb = document.getElementById('globalSearchBtn');
+    if (_gsb) _gsb.addEventListener('click', openGlobalSearch);
+    const _ct = document.getElementById('calToggle');
+    if (_ct) _ct.addEventListener('click', toggleCalendar);
+
+    // Подвкладки активного раздела
+    document.querySelectorAll('[data-active-tab-btn]').forEach(function (b) {
+      b.addEventListener('click', function () { switchActiveTab(b.dataset.activeTabBtn); });
+    });
+    document.querySelectorAll('[data-lit-tab]').forEach(function (b) {
+      b.addEventListener('click', function () { switchLitTab(b.dataset.litTab); });
+    });
+
+    // Быстрый ввод
+    const _qa = document.getElementById('quickAddBtn');
+    if (_qa) _qa.addEventListener('click', handleQuickAdd);
+    const _qv = document.getElementById('quickVoiceBtn');
+    if (_qv) _qv.addEventListener('click', function () {
+      if (_voiceRecognitionActive && _voiceRecognition) {
+        try { _voiceRecognition.stop(); } catch (e) {}
+        return;
+      }
+      startVoiceInput();
+    });
+    const _qi = document.getElementById('quickInput');
+    if (_qi) _qi.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); handleQuickAdd(); }
+    });
+
+    // Форма цели
+    const _gf = document.getElementById('goalForm');
+    if (_gf) _gf.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const titleEl = document.getElementById('goalTitle');
+      const title = titleEl.value.trim();
+      if (!title) { markInvalid(titleEl); showToast('Введите название цели', 'warn'); return; }
+      let deadline = document.getElementById('goalDeadline').value || '';
+      if (!deadline && state.calSelectedDate) deadline = state.calSelectedDate;
+      addGoal({
+        title: title,
+        description: document.getElementById('goalDesc').value.trim(),
+        priority: document.getElementById('goalPriority').value,
+        deadline: deadline
+      });
+      resetGoalForm();
+      showToast('Цель добавлена', 'ok');
+    });
+    const _gm = document.getElementById('goalMoreBtn');
+    if (_gm) _gm.addEventListener('click', function () {
+      const el = document.getElementById('goalMoreBody');
+      el.hidden = !el.hidden;
+    });
+
+    // Форма задачи
+    const _tm = document.getElementById('taskMoreBtn');
+    if (_tm) _tm.addEventListener('click', function () {
+      const el = document.getElementById('taskMoreBody');
+      el.hidden = !el.hidden;
+    });
+    const _tf = document.getElementById('taskForm');
+    if (_tf) _tf.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const textEl = document.getElementById('taskText');
+      const text = textEl.value.trim();
+      if (!text) { markInvalid(textEl); showToast('Введите текст задачи', 'warn'); return; }
+      let deadline = document.getElementById('taskDeadline').value || '';
+      if (!deadline && state.calSelectedDate) deadline = state.calSelectedDate;
+      const goalId = document.getElementById('taskGoal').value;
+      addTask(goalId, {
+        text: text,
+        priority: document.getElementById('taskPriority').value,
+        deadline: deadline,
+        tags: parseTags(document.getElementById('taskTags').value)
+      });
+      const keep = goalId;
+      resetTaskForm();
+      document.getElementById('taskGoal').value = keep;
+      document.getElementById('taskText').focus();
+      showToast('Задача добавлена', 'ok');
+    });
+
+    // Обработчики списков задач и целей
+    attachTaskListHandlers(document.getElementById('goalsList'));
+    attachTaskListHandlers(document.getElementById('tasksColumn'));
+
+        // === СВОЯ ВКЛАДКА + КАРТОЧКА ===
+    const _ctm2 = document.getElementById('customTabModal');
+    if (_ctm2) {
+      _ctm2.addEventListener('click', function (e) {
+        if (e.target === this) { closeCustomTabModal(); return; }
+        const el = e.target.closest('[data-action]'); if (!el) return;
+        if (el.dataset.action === 'close-custom-tab') closeCustomTabModal();
+        else if (el.dataset.action === 'save-custom-tab') saveCustomTab();
+      });
+      _ctm2.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeCustomTabModal();
+        else if (e.key === 'Enter') { e.preventDefault(); saveCustomTab(); }
+      });
+    }
+    const _ccm2 = document.getElementById('customCardModal');
+    if (_ccm2) {
+      _ccm2.addEventListener('click', function (e) {
+        if (e.target === this) { closeCustomCardModal(); return; }
+        const el = e.target.closest('[data-action]'); if (!el) return;
+        if (el.dataset.action === 'close-custom-card') closeCustomCardModal();
+        else if (el.dataset.action === 'save-custom-card') saveCustomCard();
+      });
+      _ccm2.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeCustomCardModal();
+        else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveCustomCard(); }
+      });
+    }
+
+// Kanban и drag&drop
+    initKanbanDnD();
+    initTaskToGoalDnD();
+    // === УПРАВЛЕНИЕ ВКЛАДКАМИ ===
+    const _tmm = document.getElementById('tabsManageModal');
+    if (_tmm) {
+      _tmm.addEventListener('click', function (e) {
+        if (e.target === this) { closeTabsManageModal(); return; }
+        const el = e.target.closest('[data-action]');
+        if (!el) return;
+        const action = el.dataset.action;
+        if (action === 'close-tabs-manage') { closeTabsManageModal(); return; }
+        if (action === 'reset-tabs') {
+          pgtConfirm({ title: 'Сбросить вкладки?', message: 'Иконки, названия и порядок вернутся к стандартным.', yesLabel: 'Сбросить', danger: false, onYes: function(){
+            state.tabs = mergeTabs(null); savePrefs(); renderTabsManageList(); renderTabs();
+            showToast('Вкладки сброшены', 'ok');
+          }});
+          return;
+        }
+        const row = el.closest('.tabs-manage-row');
+        if (!row) return;
+
+        const ctId = row.dataset.customTabId;
+        if (ctId) {
+          if (action === 'custom-tab-remove') {
+            pgtConfirm({ title: 'Удалить вкладку?', message: 'Вкладка и все её карточки будут удалены.', yesLabel: 'Удалить', onYes: function(){
+              state.customTabs = state.customTabs.filter(function (t) { return t.id !== ctId; });
+              if (state.ui.tab === ctId) state.ui.tab = 'active';
+              savePrefs(); renderTabsManageList(); renderTabs(); render();
+              showToast('Вкладка удалена', 'ok');
+            }});
+          }
+          return;
+        }
+
+        const tabId = row.dataset.tabId;
+        const idx = state.tabs.findIndex(function (t) { return t.id === tabId; });
+        if (idx === -1) return;
+        if (action === 'tab-move-up' && idx > 0) {
+          const tmp = state.tabs[idx - 1]; state.tabs[idx - 1] = state.tabs[idx]; state.tabs[idx] = tmp;
+          savePrefs(); renderTabsManageList(); renderTabs();
+        } else if (action === 'tab-move-down' && idx < state.tabs.length - 1) {
+          const tmp = state.tabs[idx + 1]; state.tabs[idx + 1] = state.tabs[idx]; state.tabs[idx] = tmp;
+          savePrefs(); renderTabsManageList(); renderTabs();
+        }
+      });
+
+      _tmm.addEventListener('change', function (e) {
+        const el = e.target;
+        const row = el.closest('.tabs-manage-row'); if (!row) return;
+        if (row.dataset.customTabId) return;
+        const tab = state.tabs.find(function (t) { return t.id === row.dataset.tabId; });
+        if (!tab) return;
+        if (el.dataset.action === 'tab-toggle-visible') {
+          tab.visible = el.checked;
+          savePrefs(); renderTabs();
+        }
+      });
+
+      _tmm.addEventListener('input', function (e) {
+        const el = e.target;
+        const row = el.closest('.tabs-manage-row'); if (!row) return;
+        if (row.dataset.customTabId) {
+          const ct = (state.customTabs || []).find(function (t) { return t.id === row.dataset.customTabId; });
+          if (!ct) return;
+          if (el.dataset.action === 'custom-tab-icon') { ct.icon = el.value.slice(0, 4) || '⭐'; savePrefs(); renderTabs(); }
+          else if (el.dataset.action === 'custom-tab-label') { ct.label = el.value.slice(0, 30); savePrefs(); renderTabs(); }
+          return;
+        }
+        const tab = state.tabs.find(function (t) { return t.id === row.dataset.tabId; });
+        if (!tab) return;
+        if (el.dataset.action === 'tab-icon') { tab.icon = el.value.slice(0, 4); savePrefs(); renderTabs(); }
+        else if (el.dataset.action === 'tab-label') { tab.label = el.value.slice(0, 30); savePrefs(); renderTabs(); }
+      });
+    }
+
+    // Кнопки массового выбора
+    const _mmt = document.getElementById('massModeToggle');
+    if (_mmt) _mmt.addEventListener('click', toggleMassMode);
+    const _mmg = document.getElementById('massModeGoalsToggle');
+    if (_mmg) _mmg.addEventListener('click', toggleMassModeGoals);
+
+      // === УПРАВЛЕНИЕ ВКЛАДКАМИ ===
+    const _tmm = document.getElementById('tabsManageModal');
+    if (_tmm) {
+      _tmm.addEventListener('click', function (e) {
+        if (e.target === this) { closeTabsManageModal(); return; }
+        const el = e.target.closest('[data-action]');
+        if (!el) return;
+        const action = el.dataset.action;
+        if (action === 'close-tabs-manage') { closeTabsManageModal(); return; }
+        if (action === 'reset-tabs') {
+          pgtConfirm({ title: 'Сбросить вкладки?', message: 'Иконки, названия и порядок вернутся к стандартным. Свои вкладки не удалятся.', yesLabel: 'Сбросить', danger: false, onYes: function(){
+            state.tabs = mergeTabs(null); savePrefs(); renderTabsManageList(); renderTabs();
+            showToast('Вкладки сброшены', 'ok');
+          }});
+          return;
+        }
+        const row = el.closest('.tabs-manage-row');
+        if (!row) return;
+
+        // Свои вкладки
+        const ctId = row.dataset.customTabId;
+        if (ctId) {
+          if (action === 'custom-tab-remove') {
+            pgtConfirm({ title: 'Удалить вкладку?', message: 'Вкладка и все её карточки будут удалены.', yesLabel: 'Удалить', onYes: function(){
+              state.customTabs = state.customTabs.filter(function (t) { return t.id !== ctId; });
+              if (state.ui.tab === ctId) state.ui.tab = 'active';
+              savePrefs(); renderTabsManageList(); renderTabs(); render();
+              showToast('Вкладка удалена', 'ok');
+            }});
+          }
+          return;
+        }
+
+        // Обычные вкладки
+        const tabId = row.dataset.tabId;
+        const idx = state.tabs.findIndex(function (t) { return t.id === tabId; });
+        if (idx === -1) return;
+        if (action === 'tab-move-up' && idx > 0) {
+          const tmp = state.tabs[idx - 1]; state.tabs[idx - 1] = state.tabs[idx]; state.tabs[idx] = tmp;
+          savePrefs(); renderTabsManageList(); renderTabs();
+        } else if (action === 'tab-move-down' && idx < state.tabs.length - 1) {
+          const tmp = state.tabs[idx + 1]; state.tabs[idx + 1] = state.tabs[idx]; state.tabs[idx] = tmp;
+          savePrefs(); renderTabsManageList(); renderTabs();
+        }
+      });
+
+      _tmm.addEventListener('change', function (e) {
+        const el = e.target;
+        const row = el.closest('.tabs-manage-row'); if (!row) return;
+        if (row.dataset.customTabId) return;
+        const tab = state.tabs.find(function (t) { return t.id === row.dataset.tabId; });
+        if (!tab) return;
+        if (el.dataset.action === 'tab-toggle-visible') {
+          tab.visible = el.checked;
+          savePrefs(); renderTabs();
+        }
+      });
+
+      _tmm.addEventListener('input', function (e) {
+        const el = e.target;
+        const row = el.closest('.tabs-manage-row'); if (!row) return;
+        // Свои вкладки
+        if (row.dataset.customTabId) {
+          const ct = (state.customTabs || []).find(function (t) { return t.id === row.dataset.customTabId; });
+          if (!ct) return;
+          if (el.dataset.action === 'custom-tab-icon') { ct.icon = el.value.slice(0, 4) || '⭐'; savePrefs(); renderTabs(); }
+          else if (el.dataset.action === 'custom-tab-label') { ct.label = el.value.slice(0, 30); savePrefs(); renderTabs(); }
+          return;
+        }
+        // Обычные
+        const tab = state.tabs.find(function (t) { return t.id === row.dataset.tabId; });
+        if (!tab) return;
+        if (el.dataset.action === 'tab-icon') { tab.icon = el.value.slice(0, 4); savePrefs(); renderTabs(); }
+        else if (el.dataset.action === 'tab-label') { tab.label = el.value.slice(0, 30); savePrefs(); renderTabs(); }
+      });
+    }
+
+  // Модал задачи
+    const _etm = document.getElementById('editTaskModal');
+    if (_etm) {
+      _etm.addEventListener('click', function (e) {
+        if (e.target === this) { closeEditTask(); return; }
+        const el = e.target.closest('[data-action]'); if (!el) return;
+        const action = el.dataset.action;
+        if (action === 'close-edit-task') closeEditTask();
+        else if (action === 'save-edit-task') saveEditTask();
+        else if (action === 'delete-task-from-edit') deleteTaskFromEdit();
+        else if (action === 'add-subtask') editAddSubtask();
+        else if (action === 'edit-delete-subtask') editDeleteSubtask(el.dataset.subId);
+      });
+      _etm.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeEditTask();
+        else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveEditTask(); }
+      });
+      _etm.addEventListener('change', function (e) {
+        const el = e.target;
+        if (el.matches && el.matches('input[data-action="edit-toggle-subtask"]')) editToggleSubtask(el.dataset.subId);
+      });
+    }
+    const _esn = document.getElementById('editSubtaskNew');
+    if (_esn) _esn.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); editAddSubtask(); }
+    });
+
+    // Модал цели
+    const _egm = document.getElementById('editGoalModal');
+    if (_egm) {
+      _egm.addEventListener('click', function (e) {
+        if (e.target === this) { closeEditGoal(); return; }
+        const el = e.target.closest('[data-action]'); if (!el) return;
+        const action = el.dataset.action;
+        if (action === 'close-edit-goal') closeEditGoal();
+        else if (action === 'save-edit-goal') saveEditGoal();
+        else if (action === 'delete-goal-from-edit') deleteGoalFromEdit();
+        else if (action === 'delete-goal-journal') deleteGoalJournalEntry(+el.dataset.idx);
+      });
+      _egm.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeEditGoal();
+        else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveEditGoal(); }
+      });
+    }
+    const _egaj = document.getElementById('editGoalAddJournalBtn');
+    if (_egaj) _egaj.addEventListener('click', addGoalJournalEntry);
+    const _egjn = document.getElementById('editGoalJournalNew');
+    if (_egjn) _egjn.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); addGoalJournalEntry(); }
+    });
+
+    // Архив
+    const _va = document.getElementById('viewArchive');
+    if (_va) _va.addEventListener('click', function (e) {
+      const el = e.target.closest('[data-action]'); if (!el) return;
+      const action = el.dataset.action; const gid = el.dataset.goalId, tid = el.dataset.taskId;
+      if (action === 'restore-goal') restoreGoal(gid);
+      else if (action === 'restore-task') restoreTask(gid, tid);
+      else if (action === 'delete-goal') {
+        const g = findGoal(gid);
+        pgtConfirm({ title: 'Удалить цель?', message: g ? ('«' + g.title + '» и все её задачи будут удалены безвозвратно.') : 'Цель будет удалена безвозвратно.', yesLabel: 'Да, удалить', onYes: function(){ deleteGoal(gid); } });
+      }
+      else if (action === 'delete-task') {
+        const g = findGoal(gid); const t = g ? g.tasks.find(function(x){return x.id===tid;}) : null;
+        pgtConfirm({ title: 'Удалить задачу?', message: t ? t.text : 'Задача будет удалена безвозвратно.', yesLabel: 'Да, удалить', onYes: function(){ deleteTask(gid, tid); } });
+      }
+    });
+
+    // Литература (статьи / книги)
+    SECTIONS.forEach(function (section) {
+      const view = document.getElementById(section === 'articles' ? 'articlesPanel' : 'booksPanel');
+      if (!view) return;
+      view.addEventListener('click', function (e) {
+        const favBtn = e.target.closest('[data-action="toggle-fav"]');
+        if (favBtn) { e.stopPropagation(); toggleFavorite(section, favBtn.dataset.name, false); return; }
+        const item = e.target.closest('.lit-item');
+        if (item && !e.target.closest('[data-action]')) {
+          const name = item.dataset.name; if (name) { selectFile(section, name); return; }
+        }
+        const el = e.target.closest('[data-action]'); if (!el) return;
+        const action = el.dataset.action;
+        const sec = el.dataset.section || section;
+        if (action === 'upload-to-drive') uploadToDrive(sec);
+        else if (action === 'refresh-from-drive') refreshFromDrive(sec);
+        else if (action === 'pick-folder') { if (fsSupported) pickFolderFSA(sec); else pickFolderFallback(sec); }
+        else if (action === 'pick-files') pickFiles(sec);
+        else if (action === 'refresh-folder') refreshFolder(sec);
+        else if (action === 'disconnect-folder') disconnectFolder(sec);
+        else if (action === 'request-permission') requestPermission(sec);
+        else if (action === 'close-reader') closeReader(sec);
+        else if (action === 'toggle-fullscreen') toggleFullscreen(sec);
+        else if (action === 'toggle-reader-only') toggleReaderOnly(sec);
+        else if (action === 'download-file') downloadFile(sec);
+        else if (action === 'nav-prev') navigateFile(sec, -1);
+        else if (action === 'nav-next') navigateFile(sec, 1);
+        else if (action === 'toggle-list') toggleListVisibility(sec);
+        else if (action === 'save-snippet') saveSelectionAsSnippet();
+        else if (action === 'open-snippets') openSnippetsModal();
+        else if (action === 'index-folder') indexFolder(sec);
+        else if (action === 'search-content') openContentSearch(sec);
+        else if (action === 'speak-text') speakText(sec);
+        else if (action === 'toggle-fav-current') { const name = runtime[sec].selected; if (name) toggleFavorite(sec, name, true); }
+        else if (action === 'toggle-fav-filter') { state.litFavFilter[sec] = !state.litFavFilter[sec]; el.classList.toggle('active', state.litFavFilter[sec]); savePrefs(); renderList(sec); }
+        else if (action === 'pdf-zoom-in') { state.pdfZoom[sec] = clampZoom((state.pdfZoom[sec] || 100) + 10); savePrefs(); rerenderPdfViewer(sec); }
+        else if (action === 'pdf-zoom-out') { state.pdfZoom[sec] = clampZoom((state.pdfZoom[sec] || 100) - 10); savePrefs(); rerenderPdfViewer(sec); }
+        else if (action === 'pdf-zoom-reset') { state.pdfZoom[sec] = 100; savePrefs(); rerenderPdfViewer(sec); }
+        else if (action === 'pdf-invert') { state.pdfInvert[sec] = !state.pdfInvert[sec]; el.classList.toggle('active', state.pdfInvert[sec]); savePrefs(); togglePdfInvert(sec); }
+      });
+      view.addEventListener('input', function (e) {
+        const inp = e.target.closest('[data-action="pdf-page"]'); if (!inp) return;
+        const sec = inp.dataset.section; const name = runtime[sec].selected; if (!name) return;
+        let v = parseInt(inp.value, 10); if (isNaN(v) || v < 1) v = 1;
+        if (!state.pdfPage[sec]) state.pdfPage[sec] = {};
+        state.pdfPage[sec][name] = v; savePrefs();
+      });
+      view.addEventListener('change', function (e) {
+        const inp = e.target.closest('[data-action="pdf-page"]'); if (!inp) return;
+        const v = parseInt(inp.value, 10);
+        if (!isNaN(v) && v > 0) scrollToPdfPage(inp.dataset.section, v);
+      });
+      const search = document.getElementById(section + 'SearchInput');
+      if (search) search.addEventListener('input', function () {
+        state.ui.litSearch[section] = search.value; savePrefs(); renderList(section);
+      });
+      const sortSel = view.querySelector('[data-action="set-sort"][data-section="' + section + '"]');
+      if (sortSel) sortSel.addEventListener('change', function () {
+        state.litSort[section] = sortSel.value; savePrefs(); renderList(section);
+      });
+    });
+
+    // Заметки
+    const _nsi = document.getElementById('notesSearchInput');
+    if (_nsi) _nsi.addEventListener('input', function (e) {
+      state.ui.notesSearch = e.target.value; savePrefs(); renderNotesList();
+    });
+    const _nnb = document.getElementById('newNoteBtn');
+    if (_nnb) _nnb.addEventListener('click', function () { addNote({ title: 'Новая заметка', body: '' }); });
+    const _dnb = document.getElementById('dailyNoteBtn');
+    if (_dnb) _dnb.addEventListener('click', openDailyNote);
+    const _nl = document.getElementById('notesList');
+    if (_nl) {
+      _nl.addEventListener('click', function (e) {
+        const fav = e.target.closest('[data-action="toggle-note-fav"]');
+        if (fav) { e.stopPropagation(); toggleNoteFav(fav.dataset.id); return; }
+        const goalBadge = e.target.closest('[data-action="goto-goal-from-note"]');
+        if (goalBadge) {
+          e.stopPropagation();
+          const gid = goalBadge.dataset.goalId;
+          switchTab('active');
+          if (gid) {
+            state.collapsed[gid] = false; savePrefs(); renderGoals();
+            setTimeout(function () {
+              const g = document.querySelector('.goal[data-goal-id="' + CSS.escape(gid) + '"]');
+              if (g) g.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+          }
+          return;
+        }
+        const item = e.target.closest('.note-item'); if (!item) return;
+        state.editingNoteId = item.dataset.id; renderNotesList(); renderNoteEditor();
+      }, true);
+    }
+    const _ne = document.getElementById('noteEditor');
+    if (_ne) _ne.addEventListener('click', function (e) {
+      const el = e.target.closest('[data-action]'); if (!el) return;
+      const action = el.dataset.action; const id = el.dataset.id;
+      if (action === 'note-delete') {
+        pgtConfirm({ title: 'Удалить заметку?', message: 'Заметка будет удалена безвозвратно.', yesLabel: 'Да, удалить', onYes: function(){ deleteNote(id); } });
+      }
+      else if (action === 'note-export-md') exportNoteAsMd(id);
+      else if (action === 'note-copy') copyNote(id);
+    });
+    document.querySelectorAll('[data-notes-filter]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        state.notesFilter = b.dataset.notesFilter;
+        document.querySelectorAll('[data-notes-filter]').forEach(function (x) {
+          x.classList.toggle('active', x.dataset.notesFilter === state.notesFilter);
+        });
+        renderNotesList();
+      });
+    });
+
+    // Привычки
+    const _hf = document.getElementById('habitForm');
+    if (_hf) _hf.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const titleEl = document.getElementById('habitTitle');
+      const iconEl = document.getElementById('habitIcon');
+      addHabitFromForm(titleEl.value, iconEl.value);
+      titleEl.value = '';
+      iconEl.value = '';
+      titleEl.focus();
+    });
+    const _hl = document.getElementById('habitList');
+    if (_hl) {
+      _hl.addEventListener('click', function (e) {
+        const el = e.target.closest('[data-action]'); if (!el) return;
+        const action = el.dataset.action; const id = el.dataset.habitId;
+        if (action === 'toggle-habit-today') toggleHabitToday(id);
+        else if (action === 'edit-habit') startEditHabit(id);
+        else if (action === 'save-habit-edit') saveHabitEdit(id);
+        else if (action === 'cancel-habit-edit') cancelHabitEdit();
+        else if (action === 'delete-habit') startDeleteHabit(id);
+        else if (action === 'confirm-delete-habit') confirmDeleteHabit(id);
+        else if (action === 'cancel-delete-habit') cancelDeleteHabit();
+      });
+      _hl.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && e.target && e.target.matches && e.target.matches('[data-habit-edit-title], [data-habit-edit-icon]')) {
+          e.preventDefault();
+          if (_editingHabitId) saveHabitEdit(_editingHabitId);
+        } else if (e.key === 'Escape' && _editingHabitId) {
+          e.preventDefault();
+          cancelHabitEdit();
+        }
+      });
+    }
+
+    // Настройки
+    const _sm = document.getElementById('settingsModal');
+    if (_sm) _sm.addEventListener('click', function (e) {
+      if (e.target === this) { this.hidden = true; return; }
+      const el = e.target.closest('[data-action]'); if (!el) return;
+      const action = el.dataset.action;
+      if (action === 'close-settings') this.hidden = true;
+      else if (action === 'restore-backup') restoreBackup(el.dataset.date);
+    });
+    document.querySelectorAll('[data-theme-opt]').forEach(function (b) {
+      b.addEventListener('click', function () { setTheme(b.dataset.themeOpt); });
+    });
+    const _tadv = document.getElementById('toggleAdvancedBtn');
+    if (_tadv) _tadv.addEventListener('click', function () {
+      state.advancedToolsVisible = !state.advancedToolsVisible;
+      savePrefs(); applyAdvancedToolsVisibility();
+    });
+    const _tqi = document.getElementById('toggleQuickInputBtn');
+    if (_tqi) _tqi.addEventListener('click', function () {
+      state.quickInputVisible = !state.quickInputVisible;
+      savePrefs(); applyQuickInputVisibility();
+    });
+    const _nt = document.getElementById('notifToggle');
+    if (_nt) _nt.addEventListener('click', function () {
+      if (state.notificationsEnabled) {
+        state.notificationsEnabled = false; savePrefs();
+        showToast('Уведомления выключены', 'warn'); updateNotifBtn();
+      } else requestNotifications();
+    });
+
+    // PIN
+    const _psb = document.getElementById('pinSetupBtn');
+    if (_psb) _psb.addEventListener('click', function () { openPinSetup('setup'); });
+    const _pcb = document.getElementById('pinChangeBtn');
+    if (_pcb) _pcb.addEventListener('click', function () { openPinSetup('change'); });
+    const _prb = document.getElementById('pinRemoveBtn');
+    if (_prb) _prb.addEventListener('click', function () {
+      pgtConfirm({ title: 'Убрать PIN?', message: 'Приложение перестанет спрашивать PIN при открытии.', yesLabel: 'Убрать', onYes: function(){
+        removePin(); renderPinStatus(); showToast('PIN убран', 'ok');
+      } });
+    });
+    const _pln = document.getElementById('pinLockNowBtn');
+    if (_pln) _pln.addEventListener('click', function () {
+      const sm = document.getElementById('settingsModal');
+      if (sm) sm.hidden = true;
+      lockNow();
+    });
+    const _ql = document.getElementById('quickLockBtn');
+    if (_ql) _ql.addEventListener('click', function () {
+      if (!hasPin()) { pgtConfirm({ title: 'PIN не установлен', message: 'Установить сейчас?', yesLabel: 'Установить', danger: false, onYes: function(){ openPinSetup('setup'); } }); return; }
+      lockNow();
+    });
+    const _pm = document.getElementById('pinSetupModal');
+    if (_pm) {
+      _pm.addEventListener('click', function (e) {
+        if (e.target === this) { closePinSetup(); return; }
+        const el = e.target.closest('[data-action]'); if (!el) return;
+        if (el.dataset.action === 'close-pin-setup') closePinSetup();
+        else if (el.dataset.action === 'save-pin') savePin();
+      });
+      _pm.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closePinSetup();
+        else if (e.key === 'Enter') { e.preventDefault(); savePin(); }
+      });
+    }
+    const _lb = document.getElementById('lockSubmitBtn');
+    if (_lb) _lb.addEventListener('click', tryUnlock);
+    const _li = document.getElementById('lockPinInput');
+    if (_li) {
+      let _autoUnlockTimer = null;
+      _li.addEventListener('input', function () {
+        const inp = this;
+        inp.value = inp.value.replace(/\D/g, '');
+        if (isCurrentlyLocked()) return;
+        const expectedLen = getPinLength();
+        if (expectedLen > 0) {
+          if (inp.value.length === expectedLen) tryUnlock();
+        } else if (inp.value.length >= 4) {
+          clearTimeout(_autoUnlockTimer);
+          _autoUnlockTimer = setTimeout(function () { tryUnlock(); }, 400);
+        }
+      });
+      _li.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); tryUnlock(); }
+      });
+    }
+    const _lrb = document.getElementById('lockResetBtn');
+    if (_lrb) _lrb.addEventListener('click', function () {
+      pgtConfirm({
+        title: 'Сбросить PIN и удалить всё?',
+        message: 'Будут удалены ВСЕ данные приложения: цели, задачи, заметки, настройки. Это необратимо.',
+        yesLabel: 'Удалить всё',
+        onYes: function () {
+          removePin();
+          try {
+            Object.keys(localStorage).forEach(function (k) { if (k.indexOf('pgt_v25_') === 0) localStorage.removeItem(k); });
+            sessionStorage.clear();
+          } catch (e) {}
+          location.reload();
+        }
+      });
+    });
+
+    // Цвета статистики
+    const _ct2 = document.getElementById('colorTotal');
+    if (_ct2) _ct2.addEventListener('input', function (e) {
+      state.colorTotal = e.target.value;
+      document.documentElement.style.setProperty('--color-total', e.target.value);
+      savePrefs();
+    });
+    const _cd = document.getElementById('colorDone');
+    if (_cd) _cd.addEventListener('input', function (e) {
+      state.colorDone = e.target.value;
+      document.documentElement.style.setProperty('--color-done', e.target.value);
+      savePrefs();
+    });
+
+    // Кэш и Zip
+    const _cab = document.getElementById('cacheAllBtn');
+    if (_cab) _cab.addEventListener('click', async function () {
+      let total = 0, failed = 0;
+      for (const s of SECTIONS) {
+        if (!state.folders[s].files.length) continue;
+        showToast('Кэширование: ' + (s === 'articles' ? 'статьи' : 'книги'), 'ok');
+        const r = await cacheSectionFiles(s);
+        total += r.done; failed += r.failed;
+      }
+      renderCacheStats();
+      showToast('Сохранено: ' + total + (failed ? ', ошибок: ' + failed : ''), total ? 'ok' : 'warn');
+    });
+    const _scb = document.getElementById('syncCacheBtn');
+    if (_scb) _scb.addEventListener('click', async function () {
+      let added = 0, updated = 0, removed = 0, failed = 0;
+      for (const s of SECTIONS) {
+        if (!state.folders[s].files.length) continue;
+        const r = await smartRefreshSection(s);
+        added += r.added; updated += r.updated; removed += r.removed; failed += r.failed;
+      }
+      renderCacheStats();
+      showToast('Обновлено: +' + added + ' ~' + updated + ' −' + removed + (failed ? ' ⚠' + failed : ''), failed ? 'warn' : 'ok');
+    });
+    const _ccb = document.getElementById('clearCacheBtn');
+    if (_ccb) _ccb.addEventListener('click', function () {
+      pgtConfirm({ title: 'Очистить кэш файлов?', message: 'Книги и статьи придётся подключать заново. Цели, задачи, заметки останутся.', yesLabel: 'Очистить', onYes: async function(){
+        await clearCachedFiles(null);
+        renderCacheStats();
+        showToast('Кэш очищен', 'ok');
+      } });
+    });
+    const _ezb = document.getElementById('exportZipBtn');
+    if (_ezb) _ezb.addEventListener('click', exportAllToZip);
+    const _izi = document.getElementById('importZipInput');
+    if (_izi) _izi.addEventListener('change', function (e) {
+      const f = e.target.files[0];
+      if (f) importFromZip(f);
+      e.target.value = '';
+    });
+
+    // Дашборд
+    const _dc = document.getElementById('dashContent');
+    if (_dc) {
+      _dc.addEventListener('click', function (e) {
+        const el = e.target.closest('[data-action]'); if (!el) return;
+        const action = el.dataset.action;
+        const gid = el.dataset.goalId; const tid = el.dataset.taskId;
+        if (action === 'dash-open-task' && gid && tid) openEditTask(gid, tid);
+        else if (action === 'dash-open-goal' && gid) openEditGoal(gid);
+      });
+      _dc.addEventListener('change', function (e) {
+        const el = e.target;
+        if (!el.matches) return;
+        if (el.matches('input[data-action="dash-toggle-task"]')) {
+          toggleTask(el.dataset.goalId, el.dataset.taskId);
+          setTimeout(renderDashboard, 50);
+        }
+      });
+    }
+
+    // Шпаргалка
+    const _kb = document.getElementById('kbdHelpBtn');
+    if (_kb) _kb.addEventListener('click', openKbdHelp);
+    const _km = document.getElementById('kbdHelpModal');
+    if (_km) _km.addEventListener('click', function (e) {
+      if (e.target === this) { closeKbdHelp(); return; }
+      const el = e.target.closest('[data-action]');
+      if (el && el.dataset.action === 'close-kbd-help') closeKbdHelp();
+    });
+
+    // Папка данных
+    const _pdf = document.getElementById('pickDataFolderBtn');
+    if (_pdf) _pdf.addEventListener('click', pickDataFolder);
+    const _ddf = document.getElementById('disconnectDataFolderBtn');
+    if (_ddf) _ddf.addEventListener('click', disconnectDataFolder);
+
+    // Бэкапы
+    const _mb = document.getElementById('manualBackupBtn');
+    if (_mb) _mb.addEventListener('click', async function () {
+      await makeBackup('manual'); renderBackupList(); showToast('Резервная копия создана', 'ok');
+    });
+    const _cb = document.getElementById('clearBackupsBtn');
+    if (_cb) _cb.addEventListener('click', clearAllBackups);
+
+    // Глобальный поиск
+    const _gsm = document.getElementById('globalSearchModal');
+    if (_gsm) _gsm.addEventListener('click', function (e) {
+      if (e.target === this) { closeGlobalSearch(); return; }
+      const el = e.target.closest('[data-action]'); if (!el) return;
+      const action = el.dataset.action;
+      if (action === 'close-gsearch') { closeGlobalSearch(); return; }
+      if (action === 'goto-goal') { const gid = el.dataset.id; closeGlobalSearch(); switchTab('active'); if (state.collapsed[gid]) { state.collapsed[gid] = false; savePrefs(); renderGoals(); } setTimeout(function () { const g = document.querySelector('.goal[data-goal-id="' + CSS.escape(gid) + '"]'); if (g) g.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100); }
+      else if (action === 'goto-task') { const gid = el.dataset.goalId; const tid = el.dataset.taskId; closeGlobalSearch(); switchTab('active'); if (state.collapsed[gid]) { state.collapsed[gid] = false; savePrefs(); renderGoals(); } setTimeout(function () { openEditTask(gid, tid); }, 150); }
+      else if (action === 'goto-note') { const nid = el.dataset.id; closeGlobalSearch(); switchTab('notes'); state.editingNoteId = nid; renderNotesList(); renderNoteEditor(); }
+      else if (action === 'goto-snippet') { const sid = el.dataset.id; closeGlobalSearch(); openSnippetsModal(); state.editingSnippetId = sid; renderSnippetsList(); }
+      else if (action === 'goto-file') { const sec = el.dataset.section; const fname = el.dataset.name; closeGlobalSearch(); switchTab('literature'); state.ui.litTab = sec; savePrefs(); renderTabs(); setTimeout(function () { selectFile(sec, fname); }, 100); }
+    });
+    const _gsi = document.getElementById('globalSearchInput');
+    if (_gsi) _gsi.addEventListener('input', debounce(function (e) { performGlobalSearch(e.target.value); }, 180));
+
+    // Цитаты
+    const _sn = document.getElementById('snippetsModal');
+    if (_sn) _sn.addEventListener('click', function (e) {
+      if (e.target === this) { closeSnippetsModal(); return; }
+      const el = e.target.closest('[data-action]'); if (!el) return;
+      const action = el.dataset.action; const id = el.dataset.id;
+      if (action === 'close-snippets') closeSnippetsModal();
+      else if (action === 'clear-snippets') clearAllSnippets();
+      else if (action === 'delete-snippet') {
+        const s = findSnippet(id);
+        pgtConfirm({ title: 'Удалить цитату?', message: s ? (s.text.slice(0, 120) + (s.text.length > 120 ? '…' : '')) : 'Цитата будет удалена безвозвратно.', yesLabel: 'Да, удалить', onYes: function(){ deleteSnippet(id); } });
+      }
+      else if (action === 'edit-snippet') editSnippet(id);
+      else if (action === 'cancel-snippet-edit') cancelSnippetEdit();
+      else if (action === 'save-snippet-edit') saveSnippetEdit(id);
+      else if (action === 'copy-snippet') copySnippetToClipboard(id);
+      else if (action === 'filter-tag') { const t = el.dataset.tag; state.ui.snippetsTagFilter = state.ui.snippetsTagFilter === t ? '' : t; document.getElementById('snippetsTagFilter').value = state.ui.snippetsTagFilter; renderSnippetsList(); }
+      else if (action === 'export-menu') { const fmt = prompt('Формат: doc, md, csv, bib, txt'); if (!fmt) return; const f = fmt.toLowerCase().trim(); if (['doc', 'md', 'csv', 'bib', 'txt'].indexOf(f) === -1) { showToast('Неизвестный формат', 'warn'); return; } exportSnippets(f); }
+    });
+    const _ss = document.getElementById('snippetsSearch');
+    if (_ss) _ss.addEventListener('input', debounce(function (e) { state.ui.snippetsSearch = e.target.value; savePrefs(); renderSnippetsList(); }, 180));
+    const _sst = document.getElementById('snippetsSort');
+    if (_sst) _sst.addEventListener('change', function (e) { state.ui.snippetsSort = e.target.value; savePrefs(); renderSnippetsList(); });
+    const _stf = document.getElementById('snippetsTagFilter');
+    if (_stf) _stf.addEventListener('change', function (e) { state.ui.snippetsTagFilter = e.target.value; savePrefs(); renderSnippetsList(); });
+    const _sg = document.getElementById('snippetsGroup');
+    if (_sg) _sg.addEventListener('change', function (e) { state.ui.snippetsGroup = e.target.value; savePrefs(); renderSnippetsList(); });
+
+    // Поиск по содержимому
+    const _csm = document.getElementById('contentSearchModal');
+    if (_csm) _csm.addEventListener('click', function (e) {
+      if (e.target === this) { this.hidden = true; return; }
+      const el = e.target.closest('[data-action]'); if (!el) return;
+      const action = el.dataset.action;
+      if (action === 'close-csearch') this.hidden = true;
+      else if (action === 'open-indexed') {
+        const sec = el.dataset.section; const fname = el.dataset.file;
+        this.hidden = true; switchTab('literature'); state.ui.litTab = sec; savePrefs(); renderTabs();
+        setTimeout(function () { selectFile(sec, fname); }, 100);
+      }
+    });
+    const _csi = document.getElementById('contentSearchInput');
+    if (_csi) _csi.addEventListener('input', debounce(function (e) { performContentSearch(e.target.value, e.target.dataset.section || 'articles'); }, 200));
+
+    // Календарь
+    const _cal = document.getElementById('appCalendar');
+    if (_cal) _cal.addEventListener('click', function (e) {
+      const navBtn = e.target.closest('[data-action]');
+      if (navBtn) {
+        const action = navBtn.dataset.action;
+        if (action === 'cal-prev') calPrev();
+        else if (action === 'cal-next') calNext();
+        else if (action === 'cal-today') calToday();
+        else if (action === 'clear-day') clearDateFilter();
+        return;
+      }
+      const cell = e.target.closest('.cal-cell');
+      if (cell && !cell.classList.contains('empty') && cell.dataset.date) selectCalendarDay(cell.dataset.date);
+    });
+
+    // Тулбар списка задач
+    const _si = document.getElementById('searchInput');
+    if (_si) _si.addEventListener('input', debounce(function (e) { state.ui.search = e.target.value; savePrefs(); renderTasks(); }, 150));
+    const _fs = document.getElementById('filterSelect');
+    if (_fs) _fs.addEventListener('change', function (e) { state.ui.filter = e.target.value; savePrefs(); renderTasks(); });
+    const _ssel = document.getElementById('sortSelect');
+    if (_ssel) _ssel.addEventListener('change', function (e) { state.ui.sort = e.target.value; savePrefs(); renderTasks(); });
+    const _gsel = document.getElementById('groupSelect');
+    if (_gsel) _gsel.addEventListener('change', function (e) { state.tasksGrouping = e.target.value; savePrefs(); renderTasks(); });
+    const _tfs = document.getElementById('tagFilterSelect');
+    if (_tfs) _tfs.addEventListener('change', function (e) { state.tagFilter = e.target.value; savePrefs(); renderTasks(); });
+    const _tab = document.getElementById('toggleAllBtn');
+    if (_tab) _tab.addEventListener('click', function () {
+      const goals = visibleGoals();
+      const allCollapsed = goals.length > 0 && goals.every(function (g) { return state.collapsed[g.id]; });
+      if (allCollapsed) expandAll(); else collapseAll();
+    });
+
+    // Экспорт/импорт
+    const _eb = document.getElementById('exportBtn');
+    if (_eb) _eb.addEventListener('click', exportData);
+    const _emb = document.getElementById('exportMdBtn');
+    if (_emb) _emb.addEventListener('click', exportMarkdownReport);
+    const _eib = document.getElementById('exportIcsBtn');
+    if (_eib) _eib.addEventListener('click', exportIcs);
+    const _ii = document.getElementById('importInput');
+    if (_ii) _ii.addEventListener('change', importData);
+    const _ici = document.getElementById('importCsvInput');
+    if (_ici) _ici.addEventListener('change', function (e) {
+      const f = e.target.files[0]; if (!f) return;
+      const r = new FileReader();
+      r.onload = function () { importFromCsv(String(r.result || '')); e.target.value = ''; };
+      r.readAsText(f);
+    });
+    const _clb = document.getElementById('clearBtn');
+    if (_clb) _clb.addEventListener('click', clearAllData);
+
+    // Клавиатурные сокращения
+    document.addEventListener('keydown', function (e) {
+      const ae = document.activeElement;
+      const inField = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT' || ae.isContentEditable);
+      const anyModal = document.querySelector('.modal-backdrop:not([hidden])');
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z' || e.key === 'я' || e.key === 'Я')) { if (!inField) { e.preventDefault(); performUndo(); return; } }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'S' || e.key === 's' || e.key === 'Ы' || e.key === 'ы')) { if (state.ui.tab === 'literature') { e.preventDefault(); saveSelectionAsSnippet(); } return; }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K' || e.key === 'л' || e.key === 'Л')) { e.preventDefault(); toggleCalendar(); return; }
+      if ((e.ctrlKey || e.metaKey) && (e.key === '/' || e.key === '.')) { e.preventDefault(); openGlobalSearch(); return; }
+      if (e.key === 'Escape') {
+        if (anyModal) { anyModal.hidden = true;
+          if (anyModal.id === 'editTaskModal') { state.editingTaskId = null; state.editingTaskGoalId = null; }
+          if (anyModal.id === 'editGoalModal') { state.editingGoalId = null; }
+          return;
+        }
+        let handled = false;
+        SECTIONS.forEach(function (s) { const pane = document.getElementById(s + 'Reader'); if (pane && pane.classList.contains('fullscreen')) { pane.classList.remove('fullscreen'); handled = true; } });
+        if (!handled && state.ui.tab === 'literature' && !inField) closeReader(state.ui.litTab);
+        return;
+      }
+      if (!anyModal && !inField && state.ui.tab === 'literature') {
+        if (e.key === 'ArrowLeft') { e.preventDefault(); navigateFile(state.ui.litTab, -1); }
+        else if (e.key === 'ArrowRight') { e.preventDefault(); navigateFile(state.ui.litTab, 1); }
+      }
+    });
+    document.addEventListener('keydown', function (e) {
+      const ae = document.activeElement;
+      const inField = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT' || ae.isContentEditable);
+      const anyModal = document.querySelector('.modal-backdrop:not([hidden])');
+      if (inField || anyModal) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const k = (e.key || '').toLowerCase();
+      if (k === 'n') { e.preventDefault(); document.getElementById('taskText').focus(); }
+      else if (k === 'g') { e.preventDefault(); document.getElementById('goalTitle').focus(); }
+      else if (e.key === '?') { e.preventDefault(); openKbdHelp(); }
+    });
+
+    // Перед закрытием — сохранить
+    window.addEventListener('beforeunload', function () {
+      if (_dataFolderHandle && _dataFolderWriteTimer) {
+        clearTimeout(_dataFolderWriteTimer);
+        _dataFolderWriteTimer = null;
+        try { writeAllToDisk(); } catch (e) {}
+      }
+    });
+    window.addEventListener('beforeunload', function () {
+      if (runtime.articles.selected) saveCurrentPosition('articles');
+      if (runtime.books.selected) saveCurrentPosition('books');
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+    });
+
+    // Синхронизация между вкладками браузера
+    window.addEventListener('storage', function (e) {
+      if (!e.key) return;
+      const bases = [DATA_KEY, PREFS_KEY, SNIPPETS_KEY, NOTES_KEY, TEMPLATES_KEY];
+      const hit = bases.some(function (b) { return e.key === b || e.key.indexOf(b + '_') === 0; });
+      if (hit) {
+        loadState(); _searchIndexDirty = true;
+        applyTheme(); applyColors(); syncToolbarInputs(); applyCalendarVisibility(); render();
+      }
+    });
+  } 
+
+initLoginGate();
   loadState();
   applyTheme();
   applyColors();
