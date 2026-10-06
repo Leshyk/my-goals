@@ -3274,16 +3274,32 @@ let _voiceRecognition = null;
     createAndStart();
   }
 
-function handleQuickAdd() {
+  function handleQuickAdd() {
     const input = document.getElementById('quickInput');
     const raw = input.value.trim(); if (!raw) return;
     const parsed = parseQuickInput(raw);
     if (!parsed.text) { showToast('Пустая задача', 'warn'); return; }
-        const goals = state.goals.filter(function (g) { return !g.isInbox && !g.archivedAt; });
-         let deadline = parsed.deadline;
+    const goals = state.goals.filter(function (g) { return !g.isInbox && !g.archivedAt; });
+    let deadline = parsed.deadline;
     let usedCalDate = false;
     if (!deadline && state.calSelectedDate) { deadline = state.calSelectedDate; usedCalDate = true; }
     addTask(null, { text: parsed.text, priority: parsed.priority, deadline: deadline, tags: parsed.tags });
+
+    // Очищаем поле ввода
+    input.value = '';
+
+    // Если сейчас идёт голосовой ввод — остановим его, чтобы старый текст
+    // не «прилип» к новому
+    if (typeof _voiceShouldBeActive !== 'undefined' && _voiceShouldBeActive) {
+      _voiceShouldBeActive = false;
+      try { if (_voiceRecognition) _voiceRecognition.stop(); } catch (e) {}
+      const vbtn = document.getElementById('quickVoiceBtn');
+      if (vbtn) vbtn.classList.remove('recording');
+    }
+
+    // Возвращаем фокус в поле — удобно добавлять задачи одну за другой
+    input.focus();
+
     if (usedCalDate) showToast('Задача добавлена на ' + formatDate(deadline), 'ok');
     else showToast('Добавлено: ' + parsed.text, 'ok');
   }
