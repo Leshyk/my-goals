@@ -5691,23 +5691,7 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
     }
     box.innerHTML = html;
   }
-
-    if (Array.isArray(state.customTabs) && state.customTabs.length) {
-      html += '<div style="font-size:11px;font-weight:700;color:var(--muted);padding:14px 0 6px;text-transform:uppercase;letter-spacing:.05em;">✨ Свои вкладки</div>';
-      html += state.customTabs.map(function (t) {
-        return '<div class="tabs-manage-row" data-custom-tab-id="' + escapeHtml(t.id) + '">' +
-          '<span style="display:inline-block;width:18px;text-align:center;color:var(--muted);">⭐</span>' +
-          '<input type="text" class="icon-input" data-action="custom-tab-icon" value="' + escapeHtml(t.icon || '⭐') + '" maxlength="4" />' +
-          '<input type="text" class="label-input" data-action="custom-tab-label" value="' + escapeHtml(t.label || '') + '" maxlength="30" />' +
-          '<div class="order-btns">' +
-            '<button type="button" class="danger" data-action="custom-tab-remove" title="Удалить вкладку" style="padding:4px 10px;">🗑</button>' +
-          '</div>' +
-        '</div>';
-      }).join('');
-    }
-    box.innerHTML = html;
-  }
-
+   
 function toggleCalendar() { state.calendarVisible = !state.calendarVisible; savePrefs(); applyCalendarVisibility(); if (state.calendarVisible) renderCalendar(); syncQuickHint(); }
   function applyCalendarVisibility() { const shell = document.getElementById('appShell'); const btn = document.getElementById('calToggle'); if (shell) shell.classList.toggle('with-cal', !!state.calendarVisible); if (btn) btn.classList.toggle('active', !!state.calendarVisible); }
 
@@ -7162,84 +7146,7 @@ function tickLiveClock() {
     if (_mmt) _mmt.addEventListener('click', toggleMassMode);
     const _mmg = document.getElementById('massModeGoalsToggle');
     if (_mmg) _mmg.addEventListener('click', toggleMassModeGoals);
-
-      // === УПРАВЛЕНИЕ ВКЛАДКАМИ ===
-    const _tmm = document.getElementById('tabsManageModal');
-    if (_tmm) {
-      _tmm.addEventListener('click', function (e) {
-        if (e.target === this) { closeTabsManageModal(); return; }
-        const el = e.target.closest('[data-action]');
-        if (!el) return;
-        const action = el.dataset.action;
-        if (action === 'close-tabs-manage') { closeTabsManageModal(); return; }
-        if (action === 'reset-tabs') {
-          pgtConfirm({ title: 'Сбросить вкладки?', message: 'Иконки, названия и порядок вернутся к стандартным. Свои вкладки не удалятся.', yesLabel: 'Сбросить', danger: false, onYes: function(){
-            state.tabs = mergeTabs(null); savePrefs(); renderTabsManageList(); renderTabs();
-            showToast('Вкладки сброшены', 'ok');
-          }});
-          return;
-        }
-        const row = el.closest('.tabs-manage-row');
-        if (!row) return;
-
-        // Свои вкладки
-        const ctId = row.dataset.customTabId;
-        if (ctId) {
-          if (action === 'custom-tab-remove') {
-            pgtConfirm({ title: 'Удалить вкладку?', message: 'Вкладка и все её карточки будут удалены.', yesLabel: 'Удалить', onYes: function(){
-              state.customTabs = state.customTabs.filter(function (t) { return t.id !== ctId; });
-              if (state.ui.tab === ctId) state.ui.tab = 'active';
-              savePrefs(); renderTabsManageList(); renderTabs(); render();
-              showToast('Вкладка удалена', 'ok');
-            }});
-          }
-          return;
-        }
-
-        // Обычные вкладки
-        const tabId = row.dataset.tabId;
-        const idx = state.tabs.findIndex(function (t) { return t.id === tabId; });
-        if (idx === -1) return;
-        if (action === 'tab-move-up' && idx > 0) {
-          const tmp = state.tabs[idx - 1]; state.tabs[idx - 1] = state.tabs[idx]; state.tabs[idx] = tmp;
-          savePrefs(); renderTabsManageList(); renderTabs();
-        } else if (action === 'tab-move-down' && idx < state.tabs.length - 1) {
-          const tmp = state.tabs[idx + 1]; state.tabs[idx + 1] = state.tabs[idx]; state.tabs[idx] = tmp;
-          savePrefs(); renderTabsManageList(); renderTabs();
-        }
-      });
-
-      _tmm.addEventListener('change', function (e) {
-        const el = e.target;
-        const row = el.closest('.tabs-manage-row'); if (!row) return;
-        if (row.dataset.customTabId) return;
-        const tab = state.tabs.find(function (t) { return t.id === row.dataset.tabId; });
-        if (!tab) return;
-        if (el.dataset.action === 'tab-toggle-visible') {
-          tab.visible = el.checked;
-          savePrefs(); renderTabs();
-        }
-      });
-
-      _tmm.addEventListener('input', function (e) {
-        const el = e.target;
-        const row = el.closest('.tabs-manage-row'); if (!row) return;
-        // Свои вкладки
-        if (row.dataset.customTabId) {
-          const ct = (state.customTabs || []).find(function (t) { return t.id === row.dataset.customTabId; });
-          if (!ct) return;
-          if (el.dataset.action === 'custom-tab-icon') { ct.icon = el.value.slice(0, 4) || '⭐'; savePrefs(); renderTabs(); }
-          else if (el.dataset.action === 'custom-tab-label') { ct.label = el.value.slice(0, 30); savePrefs(); renderTabs(); }
-          return;
-        }
-        // Обычные
-        const tab = state.tabs.find(function (t) { return t.id === row.dataset.tabId; });
-        if (!tab) return;
-        if (el.dataset.action === 'tab-icon') { tab.icon = el.value.slice(0, 4); savePrefs(); renderTabs(); }
-        else if (el.dataset.action === 'tab-label') { tab.label = el.value.slice(0, 30); savePrefs(); renderTabs(); }
-      });
-    }
-
+     
   // Модал задачи
     const _etm = document.getElementById('editTaskModal');
     if (_etm) {
