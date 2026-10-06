@@ -384,6 +384,8 @@
   .reader-body .reader-msg.error { color: var(--danger); font-style: normal; }
   .lit-reader-pane.fullscreen { position: fixed; inset: 6px; z-index: 1000; height: auto; max-height: none; }
 
+ #pgtConfirmModal { z-index: 2600 !important; }
+  #pinSetupModal { z-index: 2600 !important; }
   .modal-backdrop { position: fixed; inset: 0; z-index: 2000; background: rgba(3,8,16,.72); display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(3px); }
   .modal-backdrop[hidden] { display: none; }
   .modal { background: var(--card); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 30px 80px rgba(0,0,0,.75); width: min(1100px, 100%); max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; }
@@ -5650,7 +5652,8 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
   function clearDateFilter() { state.calSelectedDate = null; renderCalendar(); renderTasks(); syncQuickHint(); }
 
     // === УПРАВЛЕНИЕ ВКЛАДКАМИ (логика окна) ===
-  function openTabsManageModal() {
+    function openTabsManageModal() {
+    _confirmDeleteCustomTabId = null;
     renderTabsManageList();
     const m = document.getElementById('tabsManageModal');
     if (m) m.hidden = false;
@@ -5678,14 +5681,22 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
 
     if (Array.isArray(state.customTabs) && state.customTabs.length) {
       html += '<div style="font-size:11px;font-weight:700;color:var(--muted);padding:14px 0 6px;text-transform:uppercase;letter-spacing:.05em;">✨ Свои вкладки</div>';
-      html += state.customTabs.map(function (t) {
+           html += state.customTabs.map(function (t) {
+        const isConfirming = _confirmDeleteCustomTabId === t.id;
+        let delButtons;
+        if (isConfirming) {
+          delButtons =
+            '<button type="button" class="danger" data-action="custom-tab-delete-confirm" title="Да, удалить" style="padding:4px 10px; font-weight:700;">✓</button>' +
+            '<button type="button" data-action="custom-tab-delete-cancel" title="Отмена" style="padding:4px 10px;">✕</button>';
+        } else {
+          delButtons =
+            '<button type="button" class="danger" data-action="custom-tab-delete-ask" title="Удалить вкладку" style="padding:4px 10px;">🗑</button>';
+        }
         return '<div class="tabs-manage-row" data-custom-tab-id="' + escapeHtml(t.id) + '">' +
           '<span style="display:inline-block;width:18px;text-align:center;color:var(--muted);">⭐</span>' +
           '<input type="text" class="icon-input" data-action="custom-tab-icon" value="' + escapeHtml(t.icon || '⭐') + '" maxlength="4" />' +
           '<input type="text" class="label-input" data-action="custom-tab-label" value="' + escapeHtml(t.label || '') + '" maxlength="30" />' +
-          '<div class="order-btns">' +
-            '<button type="button" class="danger" data-action="custom-tab-remove" title="Удалить вкладку" style="padding:4px 10px;">🗑</button>' +
-          '</div>' +
+          '<div class="order-btns">' + delButtons + '</div>' +
         '</div>';
       }).join('');
     }
@@ -6715,6 +6726,7 @@ function initKanbanDnD() {
   let _editingCustomTabId = null;
   let _editingCustomCardId = null;
   let _editingCustomCardTabId = null;
+let _confirmDeleteCustomTabId = null;
 
   function findCustomTab(id) {
     if (!Array.isArray(state.customTabs)) return null;
@@ -6769,7 +6781,8 @@ function initKanbanDnD() {
     });
   }
 
-  function openCustomCardModal(tabId, cardId) {
+   let _confirmDeleteCustomCardId = null;
+function openCustomCardModal(tabId, cardId) {
     _editingCustomCardTabId = tabId;
     _editingCustomCardId = cardId || null;
     const tab = findCustomTab(tabId); if (!tab) return;
@@ -6826,7 +6839,13 @@ function initKanbanDnD() {
         '<div class="custom-card-body"><div class="custom-card-text">' + escapeHtml(c.text) + '</div></div>' +
         '<div class="custom-card-actions">' +
           '<button type="button" class="icon-btn" data-action="custom-card-edit" data-card-id="' + escapeHtml(c.id) + '" title="Редактировать">✎</button>' +
-          '<button type="button" class="icon-btn" data-action="custom-card-delete" data-card-id="' + escapeHtml(c.id) + '" title="Удалить">✕</button>' +
+                    (function () {
+            if (_confirmDeleteCustomCardId === c.id) {
+              return '<button type="button" class="icon-btn" style="color:var(--danger);border-color:var(--danger);" data-action="custom-card-delete-yes" data-card-id="' + escapeHtml(c.id) + '" title="Да, удалить">✓</button>' +
+                     '<button type="button" class="icon-btn" data-action="custom-card-delete-no" data-card-id="' + escapeHtml(c.id) + '" title="Отмена">✕</button>';
+            }
+            return '<button type="button" class="icon-btn" data-action="custom-card-delete" data-card-id="' + escapeHtml(c.id) + '" title="Удалить">✕</button>';
+          })() +
         '</div>' +
       '</div>';
     }).join('') : '<div class="custom-tab-empty">Пока нет карточек. Нажмите «＋ Добавить карточку», чтобы создать первую.</div>';
@@ -6851,9 +6870,11 @@ function initKanbanDnD() {
       if (!el) return;
       const action = el.dataset.action;
       const tabId = state.ui.tab;
-      if (action === 'custom-card-add') openCustomCardModal(tabId, null);
+            if (action === 'custom-card-add') openCustomCardModal(tabId, null);
       else if (action === 'custom-card-edit') openCustomCardModal(tabId, el.dataset.cardId);
-      else if (action === 'custom-card-delete') deleteCustomCard(tabId, el.dataset.cardId);
+      else if (action === 'custom-card-delete') { _confirmDeleteCustomCardId = el.dataset.cardId; renderCustomView(tabId); }
+      else if (action === 'custom-card-delete-yes') { _confirmDeleteCustomCardId = null; deleteCustomCard(tabId, el.dataset.cardId); }
+      else if (action === 'custom-card-delete-no') { _confirmDeleteCustomCardId = null; renderCustomView(tabId); }
       else if (action === 'custom-tab-edit') openCustomTabModal(tabId);
       else if (action === 'custom-tab-delete') deleteCustomTab(tabId);
     });
@@ -7128,35 +7149,7 @@ function tickLiveClock() {
     attachTaskListHandlers(document.getElementById('goalsList'));
     attachTaskListHandlers(document.getElementById('tasksColumn'));
 
-        // === СВОЯ ВКЛАДКА + КАРТОЧКА ===
-    const _ctm2 = document.getElementById('customTabModal');
-    if (_ctm2) {
-      _ctm2.addEventListener('click', function (e) {
-        if (e.target === this) { closeCustomTabModal(); return; }
-        const el = e.target.closest('[data-action]'); if (!el) return;
-        if (el.dataset.action === 'close-custom-tab') closeCustomTabModal();
-        else if (el.dataset.action === 'save-custom-tab') saveCustomTab();
-      });
-      _ctm2.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closeCustomTabModal();
-        else if (e.key === 'Enter') { e.preventDefault(); saveCustomTab(); }
-      });
-    }
-    const _ccm2 = document.getElementById('customCardModal');
-    if (_ccm2) {
-      _ccm2.addEventListener('click', function (e) {
-        if (e.target === this) { closeCustomCardModal(); return; }
-        const el = e.target.closest('[data-action]'); if (!el) return;
-        if (el.dataset.action === 'close-custom-card') closeCustomCardModal();
-        else if (el.dataset.action === 'save-custom-card') saveCustomCard();
-      });
-      _ccm2.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closeCustomCardModal();
-        else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveCustomCard(); }
-      });
-    }
-
-// Kanban и drag&drop
+    // Kanban и drag&drop
     initKanbanDnD();
     initTaskToGoalDnD();
     // === УПРАВЛЕНИЕ ВКЛАДКАМИ ===
@@ -7178,15 +7171,20 @@ function tickLiveClock() {
         const row = el.closest('.tabs-manage-row');
         if (!row) return;
 
-        const ctId = row.dataset.customTabId;
+              const ctId = row.dataset.customTabId;
         if (ctId) {
-          if (action === 'custom-tab-remove') {
-            pgtConfirm({ title: 'Удалить вкладку?', message: 'Вкладка и все её карточки будут удалены.', yesLabel: 'Удалить', onYes: function(){
-              state.customTabs = state.customTabs.filter(function (t) { return t.id !== ctId; });
-              if (state.ui.tab === ctId) state.ui.tab = 'active';
-              savePrefs(); renderTabsManageList(); renderTabs(); render();
-              showToast('Вкладка удалена', 'ok');
-            }});
+          if (action === 'custom-tab-delete-ask') {
+            _confirmDeleteCustomTabId = ctId;
+            renderTabsManageList();
+          } else if (action === 'custom-tab-delete-confirm') {
+            _confirmDeleteCustomTabId = null;
+            state.customTabs = state.customTabs.filter(function (t) { return t.id !== ctId; });
+            if (state.ui.tab === ctId) state.ui.tab = 'active';
+            savePrefs(); renderTabsManageList(); renderTabs(); render();
+            showToast('Вкладка удалена', 'ok');
+          } else if (action === 'custom-tab-delete-cancel') {
+            _confirmDeleteCustomTabId = null;
+            renderTabsManageList();
           }
           return;
         }
