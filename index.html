@@ -1003,6 +1003,34 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
       font-weight: bold;
     }
   }
+    /* === МОБИЛЬНАЯ FAB-КНОПКА === */
+  .mobile-fab {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    border: 0;
+    font-size: 28px;
+    font-weight: 300;
+    line-height: 1;
+    z-index: 800;
+    box-shadow: 0 6px 20px rgba(0,0,0,.5);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: transform .15s;
+  }
+  .mobile-fab:active { transform: scale(0.92); }
+  @media (max-width: 700px) {
+    .mobile-fab { display: flex; }
+    .kbd-hint-fab { bottom: 88px !important; }
+  }
 .habit-empty { font-size: 12px; color: var(--muted); padding: 24px 16px; text-align: center; border: 1px dashed var(--border); border-radius: 10px; }
 /* === СВАЙПЫ НА МОБИЛЬНЫХ === */
 .task { position: relative; touch-action: pan-y; }
@@ -1402,6 +1430,7 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
 	  <span class="save-indicator" id="saveIndicator">✓ Сохранено</span>
       <span class="sync-status" id="syncStatus"></span>
        <span class="user-badge" id="userBadge" hidden></span>
+	          <button type="button" class="header-btn" id="todayWidgetBtn" title="Сегодня">📊 <span id="todayWidgetText">—</span></button>
        <span class="sync-dot" id="syncDot" title="Не синхронизировано"></span>
       <button type="button" class="header-btn" id="syncBtn" title="Синхронизировать" hidden>☁️ Синхро</button>
      <div class="mini-tasks-btn" style="position:relative;">
@@ -2159,6 +2188,19 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
     </div>
   </div>
 </div>
+<!-- Ежедневный отчёт -->
+<div class="modal-backdrop" id="dailyReportModal" hidden>
+  <div class="modal modal-sm">
+    <header class="modal-head">
+      <div class="modal-title">📊 Отчёт за день</div>
+      <button type="button" class="secondary" data-action="close-report">✕</button>
+    </header>
+    <div class="modal-body" id="dailyReportBody"></div>
+    <div class="modal-foot">
+      <button type="button" class="secondary" data-action="close-report">Закрыть</button>
+    </div>
+  </div>
+</div>
 <div class="cmd-palette-backdrop" id="cmdPalette" hidden>
   <div class="cmd-palette">
     <input type="text" id="cmdInput" placeholder="Команда или задача… (например: задача купить молоко)" autocomplete="off" />
@@ -2167,6 +2209,7 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
 </div>
 <div class="toast-container" id="toastContainer"></div>
 <button type="button" class="kbd-hint-fab" id="kbdHelpBtn" title="Горячие клавиши (?)">?</button>
+<button type="button" class="mobile-fab" id="mobileFab" title="Быстрая задача">＋</button>
 <!-- Модалка установки/смены PIN -->
 <div class="modal-backdrop" id="pinSetupModal" hidden>
   <div class="modal modal-sm">
@@ -2176,21 +2219,23 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
     </header>
     <div class="modal-body">
       <div class="modal-hint">PIN от 4 до 8 цифр. Не используйте простые комбинации вроде <code>1234</code> или <code>0000</code>.</div>
+      <form id="pinSetupForm" autocomplete="off" novalidate>
       <div style="display:grid; gap:10px;">
         <div id="pinChangeOldWrap" hidden>
           <label for="pinInput0">Текущий PIN</label>
-          <input type="password" id="pinInput0" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="••••" style="font-size:20px; letter-spacing:6px; text-align:center;" autocomplete="current-password" />
+          <input type="password" id="pinInput0" name="pin-current" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="••••" style="font-size:20px; letter-spacing:6px; text-align:center;" autocomplete="off" />
         </div>
         <div>
           <label for="pinInput1">Новый PIN</label>
-          <input type="password" id="pinInput1" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="••••" style="font-size:20px; letter-spacing:6px; text-align:center;" autocomplete="new-password" />
+          <input type="password" id="pinInput1" name="pin-new" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="••••" style="font-size:20px; letter-spacing:6px; text-align:center;" autocomplete="off" />
         </div>
         <div>
           <label for="pinInput2">Повторите новый PIN</label>
-          <input type="password" id="pinInput2" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="••••" style="font-size:20px; letter-spacing:6px; text-align:center;" autocomplete="new-password" />
+          <input type="password" id="pinInput2" name="pin-repeat" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="••••" style="font-size:20px; letter-spacing:6px; text-align:center;" autocomplete="off" />
         </div>
         <div id="pinSetupError" style="color:var(--danger); font-size:12px; min-height:16px;"></div>
       </div>
+      </form>
     </div>
     <div class="modal-foot">
       <button type="button" class="secondary" data-action="close-pin-setup">Отмена</button>
@@ -2205,10 +2250,12 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
     <div class="lock-icon" id="lockIcon">🔒</div>
     <div class="lock-title" id="lockTitle">Введите PIN-код</div>
     <div class="lock-sub" id="lockSub">Доступ к приложению защищён</div>
-    <input type="password" id="lockPinInput" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="••••" class="lock-input" autocomplete="off" />
+    <form id="lockForm" autocomplete="off" novalidate>
+    <input type="password" id="lockPinInput" name="pin" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="••••" class="lock-input" autocomplete="off" aria-label="PIN-код" />
     <div class="lock-error" id="lockError"></div>
     <div class="lock-attempts" id="lockAttempts"></div>
-    <button type="button" id="lockSubmitBtn" class="lock-btn">Разблокировать</button>
+    <button type="submit" id="lockSubmitBtn" class="lock-btn">Разблокировать</button>
+    </form>
     <button type="button" id="lockResetBtn" class="lock-link">Забыли PIN?</button>
   </div>
 </div>
@@ -2799,9 +2846,11 @@ tags: normalizeTags(g.tags),
     saveData(); savePrefs(); render();
     pushUndo(function () { state.goals.splice(idx, 0, snapshot); saveData(); render(); }, 'удаление цели');
   }
-    function addTask(goalId, f) {
+        function addTask(goalId, f) {
     const goal = goalId ? (findGoal(goalId) || ensureInboxGoal()) : ensureInboxGoal();
     const isDone = !!f.done;
+    var explicitTags = normalizeTags(f.tags || []);
+    var finalTags = explicitTags.length ? explicitTags : autoCategorize(f.text);
     goal.tasks.push({
       id: uid(),
       text: f.text,
@@ -2811,7 +2860,7 @@ tags: normalizeTags(g.tags),
       time: f.time || '',
       status: f.status || (isDone ? 'done' : 'todo'),
       repeat: f.repeat || null,
-      tags: normalizeTags(f.tags || []),
+        tags: finalTags,
       pinned: false,
       archivedAt: null,
       createdAt: Date.now(),
@@ -3080,15 +3129,18 @@ tags: normalizeTags(g.tags),
   }
 
   const DOW_MAP = { 'пн':1, 'вт':2, 'ср':3, 'чт':4, 'пт':5, 'сб':6, 'вс':0, 'воскресенье':0, 'понедельник':1, 'вторник':2, 'среда':3, 'четверг':4, 'пятница':5, 'суббота':6 };
-  function parseQuickInput(str) {
+   function parseQuickInput(str) {
     const result = { text: str, deadline: '', priority: 'medium', tags: [] };
     let s = ' ' + str + ' ';
     const today = new Date(); today.setHours(0,0,0,0);
-    s = s.replace(/\s+(сегодня)\s+/i, function () { result.deadline = dateToISO(today); return ' '; });
-    s = s.replace(/\s+(завтра)\s+/i, function () { const d = new Date(today); d.setDate(d.getDate() + 1); result.deadline = dateToISO(d); return ' '; });
-    s = s.replace(/\s+(послезавтра)\s+/i, function () { const d = new Date(today); d.setDate(d.getDate() + 2); result.deadline = dateToISO(d); return ' '; });
+    s = s.replace(/\s+(?:на\s+|в\s+)?(сегодня)\s+/i, function () { result.deadline = dateToISO(today); return ' '; });
+    s = s.replace(/\s+(?:на\s+|в\s+)?(завтра)\s+/i, function () { const d = new Date(today); d.setDate(d.getDate() + 1); result.deadline = dateToISO(d); return ' '; });
+    s = s.replace(/\s+(?:на\s+|в\s+)?(послезавтра)\s+/i, function () { const d = new Date(today); d.setDate(d.getDate() + 2); result.deadline = dateToISO(d); return ' '; });
+    s = s.replace(/\s+через\s+(\d{1,3})\s+(?:день|дня|дней)\s+/i, function (m, n) { const d = new Date(today); d.setDate(d.getDate() + parseInt(n, 10)); result.deadline = dateToISO(d); return ' '; });
+    s = s.replace(/\s+через\s+(?:неделю|недели)\s+/i, function () { const d = new Date(today); d.setDate(d.getDate() + 7); result.deadline = dateToISO(d); return ' '; });
+    s = s.replace(/\s+через\s+(?:месяц|месяца)\s+/i, function () { const d = new Date(today); d.setDate(d.getDate() + 30); result.deadline = dateToISO(d); return ' '; });
     s = s.replace(/\s+\+(\d{1,3})\s+/, function (m, n) { const d = new Date(today); d.setDate(d.getDate() + parseInt(n, 10)); result.deadline = dateToISO(d); return ' '; });
-    s = s.replace(/\s+(пн|вт|ср|чт|пт|сб|вс|понедельник|вторник|среда|четверг|пятница|суббота|воскресенье)\s+/i, function (m, w) { const target = DOW_MAP[w.toLowerCase()]; if (target === undefined) return m; const d = new Date(today); let diff = (target - d.getDay() + 7) % 7; if (diff === 0) diff = 7; d.setDate(d.getDate() + diff); result.deadline = dateToISO(d); return ' '; });
+    s = s.replace(/\s+(?:в\s+|на\s+)?(пн|вт|ср|чт|пт|сб|вс|понедельник|вторник|среда|четверг|пятница|суббота|воскресенье)\s+/i, function (m, w) { const target = DOW_MAP[w.toLowerCase()]; if (target === undefined) return m; const d = new Date(today); let diff = (target - d.getDay() + 7) % 7; if (diff === 0) diff = 7; d.setDate(d.getDate() + diff); result.deadline = dateToISO(d); return ' '; });
     s = s.replace(/\s+(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?\s+/, function (m, dd, mm, yyyy) { const d = new Date(today); d.setDate(parseInt(dd, 10)); d.setMonth(parseInt(mm, 10) - 1); if (yyyy) { let y = parseInt(yyyy, 10); if (y < 100) y += 2000; d.setFullYear(y); } result.deadline = dateToISO(d); return ' '; });
     s = s.replace(/\s+!(важно|высокий|high|1)\s+/i, function () { result.priority = 'high'; return ' '; });
     s = s.replace(/\s+!(низкий|low|3)\s+/i, function () { result.priority = 'low'; return ' '; });
@@ -4486,7 +4538,7 @@ function autoArchiveOldCompletedTasks() {
     const pane = document.getElementById('noteEditor');
     if (!state.editingNoteId) { pane.innerHTML = '<div class="note-editor-empty"><div style="font-size:40px;opacity:.6;margin-bottom:12px;">📝</div>Выберите заметку слева.</div>'; return; }
     const n = findNote(state.editingNoteId); if (!n) { state.editingNoteId = null; renderNoteEditor(); return; }
-    pane.innerHTML = '<div style="display:flex;gap:6px;align-items:center;flex:1;min-width:0;"><input type="text" id="noteTitleInput" value="' + escapeHtml(n.title) + '" placeholder="Заголовок" style="font-weight:700;font-size:15px;" /><button type="button" class="icon-btn" data-action="note-export-md" data-id="' + escapeHtml(n.id) + '">⬇ .md</button><button type="button" class="icon-btn" data-action="note-copy" data-id="' + escapeHtml(n.id) + '">📋</button><button type="button" class="icon-btn" data-action="note-delete" data-id="' + escapeHtml(n.id) + '">🗑</button></div>' +
+        pane.innerHTML = '<div style="display:flex;gap:6px;align-items:center;flex:1;min-width:0;"><input type="text" id="noteTitleInput" value="' + escapeHtml(n.title) + '" placeholder="Заголовок" style="font-weight:700;font-size:15px;" /><button type="button" class="icon-btn" data-action="note-to-task" data-id="' + escapeHtml(n.id) + '" title="Создать задачу из заметки">✅</button><button type="button" class="icon-btn" data-action="note-export-md" data-id="' + escapeHtml(n.id) + '">⬇ .md</button><button type="button" class="icon-btn" data-action="note-copy" data-id="' + escapeHtml(n.id) + '">📋</button><button type="button" class="icon-btn" data-action="note-delete" data-id="' + escapeHtml(n.id) + '">🗑</button></div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
         '<input type="text" id="noteTagsInput" value="' + escapeHtml((n.tags || []).map(function (t) { return '#' + t; }).join(' ')) + '" placeholder="#теги" style="font-size:12px;" />' +
         '<div class="note-goal-picker"><select id="noteGoalSelect"><option value="">— Без привязки к цели —</option>' + state.goals.filter(function (g) { return !g.archivedAt && !g.isInbox; }).map(function (g) { return '<option value="' + escapeHtml(g.id) + '"' + (n.goalId === g.id ? ' selected' : '') + '>🎯 ' + escapeHtml(g.title) + '</option>'; }).join('') + '</select></div>' +
@@ -5658,7 +5710,9 @@ function autoArchiveOldCompletedTasks() {
     document.getElementById('booksPanel').hidden = state.ui.litTab !== 'books';
     applyActiveTab();
   }
-    function switchTab(tab) {
+      function switchTab(tab) {
+    if (!state.scrollPositions) state.scrollPositions = {};
+    state.scrollPositions[state.ui.tab] = window.scrollY || window.pageYOffset || 0;
     if (state.ui.tab === 'literature') saveCurrentPosition(state.ui.litTab);
     state.ui.tab = tab;
     savePrefs();
@@ -5667,9 +5721,14 @@ function autoArchiveOldCompletedTasks() {
     if (tab === 'habits') renderHabits();
     if (tab === 'notes') { renderNotesList(); renderNoteEditor(); }
     if (tab === 'archive') renderArchive();
- if (tab === 'analytics') renderAnalytics();
+    if (tab === 'analytics') renderAnalytics();
     if (tab === 'literature') { SECTIONS.forEach(function (s) { renderMeta(s); renderList(s); applyListVisibility(s); }); }
-    
+    var target = state.scrollPositions[tab] || 0;
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        window.scrollTo(0, target);
+      });
+    });
   }
   function switchActiveTab(t) {
     state.ui.activeTab = t;
@@ -8867,8 +8926,19 @@ function tickLiveClock() {
       if (action === 'note-delete') {
         pgtConfirm({ title: 'Удалить заметку?', message: 'Заметка будет удалена безвозвратно.', yesLabel: 'Да, удалить', onYes: function(){ deleteNote(id); } });
       }
-      else if (action === 'note-export-md') exportNoteAsMd(id);
+            else if (action === 'note-export-md') exportNoteAsMd(id);
       else if (action === 'note-copy') copyNote(id);
+      else if (action === 'note-to-task') {
+        var note = findNote(id); if (!note) return;
+        var firstLine = String(note.title || '').trim();
+        if (!firstLine) {
+          var lines = String(note.body || '').split('\n').map(function(l){ return l.replace(/^#+\s*/, '').trim(); }).filter(Boolean);
+          firstLine = lines[0] || '';
+        }
+        if (!firstLine) { showToast('Заметка пуста', 'warn'); return; }
+        addTask(note.goalId || null, { text: firstLine.slice(0, 200), priority: 'medium', deadline: '', tags: (note.tags || []).slice() });
+        showToast('Задача создана: ' + firstLine.slice(0, 40), 'ok');
+      }
     });
     document.querySelectorAll('[data-notes-filter]').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -8982,6 +9052,13 @@ function tickLiveClock() {
     }
     const _lb = document.getElementById('lockSubmitBtn');
     if (_lb) _lb.addEventListener('click', tryUnlock);
+    // Формы вокруг PIN-полей: Enter отправляет форму — превращаем это в обычное
+    // действие (разблокировать / сохранить) и не даём странице перезагрузиться.
+    // Заодно Chrome перестаёт ругаться, что поле пароля вне формы.
+    const _pf = document.getElementById('pinSetupForm');
+    if (_pf) _pf.addEventListener('submit', function (e) { e.preventDefault(); savePin(); });
+    const _lf = document.getElementById('lockForm');
+    if (_lf) _lf.addEventListener('submit', function (e) { e.preventDefault(); tryUnlock(); });
     const _li = document.getElementById('lockPinInput');
     if (_li) {
       let _autoUnlockTimer = null;
@@ -9379,6 +9456,17 @@ applyQuickInputVisibility();
  setTimeout(checkNotifications, 30000);
  setTimeout(initDataFolder, 500);
  setTimeout(autoArchiveOldCompletedTasks, 1500);
+   setTimeout(checkSmartReminders, 6000);
+     setTimeout(maybeAutoShowReport, 4000);
+  setTimeout(function () {
+    const rModal = document.getElementById('dailyReportModal');
+    if (!rModal) return;
+    rModal.addEventListener('click', function (e) {
+      if (e.target === rModal) { rModal.hidden = true; return; }
+      const el = e.target.closest('[data-action]');
+      if (el && el.dataset.action === 'close-report') rModal.hidden = true;
+    });
+  }, 500);
  initTaskSwipe();
   // Миграция старых IDB-блобов в OPFS и запрос persistent-хранилища
   (async function initStorage() {
@@ -9755,7 +9843,29 @@ applyQuickInputVisibility();
     _origRenderForMini();
     updateMiniTasksBadge();
   };
-  // Запуск
+   // Привязка кнопки «Сегодня» в шапке
+  setTimeout(function () {
+    const btn = document.getElementById('todayWidgetBtn');
+    if (btn) btn.addEventListener('click', function () { switchTab('today'); });
+  }, 400);
+    // Кнопка «＋» на мобильном — фокус на быстрый ввод
+  setTimeout(function () {
+    const fab = document.getElementById('mobileFab');
+    if (!fab) return;
+    fab.addEventListener('click', function () {
+      if (!state.quickInputVisible) {
+        state.quickInputVisible = true;
+        savePrefs();
+        applyQuickInputVisibility();
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setTimeout(function () {
+        const inp = document.getElementById('quickInput');
+        if (inp) { inp.focus(); }
+      }, 350);
+    });
+  }, 400);
+ // Запуск
   setTimeout(function () {
     bindMiniTasks();
     updateMiniTasksBadge();
@@ -10123,7 +10233,141 @@ setTimeout(function() {
     });
   }
 }, 300);
-   
+     // === АВТОКАТЕГОРИЯ ЗАДАЧ ===
+  const AUTO_CATEGORY_RULES = [
+    { tag: 'покупки', words: ['купить', 'куплю', 'магазин', 'продукты', 'молоко', 'хлеб', 'доставка', 'аптека', 'лекарств'] },
+    { tag: 'работа', words: ['отчёт', 'отчет', 'совещание', 'созвон', 'позвонить', 'письмо', 'клиент', 'заказчик', 'проект', 'презентация', 'митинг', 'коллега', 'начальник', 'собеседован'] },
+    { tag: 'дом', words: ['убрать', 'уборка', 'помыть', 'постирать', 'посуда', 'ремонт', 'кран', 'мебель', 'стирка', 'готовить', 'ужин', 'обед', 'завтрак'] },
+    { tag: 'здоровье', words: ['врач', 'тренировка', 'спортзал', 'зарядка', 'витамины', 'анализы', 'прививк', 'стоматолог', 'здоровье', 'бассейн'] },
+    { tag: 'учёба', words: ['учить', 'выучить', 'прочитать', 'книга', 'курс', 'лекция', 'экзамен', 'домашка', 'задание', 'изучить', 'конспект'] },
+    { tag: 'финансы', words: ['оплатить', 'счёт', 'счет', 'налог', 'банк', 'кредит', 'перевод', 'зарплат', 'бюджет'] },
+    { tag: 'документы', words: ['паспорт', 'справка', 'документ', 'заявлени', 'госуслуг', 'мфц', 'полис', 'страховк'] },
+    { tag: 'путешествие', words: ['билет', 'поезд', 'самолёт', 'самолет', 'отель', 'виза', 'чемодан', 'отпуск', 'поездк'] },
+    { tag: 'общение', words: ['поздрав', 'день рожден', 'подарок', 'написать', 'напомнить', 'позвонить мам', 'позвонить пап'] }
+  ];
+
+  function autoCategorize(text) {
+    if (!text) return [];
+    const lower = String(text).toLowerCase();
+    const found = [];
+    for (let i = 0; i < AUTO_CATEGORY_RULES.length; i++) {
+      const rule = AUTO_CATEGORY_RULES[i];
+      for (let j = 0; j < rule.words.length; j++) {
+        if (lower.indexOf(rule.words[j]) !== -1) { found.push(rule.tag); break; }
+      }
+    }
+    return found;
+  }
+    // === ЕЖЕДНЕВНЫЙ ОТЧЁТ ===
+  function openDailyReport() {
+    const modal = document.getElementById('dailyReportModal');
+    const body = document.getElementById('dailyReportBody');
+    if (!modal || !body) return;
+
+    const todayISO = dateToISO(new Date());
+    const start = todayStart().getTime();
+    const end = start + 24 * 60 * 60 * 1000;
+
+    const doneTasks = [];
+    state.goals.forEach(function (g) {
+      if (g.isInbox && g.archivedAt) return;
+      g.tasks.forEach(function (t) {
+        if (t.done && t.doneAt && t.doneAt >= start && t.doneAt < end) {
+          doneTasks.push({ task: t, goal: g });
+        }
+      });
+    });
+
+    const archivedGoals = state.goals.filter(function (g) {
+      return g.archivedAt && !g.isInbox && g.archivedAt >= start && g.archivedAt < end;
+    });
+
+    const doneHabits = state.habits.filter(function (h) {
+      return (h.marks || []).indexOf(todayISO) !== -1;
+    });
+
+    const total = doneTasks.length + archivedGoals.length + doneHabits.length;
+
+    let html = '<div style="text-align:center;font-size:14px;color:var(--muted);margin-bottom:14px;">' + formatDate(todayISO) + '</div>';
+    if (!total) {
+      html += '<div style="text-align:center;padding:30px 10px;color:var(--muted);font-size:13px;">Пока нечего подвести. Денёк только начинается 🌱</div>';
+    } else {
+      html += '<div style="text-align:center;font-size:44px;font-weight:800;color:var(--accent);line-height:1;margin-bottom:6px;">' + total + '</div>';
+      html += '<div style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:20px;">достижений за день</div>';
+    }
+
+    if (doneTasks.length) {
+      html += '<div style="margin-bottom:14px;"><div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">✓ Задачи (' + doneTasks.length + ')</div>';
+      doneTasks.forEach(function (it) {
+        html += '<div style="padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;">' + escapeHtml(it.task.text) + (it.goal.isInbox ? '' : ' <span style="color:var(--muted);font-size:11px;">· ' + escapeHtml(it.goal.title) + '</span>') + '</div>';
+      });
+      html += '</div>';
+    }
+
+    if (archivedGoals.length) {
+      html += '<div style="margin-bottom:14px;"><div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">🎯 Завершено целей (' + archivedGoals.length + ')</div>';
+      archivedGoals.forEach(function (g) {
+        html += '<div style="padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;">' + escapeHtml(g.title) + '</div>';
+      });
+      html += '</div>';
+    }
+
+    if (doneHabits.length) {
+      html += '<div style="margin-bottom:14px;"><div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">📆 Привычки (' + doneHabits.length + ')</div>';
+      doneHabits.forEach(function (h) {
+        html += '<div style="padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;">' + escapeHtml(h.icon || '🎯') + ' ' + escapeHtml(h.title) + '</div>';
+      });
+      html += '</div>';
+    }
+
+    body.innerHTML = html;
+    modal.hidden = false;
+  }
+
+  function maybeAutoShowReport() {
+    const now = new Date();
+    if (now.getHours() < 19) return;
+    const todayISO = dateToISO(now);
+    try {
+      if (localStorage.getItem('pgt_last_report_shown') === todayISO) return;
+      localStorage.setItem('pgt_last_report_shown', todayISO);
+    } catch (e) { return; }
+    setTimeout(openDailyReport, 2500);
+  }
+    // === УМНЫЕ НАПОМИНАНИЯ ===
+  function checkSmartReminders() {
+    const now = todayStart().getTime();
+    const THREE_DAYS = 3 * 24 * 60 * 60 * 1000;
+    const stale = [];
+    state.goals.forEach(function (g) {
+      if (g.archivedAt) return;
+      g.tasks.forEach(function (t) {
+        if (t.archivedAt || t.done || !t.deadline) return;
+        const d = new Date(t.deadline + 'T00:00:00').getTime();
+        if (now - d > THREE_DAYS) stale.push({ goal: g, task: t });
+      });
+    });
+    if (!stale.length) return;
+    try {
+      const todayISO = dateToISO(new Date());
+      if (sessionStorage.getItem('pgt_smart_reminders_shown') === todayISO) return;
+      sessionStorage.setItem('pgt_smart_reminders_shown', todayISO);
+    } catch (e) {}
+    showToast('⚠ Просрочено больше 3 дней: ' + stale.length, 'warn', 'Перепланировать', function () {
+      pgtConfirm({
+        title: 'Перепланировать задачи?',
+        message: 'Найдено ' + stale.length + ' задач, просроченных больше 3 дней. Перенести все на сегодня?',
+        yesLabel: 'На сегодня',
+        danger: false,
+        onYes: function () {
+          const todayISO = dateToISO(new Date());
+          stale.forEach(function (it) { it.task.deadline = todayISO; });
+          saveData(); render();
+          showToast('Перепланировано: ' + stale.length, 'ok');
+        }
+      });
+    }, 15000);
+  }
     // ============================================================
   // === FEATURE 4: MILESTONES (этапы у целей) ===
   // ============================================================
