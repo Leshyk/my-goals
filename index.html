@@ -956,7 +956,51 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
 .habit-actions .icon-btn.danger { color: #fff; background: var(--danger); border-color: var(--danger); padding: 3px 8px; }
 .habit-actions .icon-btn.danger:hover { filter: brightness(1.1); }
 .habit-actions .icon-btn.success { color: var(--color-total); border-color: var(--color-total); }
-
+  /* === МОБИЛЬНЫЙ ФИКС ДЛЯ ПРИВЫЧЕК === */
+  @media (max-width: 600px) {
+    .habit-card {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      grid-template-areas:
+        "check info actions"
+        "days  days days";
+      gap: 10px;
+      align-items: center;
+    }
+    .habit-check { grid-area: check; }
+    .habit-info { grid-area: info; min-width: 0; }
+    .habit-actions { grid-area: actions; margin-left: 0; }
+    .habit-days-strip { 
+      grid-area: days; 
+      justify-content: space-between; 
+      margin-top: 4px;
+    }
+    
+    /* Делаем кнопки яркими и крупными */
+    .habit-actions .icon-btn {
+      background: var(--bar-bg);
+      border: 1px solid var(--border);
+      min-width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .habit-actions .icon-btn.success {
+      background: var(--color-total);
+      color: #ffffff;
+      border-color: var(--color-total);
+      font-weight: bold;
+    }
+    .habit-actions .icon-btn.danger {
+      background: var(--danger);
+      color: #ffffff;
+      border-color: var(--danger);
+      font-weight: bold;
+    }
+  }
 .habit-empty { font-size: 12px; color: var(--muted); padding: 24px 16px; text-align: center; border: 1px dashed var(--border); border-radius: 10px; }
 /* === СВАЙПЫ НА МОБИЛЬНЫХ === */
 .task { position: relative; touch-action: pan-y; }
