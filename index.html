@@ -3667,6 +3667,52 @@ function initPin() {
     }
   }
 
+  // Ключ списка известных аккаунтов (пишет sync.js) — нужен, чтобы вычистить
+  // испорченный адрес аватара из уже сохранённых данных.
+  const KNOWN_USERS_STORAGE_KEY = 'pgt_v25_known_users';
+
+  /**
+   * Вернуть безопасный адрес аватара или '' — если значение не похоже на адрес.
+   * Отсекаем мусор, попавший в данные (куски кода, кавычки, пробелы), из-за
+   * которого браузер уходит в 404 за несуществующей картинкой.
+   * @param {*} value — сохранённое значение picture.
+   * @returns {string} адрес http(s) или пустая строка.
+   */
+  function safeAvatarUrl(value) {
+    if (typeof value !== 'string') return '';
+    const url = value.trim();
+    if (!url || url.length > 2048) return '';
+    // Никаких пробелов, кавычек и угловых скобок в адресе быть не должно.
+    if (/[\s"'<>`]/.test(url)) return '';
+    if (!/^https?:\/\//i.test(url)) return '';
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '';
+      return parsed.href;
+    } catch (e) {
+      return '';
+    }
+  }
+
+  /** Убрать испорченный picture у одного аккаунта, чтобы он не всплывал снова. */
+  function forgetUserPicture(sub) {
+    if (!sub) return;
+    try {
+      const raw = localStorage.getItem(KNOWN_USERS_STORAGE_KEY);
+      if (!raw) return;
+      const list = JSON.parse(raw);
+      if (!Array.isArray(list)) return;
+      let changed = false;
+      list.forEach(function (user) {
+        if (user && user.sub === sub && user.picture && !safeAvatarUrl(user.picture)) {
+          user.picture = '';
+          changed = true;
+        }
+      });
+      if (changed) localStorage.setItem(KNOWN_USERS_STORAGE_KEY, JSON.stringify(list));
+    } catch (e) { /* хранилище недоступно — просто не рисуем картинку */ }
+  }
+
   function renderLoginGateUsers() {
     const box = document.getElementById('loginGateUsers');
     const addBtn = document.getElementById('loginGateAddBtn');
@@ -3692,8 +3738,15 @@ function initPin() {
 
     box.innerHTML = users.map(function (u) {
       const initial = (u.name || u.email || '?').charAt(0).toUpperCase();
-      const avatar = u.picture
-        ? '<img src="' + escapeHtml(u.picture) + '" alt="" class="login-user-avatar" />'
+      // Аватар берём только если это настоящий http(s)-адрес. В сохранённых
+      // аккаунтах иногда оказывается испорченное значение (например, попавший
+      // в данные кусок кода вида "' + escapeHtml(u.picture) + '") — тогда
+      // браузер уходит в 404 за таким «адресом». В этом случае показываем
+      // букву и заодно вычищаем мусор из хранилища.
+      const avatarUrl = safeAvatarUrl(u.picture);
+      if (u.picture && !avatarUrl) forgetUserPicture(u.sub);
+      const avatar = avatarUrl
+        ? '<img src="' + escapeHtml(avatarUrl) + '" alt="" class="login-user-avatar" referrerpolicy="no-referrer" />'
         : '<div class="login-user-avatar login-user-avatar-letter">' + escapeHtml(initial) + '</div>';
       return '<div class="login-user-row" data-sub="' + escapeHtml(u.sub) + '">' +
         '<button type="button" class="login-user-btn" data-action="login-user" data-email="' + escapeHtml(u.email) + '">' +
