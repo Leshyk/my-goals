@@ -461,6 +461,14 @@
 .reader-progress-row input[type="range"] { flex: 1; accent-color: var(--accent); cursor: pointer; min-width: 80px; }
 .reader-progress-row .rp-label { white-space: nowrap; font-weight: 600; }
 .reader-progress-row .rp-label b { color: var(--accent); font-weight: 700; }
+/* === MILESTONES (этапы целей) === */
+.goal-milestones { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border); }
+.milestone-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 999px; background: var(--bar-bg); border: 1px solid var(--border); font-size: 10px; cursor: pointer; color: var(--muted); transition: all .15s; user-select: none; }
+.milestone-chip:hover { border-color: var(--accent); color: var(--text); }
+.milestone-chip.done { background: rgba(63,185,80,.15); border-color: var(--color-total); color: var(--color-total); text-decoration: line-through; }
+.milestone-list-row { display: flex; gap: 6px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--border); }
+.milestone-list-row input[type="text"] { flex: 1; font-size: 12px; padding: 4px 8px; }
+.milestone-list-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--color-total); cursor: pointer; flex: 0 0 auto; }
   .toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column-reverse; gap: 8px; z-index: 3000; pointer-events: none; max-width: 400px; }
   .toast { background: var(--toast-bg); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 10px; font-size: 13px; box-shadow: 0 12px 32px rgba(0,0,0,.6); transform: translateX(20px); opacity: 0; transition: transform .25s, opacity .25s; display: flex; align-items: center; gap: 10px; pointer-events: auto; }
   .toast.show { transform: translateX(0); opacity: 1; }
@@ -1745,7 +1753,15 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
           <label for="editGoalDesc">Описание</label>
           <textarea id="editGoalDesc" rows="3"></textarea>
         </div>
-        <div>
+                <div>
+          <label>Milestones (этапы)</label>
+          <div id="editGoalMilestonesList" style="max-height:180px;overflow-y:auto;margin-bottom:6px;"></div>
+          <div class="form-row">
+            <input type="text" id="editGoalMilestoneNew" placeholder="Например: 10 км пробежать" />
+            <button type="button" class="secondary" id="editGoalAddMilestoneBtn">+</button>
+          </div>
+        </div>
+<div>
           <label>Журнал прогресса</label>
           <div id="editGoalJournalList" style="max-height:180px;overflow-y:auto;margin-bottom:6px;"></div>
           <div class="form-row">
@@ -2610,7 +2626,8 @@ scheduleDiskWrite();
       createdAt: typeof g.createdAt === 'number' ? g.createdAt : Date.now(),
       pinned: !!g.pinned,
       journal: Array.isArray(g.journal) ? g.journal.map(function(e){ return { ts: typeof e.ts === 'number' ? e.ts : Date.now(), text: String(e.text || '').slice(0, 2000) }; }).filter(function(e){ return e.text; }) : [],
-      tags: normalizeTags(g.tags),
+            milestones: Array.isArray(g.milestones) ? g.milestones.map(function(m){ return { id: m.id || uid(), text: String(m.text || '').slice(0, 200), done: !!m.done, createdAt: m.createdAt || Date.now() }; }).filter(function(m){ return m.text; }) : [],
+tags: normalizeTags(g.tags),
       tasks: []
     };
     if (Array.isArray(g.tasks)) goal.tasks = g.tasks.map(normalizeTask).filter(Boolean);
@@ -9792,6 +9809,133 @@ applyQuickInputVisibility();
     if (!state.readingPos[section]) state.readingPos[section] = {};
     state.readingPos[section][name] = body.scrollTop;
   }, true);
+  // ============================================================
+  // === FEATURE 4: MILESTONES (этапы у целей) ===
+  // ============================================================
+  function renderEditGoalMilestones(g) {
+    const box = document.getElementById('editGoalMilestonesList');
+    if (!box) return;
+    const ms = g.milestones || [];
+    if (!ms.length) { box.innerHTML = '<div class="empty" style="font-size:11px;">Пока нет этапов. Добавь первый — например, «10 км пробежать».</div>'; return; }
+    box.innerHTML = ms.map(function (m) {
+      return '<div class="milestone-list-row">' +
+        '<input type="checkbox" ' + (m.done ? 'checked' : '') + ' data-action="milestone-toggle" data-milestone-id="' + escapeHtml(m.id) + '" />' +
+        '<input type="text" value="' + escapeHtml(m.text) + '" data-action="milestone-text" data-milestone-id="' + escapeHtml(m.id) + '" />' +
+        '<button type="button" class="icon-btn" data-action="milestone-delete" data-milestone-id="' + escapeHtml(m.id) + '" title="Удалить">✕</button>' +
+      '</div>';
+    }).join('');
+  }
+  function addGoalMilestone() {
+    const g = findGoal(state.editingGoalId); if (!g) return;
+    const inp = document.getElementById('editGoalMilestoneNew');
+    const text = (inp.value || '').trim(); if (!text) return;
+    if (!Array.isArray(g.milestones)) g.milestones = [];
+    g.milestones.push({ id: uid(), text: text.slice(0, 200), done: false, createdAt: Date.now() });
+    inp.value = '';
+    saveData();
+    renderEditGoalMilestones(g);
+    renderGoals();
+  }
+  function toggleMilestone(mid) {
+    const g = findGoal(state.editingGoalId); if (!g || !g.milestones) return;
+    const m = g.milestones.find(function (x) { return x.id === mid; }); if (!m) return;
+    m.done = !m.done;
+    saveData(); renderEditGoalMilestones(g); renderGoals();
+  }
+  function deleteMilestone(mid) {
+    const g = findGoal(state.editingGoalId); if (!g || !g.milestones) return;
+    g.milestones = g.milestones.filter(function (x) { return x.id !== mid; });
+    saveData(); renderEditGoalMilestones(g); renderGoals();
+  }
+  function updateMilestoneText(mid, text) {
+    const g = findGoal(state.editingGoalId); if (!g || !g.milestones) return;
+    const m = g.milestones.find(function (x) { return x.id === mid; }); if (!m) return;
+    m.text = text.slice(0, 200);
+    saveData(); renderGoals();
+  }
+  function milestonesHtml(g) {
+    if (!g.milestones || !g.milestones.length) return '';
+    return '<div class="goal-milestones">' + g.milestones.map(function (m) {
+      return '<span class="milestone-chip' + (m.done ? ' done' : '') + '" data-action="milestone-chip-toggle" data-goal-id="' + escapeHtml(g.id) + '" data-milestone-id="' + escapeHtml(m.id) + '" title="Нажми, чтобы отметить/снять">' +
+        (m.done ? '✓' : '◯') + ' ' + escapeHtml(m.text) + '</span>';
+    }).join('') + '</div>';
+  }
+
+  // === Обработчики в модале редактирования цели ===
+  function bindMilestoneEvents() {
+    const modal = document.getElementById('editGoalModal');
+    if (!modal || modal.dataset.msBound === '1') return;
+    modal.dataset.msBound = '1';
+    modal.addEventListener('click', function (e) {
+      const el = e.target.closest('[data-action]'); if (!el) return;
+      const a = el.dataset.action;
+      const mid = el.dataset.milestoneId;
+      if (a === 'milestone-delete') deleteMilestone(mid);
+    });
+    modal.addEventListener('change', function (e) {
+      if (e.target.matches && e.target.matches('input[data-action="milestone-toggle"]')) toggleMilestone(e.target.dataset.milestoneId);
+    });
+    modal.addEventListener('input', function (e) {
+      if (e.target.matches && e.target.matches('input[data-action="milestone-text"]')) updateMilestoneText(e.target.dataset.milestoneId, e.target.value);
+    });
+    const btn = document.getElementById('editGoalAddMilestoneBtn');
+    if (btn) btn.addEventListener('click', addGoalMilestone);
+    const inp = document.getElementById('editGoalMilestoneNew');
+    if (inp) inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addGoalMilestone(); } });
+  }
+
+  // === Хук в openEditGoal — рендерить список этапов при открытии модала ===
+  const _origOpenEditGoalForMs = openEditGoal;
+  openEditGoal = function (id) {
+    _origOpenEditGoalForMs(id);
+    const g = findGoal(id);
+    if (g) renderEditGoalMilestones(g);
+  };
+
+  // === Хук в renderGoals — вставить чипсы этапов в каждую карточку ===
+  const _origRenderGoalsForMs = renderGoals;
+  renderGoals = function () {
+    _origRenderGoalsForMs();
+    const list = document.getElementById('goalsList');
+    if (!list) return;
+    list.querySelectorAll('.goal').forEach(function (el) {
+      const gid = el.dataset.goalId;
+      const g = findGoal(gid); if (!g || !g.milestones || !g.milestones.length) return;
+      const body = el.querySelector('.goal-body');
+      if (!body) return;
+      const target = body.querySelector('.goal-progress');
+      const html = milestonesHtml(g);
+      if (target) {
+        target.insertAdjacentHTML('beforebegin', html);
+      } else {
+        body.insertAdjacentHTML('beforeend', html);
+      }
+    });
+  };
+
+  // === Клик по чипсу прямо в карточке — переключить отметку ===
+  setTimeout(function () {
+    const goalsList = document.getElementById('goalsList');
+    if (goalsList && goalsList.dataset.msBound !== '1') {
+      goalsList.dataset.msBound = '1';
+      goalsList.addEventListener('click', function (e) {
+        const chip = e.target.closest('[data-action="milestone-chip-toggle"]');
+        if (!chip) return;
+        e.stopPropagation();
+        const gid = chip.dataset.goalId, mid = chip.dataset.milestoneId;
+        const g = findGoal(gid); if (!g || !g.milestones) return;
+        const m = g.milestones.find(function (x) { return x.id === mid; }); if (!m) return;
+        m.done = !m.done;
+        saveData(); renderGoals();
+      });
+    }
+
+    // При загрузке — убедимся, что у каждой цели есть массив milestones
+    state.goals.forEach(function (g) { if (!Array.isArray(g.milestones)) g.milestones = []; });
+
+    bindMilestoneEvents();
+    renderGoals();
+  }, 500);
 })();
 </script>
 </body>
