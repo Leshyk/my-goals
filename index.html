@@ -9809,26 +9809,52 @@ applyQuickInputVisibility();
     if (!state.readingPos[section]) state.readingPos[section] = {};
     state.readingPos[section][name] = body.scrollTop;
   }, true);
-  // ============================================================
+    // ============================================================
   // === FEATURE 4: MILESTONES (этапы у целей) ===
   // ============================================================
+
+  // Ищем цель по ID этапа — не зависим от state.editingGoalId
+  function findGoalByMilestoneId(mid) {
+    for (let i = 0; i < state.goals.length; i++) {
+      const g = state.goals[i];
+      if (Array.isArray(g.milestones) && g.milestones.some(function (m) { return m.id === mid; })) return g;
+    }
+    return null;
+  }
+
   function renderEditGoalMilestones(g) {
     const box = document.getElementById('editGoalMilestonesList');
     if (!box) return;
-    const ms = g.milestones || [];
-    if (!ms.length) { box.innerHTML = '<div class="empty" style="font-size:11px;">Пока нет этапов. Добавь первый — например, «10 км пробежать».</div>'; return; }
+    const ms = (g && g.milestones) || [];
+    if (!ms.length) {
+      box.innerHTML = '<div class="empty" style="font-size:11px;">Пока нет этапов. Добавь первый — например, «10 км пробежать».</div>';
+      return;
+    }
     box.innerHTML = ms.map(function (m) {
       return '<div class="milestone-list-row">' +
         '<input type="checkbox" ' + (m.done ? 'checked' : '') + ' data-action="milestone-toggle" data-milestone-id="' + escapeHtml(m.id) + '" />' +
-        '<input type="text" value="' + escapeHtml(m.text) + '" data-action="milestone-text" data-milestone-id="' + escapeHtml(m.id) + '" />' +
+        '<input type="text" value="' + escapeHtml(m.text) + '" data-action="milestone-text" data-milestone-id="' + escapeHtml(m.id) + '" autocomplete="off" />' +
         '<button type="button" class="icon-btn" data-action="milestone-delete" data-milestone-id="' + escapeHtml(m.id) + '" title="Удалить">✕</button>' +
       '</div>';
     }).join('');
   }
+
   function addGoalMilestone() {
-    const g = findGoal(state.editingGoalId); if (!g) return;
+    // Для добавления всё-таки нужен editingGoalId — берём из state
+    let g = findGoal(state.editingGoalId);
+    // Фолбэк: если editingGoalId не установлен — берём цель, которую сейчас пытаются редактировать
+    if (!g) {
+      // Ищем по заголовку, который показан в модале
+      const titleField = document.getElementById('editGoalTitle');
+      if (titleField) {
+        const t = titleField.value.trim();
+        g = state.goals.find(function (x) { return !x.archivedAt && x.title === t; });
+      }
+    }
+    if (!g) { showToast('Не удалось определить цель. Откройте ✎ заново.', 'error'); return; }
     const inp = document.getElementById('editGoalMilestoneNew');
-    const text = (inp.value || '').trim(); if (!text) return;
+    const text = (inp.value || '').trim();
+    if (!text) return;
     if (!Array.isArray(g.milestones)) g.milestones = [];
     g.milestones.push({ id: uid(), text: text.slice(0, 200), done: false, createdAt: Date.now() });
     inp.value = '';
@@ -9836,23 +9862,34 @@ applyQuickInputVisibility();
     renderEditGoalMilestones(g);
     renderGoals();
   }
+
   function toggleMilestone(mid) {
-    const g = findGoal(state.editingGoalId); if (!g || !g.milestones) return;
+    const g = findGoalByMilestoneId(mid); if (!g) return;
     const m = g.milestones.find(function (x) { return x.id === mid; }); if (!m) return;
     m.done = !m.done;
-    saveData(); renderEditGoalMilestones(g); renderGoals();
+    saveData();
+    renderEditGoalMilestones(g);
+    renderGoals();
   }
+
   function deleteMilestone(mid) {
-    const g = findGoal(state.editingGoalId); if (!g || !g.milestones) return;
+    const g = findGoalByMilestoneId(mid); if (!g) return;
     g.milestones = g.milestones.filter(function (x) { return x.id !== mid; });
-    saveData(); renderEditGoalMilestones(g); renderGoals();
+    saveData();
+    renderEditGoalMilestones(g);
+    renderGoals();
   }
+
   function updateMilestoneText(mid, text) {
-    const g = findGoal(state.editingGoalId); if (!g || !g.milestones) return;
+    const g = findGoalByMilestoneId(mid); if (!g) return;
     const m = g.milestones.find(function (x) { return x.id === mid; }); if (!m) return;
-    m.text = text.slice(0, 200);
-    saveData(); renderGoals();
+    const newText = String(text == null ? '' : text).slice(0, 200);
+    if (m.text === newText) return; // ничего не поменялось — не дёргаем сохранение
+    m.text = newText;
+    saveData();
+    renderGoals();
   }
+
   function milestonesHtml(g) {
     if (!g.milestones || !g.milestones.length) return '';
     return '<div class="goal-milestones">' + g.milestones.map(function (m) {
@@ -9861,28 +9898,54 @@ applyQuickInputVisibility();
     }).join('') + '</div>';
   }
 
-  // === Обработчики в модале редактирования цели ===
-  function bindMilestoneEvents() {
-    const modal = document.getElementById('editGoalModal');
-    if (!modal || modal.dataset.msBound === '1') return;
-    modal.dataset.msBound = '1';
-    modal.addEventListener('click', function (e) {
-      const el = e.target.closest('[data-action]'); if (!el) return;
-      const a = el.dataset.action;
+  // === Единый обработчик на документе: работает всегда, независимо от того, когда отрисован модал ===
+  document.addEventListener('input', function (e) {
+    const el = e.target;
+    if (!el || !el.dataset || el.dataset.action !== 'milestone-text') return;
+    updateMilestoneText(el.dataset.milestoneId, el.value);
+  });
+
+  document.addEventListener('change', function (e) {
+    const el = e.target;
+    if (!el || !el.dataset) return;
+    if (el.dataset.action === 'milestone-toggle') {
+      toggleMilestone(el.dataset.milestoneId);
+    } else if (el.dataset.action === 'milestone-text') {
+      // на случай, если input-событие почему-то не сработало
+      updateMilestoneText(el.dataset.milestoneId, el.value);
+    }
+  });
+
+  document.addEventListener('click', function (e) {
+    const el = e.target.closest('[data-action]');
+    if (!el) return;
+    if (el.dataset.action === 'milestone-delete') {
+      deleteMilestone(el.dataset.milestoneId);
+    } else if (el.dataset.action === 'milestone-chip-toggle') {
+      e.stopPropagation();
       const mid = el.dataset.milestoneId;
-      if (a === 'milestone-delete') deleteMilestone(mid);
-    });
-    modal.addEventListener('change', function (e) {
-      if (e.target.matches && e.target.matches('input[data-action="milestone-toggle"]')) toggleMilestone(e.target.dataset.milestoneId);
-    });
-    modal.addEventListener('input', function (e) {
-      if (e.target.matches && e.target.matches('input[data-action="milestone-text"]')) updateMilestoneText(e.target.dataset.milestoneId, e.target.value);
-    });
-    const btn = document.getElementById('editGoalAddMilestoneBtn');
-    if (btn) btn.addEventListener('click', addGoalMilestone);
-    const inp = document.getElementById('editGoalMilestoneNew');
-    if (inp) inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addGoalMilestone(); } });
-  }
+      const g = findGoalByMilestoneId(mid); if (!g) return;
+      const m = g.milestones.find(function (x) { return x.id === mid; }); if (!m) return;
+      m.done = !m.done;
+      saveData(); renderGoals();
+    }
+  });
+
+  // Кнопка «+» в модале
+  document.addEventListener('click', function (e) {
+    const el = e.target.closest('#editGoalAddMilestoneBtn');
+    if (el) { e.preventDefault(); addGoalMilestone(); }
+  });
+
+  // Enter в поле «новый milestone» тоже добавляет
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    const el = e.target;
+    if (el && el.id === 'editGoalMilestoneNew') {
+      e.preventDefault();
+      addGoalMilestone();
+    }
+  });
 
   // === Хук в openEditGoal — рендерить список этапов при открытии модала ===
   const _origOpenEditGoalForMs = openEditGoal;
@@ -9903,6 +9966,9 @@ applyQuickInputVisibility();
       const g = findGoal(gid); if (!g || !g.milestones || !g.milestones.length) return;
       const body = el.querySelector('.goal-body');
       if (!body) return;
+      // Если чипсы уже есть — удаляем (защита от дублирования)
+      const existing = body.querySelector('.goal-milestones');
+      if (existing) existing.remove();
       const target = body.querySelector('.goal-progress');
       const html = milestonesHtml(g);
       if (target) {
@@ -9912,6 +9978,10 @@ applyQuickInputVisibility();
       }
     });
   };
+
+  // При загрузке — убедимся, что у каждой цели есть массив milestones
+  state.goals.forEach(function (g) { if (!Array.isArray(g.milestones)) g.milestones = []; });
+  
 
   // === Клик по чипсу прямо в карточке — переключить отметку ===
   setTimeout(function () {
