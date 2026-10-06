@@ -1348,7 +1348,7 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
  <button type="button" class="header-btn" id="globalSearchBtn" title="Поиск (Ctrl+/)">🔍 Поиск</button>
 	    <button type="button" class="header-btn" id="quickLockBtn" title="Заблокировать" hidden>🔒</button>
  <button type="button" class="header-btn" id="installPwaBtn" title="Установить как приложение" hidden>📥 Установить</button>
-      <button type="button" class="header-btn active" id="calToggle" title="Календарь (Ctrl+K)">📅 Календарь</button>
+      <button type="button" class="header-btn active" id="calToggle" title="Календарь (Ctrl+Shift+K)">📅 Календарь</button>
       <button type="button" class="header-btn" id="settingsBtn">⚙ Настройки</button>
     </div>
   </header>
@@ -1364,7 +1364,7 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
       <code>завтра</code> <code>послезавтра</code> <code>пн</code> <code>15.11</code>
       <code>+3</code> <code>!важно</code> <code>#тег</code>
       <span class="cal-day-hint" id="calDayHint" hidden></span>
-      <span class="muted" style="margin-left:auto">Ctrl+/ поиск · Ctrl+K календарь · Ctrl+Z отменить</span>
+      <span class="muted" style="margin-left:auto">Ctrl+K команды · Ctrl+Shift+K календарь · Ctrl+/ поиск</span>
     </div>
   </div>
 
@@ -1931,7 +1931,8 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
         <div class="kbd-row"><span>Новая задача</span><kbd>N</kbd></div>
         <div class="kbd-row"><span>Новая цель</span><kbd>G</kbd></div>
         <div class="kbd-row"><span>Поиск</span><kbd>Ctrl + /</kbd></div>
-        <div class="kbd-row"><span>Календарь</span><kbd>Ctrl + K</kbd></div>
+        <div class="kbd-row"><span>Командная палитра</span><kbd>Ctrl + K</kbd></div>
+<div class="kbd-row"><span>Календарь</span><kbd>Ctrl + Shift + K</kbd></div>
         <div class="kbd-row"><span>Отменить действие</span><kbd>Ctrl + Z</kbd></div>
         <div class="kbd-row"><span>Сохранить в edit-модале</span><kbd>Ctrl + Enter</kbd></div>
         <div class="kbd-row"><span>Закрыть модал</span><kbd>Esc</kbd></div>
@@ -9065,8 +9066,8 @@ function tickLiveClock() {
       const anyModal = document.querySelector('.modal-backdrop:not([hidden])');
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z' || e.key === 'я' || e.key === 'Я')) { if (!inField) { e.preventDefault(); performUndo(); return; } }
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'S' || e.key === 's' || e.key === 'Ы' || e.key === 'ы')) { if (state.ui.tab === 'literature') { e.preventDefault(); saveSelectionAsSnippet(); } return; }
-            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'k' || e.key === 'K' || e.key === 'л' || e.key === 'Л')) { e.preventDefault(); openCommandPalette(); return; }
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'k' || e.key === 'K' || e.key === 'л' || e.key === 'Л')) { e.preventDefault(); toggleCalendar(); return; }
+       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'k' || e.key === 'K' || e.key === 'л' || e.key === 'Л')) { e.preventDefault(); openCommandPalette(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'k' || e.key === 'K' || e.key === 'л' || e.key === 'Л')) { e.preventDefault(); toggleCalendar(); return; }    
       if ((e.ctrlKey || e.metaKey) && (e.key === '/' || e.key === '.')) { e.preventDefault(); openGlobalSearch(); return; }
       // Alt + 1..9 — переключение на первые 9 видимых вкладок
       if (e.altKey && !e.ctrlKey && !e.metaKey && !inField && !anyModal) {
@@ -9526,8 +9527,7 @@ applyQuickInputVisibility();
       const el = e.target.closest('[data-action]'); if (!el) return;
       const a = el.dataset.action;
       const gid = el.dataset.goalId, tid = el.dataset.taskId;
-      if (a === 'mini-toggle') { e.stopPropagation(); toggleTask(gid, tid); setTimeout(function(){ renderMiniTasksPanel(); updateMiniTasksBadge(); }, 30); return; }
-      if (a === 'mini-open') { openEditTask(gid, tid); panel.hidden = true; }
+         if (a === 'mini-open') { openEditTask(gid, tid); panel.hidden = true; }
     });
     panel.addEventListener('change', function (e) {
       if (e.target.matches('input[data-action="mini-toggle"]')) {
@@ -9666,6 +9666,7 @@ applyQuickInputVisibility();
   }
   // Разбудить палитру при загрузке
   setTimeout(function () { initCommandPalette(); }, 300);
+
 })();
 </script>
 </body>
