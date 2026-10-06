@@ -433,6 +433,18 @@
   .search-result-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
   .search-result mark { background: rgba(88,166,255,.4); color: inherit; padding: 0 2px; border-radius: 2px; }
 
+.mini-tasks-btn { position: relative; }
+.mini-tasks-count { background: var(--danger); color: #fff; border-radius: 999px; padding: 0 6px; font-size: 10px; font-weight: 700; margin-left: 4px; min-width: 16px; text-align: center; display: inline-block; }
+.mini-tasks-count.zero { background: var(--color-total); }
+.mini-tasks-panel { position: absolute; top: calc(100% + 6px); right: 0; background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.6); width: min(380px, 90vw); max-height: 70vh; overflow: hidden; z-index: 500; display: flex; flex-direction: column; }
+.mini-tasks-panel[hidden] { display: none; }
+.mini-tasks-head { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 700; color: var(--text); display: flex; justify-content: space-between; align-items: center; }
+.mini-tasks-list { overflow-y: auto; padding: 6px; max-height: 60vh; }
+.mini-task-item { display: grid; grid-template-columns: auto 1fr; gap: 8px; padding: 6px 8px; border-radius: 6px; align-items: start; cursor: pointer; }
+.mini-task-item:hover { background: var(--bar-bg); }
+.mini-task-item input[type="checkbox"] { margin-top: 3px; width: 14px; height: 14px; accent-color: var(--color-done); cursor: pointer; }
+.mini-task-item .text { font-size: 12px; word-break: break-word; }
+.mini-task-item .meta { font-size: 10px; color: var(--muted); margin-top: 2px; }
   .toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column-reverse; gap: 8px; z-index: 3000; pointer-events: none; max-width: 400px; }
   .toast { background: var(--toast-bg); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 10px; font-size: 13px; box-shadow: 0 12px 32px rgba(0,0,0,.6); transform: translateX(20px); opacity: 0; transition: transform .25s, opacity .25s; display: flex; align-items: center; gap: 10px; pointer-events: auto; }
   .toast.show { transform: translateX(0); opacity: 1; }
@@ -1315,7 +1327,14 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
        <span class="user-badge" id="userBadge" hidden></span>
        <span class="sync-dot" id="syncDot" title="Не синхронизировано"></span>
       <button type="button" class="header-btn" id="syncBtn" title="Синхронизировать" hidden>☁️ Синхро</button>
-      <button type="button" class="header-btn" id="globalSearchBtn" title="Поиск (Ctrl+/)">🔍 Поиск</button>
+     <div class="mini-tasks-btn" style="position:relative;">
+  <button type="button" class="header-btn" id="miniTasksBtn" title="Задачи на сегодня">📌 Сегодня<span class="mini-tasks-count zero" id="miniTasksCount">0</span></button>
+  <div class="mini-tasks-panel" id="miniTasksPanel" hidden>
+    <div class="mini-tasks-head"><span>📌 Задачи на сегодня</span><span class="muted" id="miniTasksSub"></span></div>
+    <div class="mini-tasks-list" id="miniTasksList"></div>
+  </div>
+</div>
+ <button type="button" class="header-btn" id="globalSearchBtn" title="Поиск (Ctrl+/)">🔍 Поиск</button>
 	    <button type="button" class="header-btn" id="quickLockBtn" title="Заблокировать" hidden>🔒</button>
  <button type="button" class="header-btn" id="installPwaBtn" title="Установить как приложение" hidden>📥 Установить</button>
       <button type="button" class="header-btn active" id="calToggle" title="Календарь (Ctrl+K)">📅 Календарь</button>
@@ -9431,6 +9450,86 @@ applyQuickInputVisibility();
   // ---- Запоминаем, когда локальные данные последний раз менялись
   // (чтобы sync.js мог понять, что новее — облако или локально)
   
+  // === FEATURE: MINI-TASKS PANEL ===
+  function getTodayTasks() {
+    const todayISO = dateToISO(new Date());
+    const out = [];
+    state.goals.forEach(function (g) {
+      if (g.archivedAt) return;
+      g.tasks.forEach(function (t) {
+        if (t.archivedAt || t.done) return;
+        if (t.deadline === todayISO || isOverdue(t)) out.push({ goal: g, task: t, overdue: isOverdue(t) });
+      });
+    });
+    out.sort(function (a, b) { return (a.overdue === b.overdue) ? 0 : (a.overdue ? -1 : 1); });
+    return out;
+  }
+  function updateMiniTasksBadge() {
+    const el = document.getElementById('miniTasksCount');
+    if (!el) return;
+    const n = getTodayTasks().length;
+    el.textContent = String(n);
+    el.classList.toggle('zero', n === 0);
+  }
+  function renderMiniTasksPanel() {
+    const list = document.getElementById('miniTasksList');
+    const sub = document.getElementById('miniTasksSub');
+    if (!list) return;
+    const items = getTodayTasks();
+    if (sub) sub.textContent = items.length ? (items.length + ' шт.') : '';
+    if (!items.length) { list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">На сегодня пусто ✨</div>'; return; }
+    list.innerHTML = items.map(function (it) {
+      const t = it.task, g = it.goal;
+      const meta = [];
+      if (!g.isInbox) meta.push(escapeHtml(g.title));
+      if (it.overdue) meta.push('<span style="color:var(--danger);font-weight:700;">просрочено</span>');
+      if (t.priority === 'high') meta.push('высокий');
+      return '<div class="mini-task-item" data-action="mini-open" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '">' +
+        '<input type="checkbox" data-action="mini-toggle" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" />' +
+        '<div><div class="text">' + escapeHtml(t.text) + '</div><div class="meta">' + meta.join(' • ') + '</div></div>' +
+      '</div>';
+    }).join('');
+  }
+  function bindMiniTasks() {
+    const btn = document.getElementById('miniTasksBtn');
+    const panel = document.getElementById('miniTasksPanel');
+    if (!btn || !panel) return;
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (panel.hidden) { renderMiniTasksPanel(); panel.hidden = false; }
+      else panel.hidden = true;
+    });
+    document.addEventListener('click', function (e) {
+      if (panel.hidden) return;
+      if (e.target.closest('#miniTasksPanel') || e.target.closest('#miniTasksBtn')) return;
+      panel.hidden = true;
+    });
+    panel.addEventListener('click', function (e) {
+      const el = e.target.closest('[data-action]'); if (!el) return;
+      const a = el.dataset.action;
+      const gid = el.dataset.goalId, tid = el.dataset.taskId;
+      if (a === 'mini-toggle') { e.stopPropagation(); toggleTask(gid, tid); setTimeout(function(){ renderMiniTasksPanel(); updateMiniTasksBadge(); }, 30); return; }
+      if (a === 'mini-open') { openEditTask(gid, tid); panel.hidden = true; }
+    });
+    panel.addEventListener('change', function (e) {
+      if (e.target.matches('input[data-action="mini-toggle"]')) {
+        toggleTask(e.target.dataset.goalId, e.target.dataset.taskId);
+        setTimeout(function(){ renderMiniTasksPanel(); updateMiniTasksBadge(); }, 30);
+      }
+    });
+  }
+  // Хук: обновляем счётчик при каждом рендере
+  const _origRenderForMini = render;
+  render = function () {
+    _origRenderForMini();
+    updateMiniTasksBadge();
+  };
+  // Запуск
+  setTimeout(function () {
+    bindMiniTasks();
+    updateMiniTasksBadge();
+    setInterval(updateMiniTasksBadge, 60000);
+  }, 300);
 })();
 </script>
 </body>
