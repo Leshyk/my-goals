@@ -9809,6 +9809,7 @@ applyQuickInputVisibility();
     if (!state.readingPos[section]) state.readingPos[section] = {};
     state.readingPos[section][name] = body.scrollTop;
   }, true);
+   
     // ============================================================
   // === FEATURE 4: MILESTONES (этапы у целей) ===
   // ============================================================
@@ -9840,11 +9841,8 @@ applyQuickInputVisibility();
   }
 
   function addGoalMilestone() {
-    // Для добавления всё-таки нужен editingGoalId — берём из state
     let g = findGoal(state.editingGoalId);
-    // Фолбэк: если editingGoalId не установлен — берём цель, которую сейчас пытаются редактировать
     if (!g) {
-      // Ищем по заголовку, который показан в модале
       const titleField = document.getElementById('editGoalTitle');
       if (titleField) {
         const t = titleField.value.trim();
@@ -9863,7 +9861,7 @@ applyQuickInputVisibility();
     renderGoals();
   }
 
-  function toggleMilestone(mid) {
+  function toggleMilestoneById(mid) {
     const g = findGoalByMilestoneId(mid); if (!g) return;
     const m = g.milestones.find(function (x) { return x.id === mid; }); if (!m) return;
     m.done = !m.done;
@@ -9884,7 +9882,7 @@ applyQuickInputVisibility();
     const g = findGoalByMilestoneId(mid); if (!g) return;
     const m = g.milestones.find(function (x) { return x.id === mid; }); if (!m) return;
     const newText = String(text == null ? '' : text).slice(0, 200);
-    if (m.text === newText) return; // ничего не поменялось — не дёргаем сохранение
+    if (m.text === newText) return;
     m.text = newText;
     saveData();
     renderGoals();
@@ -9893,12 +9891,12 @@ applyQuickInputVisibility();
   function milestonesHtml(g) {
     if (!g.milestones || !g.milestones.length) return '';
     return '<div class="goal-milestones">' + g.milestones.map(function (m) {
-      return '<span class="milestone-chip' + (m.done ? ' done' : '') + '" data-action="milestone-chip-toggle" data-goal-id="' + escapeHtml(g.id) + '" data-milestone-id="' + escapeHtml(m.id) + '" title="Нажми, чтобы отметить/снять">' +
+      return '<span class="milestone-chip' + (m.done ? ' done' : '') + '" data-action="milestone-chip-toggle" data-goal-id="' + escapeHtml(g.id) + '" data-milestone-id="' + escapeHtml(m.id) + '" title="Клик — отметить · Двойной клик — изменить текст">' +
         (m.done ? '✓' : '◯') + ' ' + escapeHtml(m.text) + '</span>';
     }).join('') + '</div>';
   }
 
-  // === Единый обработчик на документе: работает всегда, независимо от того, когда отрисован модал ===
+  // === Обработчики полей в модале редактирования цели ===
   document.addEventListener('input', function (e) {
     const el = e.target;
     if (!el || !el.dataset || el.dataset.action !== 'milestone-text') return;
@@ -9909,9 +9907,8 @@ applyQuickInputVisibility();
     const el = e.target;
     if (!el || !el.dataset) return;
     if (el.dataset.action === 'milestone-toggle') {
-      toggleMilestone(el.dataset.milestoneId);
+      toggleMilestoneById(el.dataset.milestoneId);
     } else if (el.dataset.action === 'milestone-text') {
-      // на случай, если input-событие почему-то не сработало
       updateMilestoneText(el.dataset.milestoneId, el.value);
     }
   });
@@ -9921,23 +9918,14 @@ applyQuickInputVisibility();
     if (!el) return;
     if (el.dataset.action === 'milestone-delete') {
       deleteMilestone(el.dataset.milestoneId);
-    } else if (el.dataset.action === 'milestone-chip-toggle') {
-      e.stopPropagation();
-      const mid = el.dataset.milestoneId;
-      const g = findGoalByMilestoneId(mid); if (!g) return;
-      const m = g.milestones.find(function (x) { return x.id === mid; }); if (!m) return;
-      m.done = !m.done;
-      saveData(); renderGoals();
     }
   });
 
-  // Кнопка «+» в модале
   document.addEventListener('click', function (e) {
     const el = e.target.closest('#editGoalAddMilestoneBtn');
     if (el) { e.preventDefault(); addGoalMilestone(); }
   });
 
-  // Enter в поле «новый milestone» тоже добавляет
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Enter') return;
     const el = e.target;
@@ -9945,6 +9933,48 @@ applyQuickInputVisibility();
       e.preventDefault();
       addGoalMilestone();
     }
+  });
+
+  // === Клик по чипсу этапа в карточке — отметить/снять (обычный клик) ===
+  // === Двойной клик — редактировать текст ===
+  document.addEventListener('click', function (e) {
+    const chip = e.target.closest('[data-action="milestone-chip-toggle"]');
+    if (!chip) return;
+    e.stopPropagation();
+    e.preventDefault();
+    // Клик с detail === 2 — это второй клик в двойном; пропускаем, отдаём dblclick
+    if (e.detail >= 2) return;
+    const mid = chip.dataset.milestoneId;
+    toggleMilestoneById(mid);
+  });
+
+  document.addEventListener('dblclick', function (e) {
+    const chip = e.target.closest('[data-action="milestone-chip-toggle"]');
+    if (!chip) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const mid = chip.dataset.milestoneId;
+    const g = findGoalByMilestoneId(mid); if (!g) return;
+    const m = g.milestones.find(function (x) { return x.id === mid; }); if (!m) return;
+    const newText = prompt('Изменить название этапа:', m.text);
+    if (newText === null) return;
+    const v = String(newText).trim();
+    if (!v) return;
+    m.text = v.slice(0, 200);
+    saveData();
+    renderGoals();
+  });
+
+  // === Двойной клик по названию цели → открыть редактирование цели ===
+  document.addEventListener('dblclick', function (e) {
+    const goalName = e.target.closest('.goal-name');
+    if (!goalName) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const goalEl = goalName.closest('.goal');
+    if (!goalEl) return;
+    const gid = goalEl.dataset.goalId;
+    if (gid) openEditGoal(gid);
   });
 
   // === Хук в openEditGoal — рендерить список этапов при открытии модала ===
@@ -9955,7 +9985,7 @@ applyQuickInputVisibility();
     if (g) renderEditGoalMilestones(g);
   };
 
-  // === Хук в renderGoals — вставить чипсы этапов в каждую карточку ===
+  // === Хук в renderGoals — вставить чипсы этапов и умную полосу прогресса ===
   const _origRenderGoalsForMs = renderGoals;
   renderGoals = function () {
     _origRenderGoalsForMs();
@@ -9963,25 +9993,39 @@ applyQuickInputVisibility();
     if (!list) return;
     list.querySelectorAll('.goal').forEach(function (el) {
       const gid = el.dataset.goalId;
-      const g = findGoal(gid); if (!g || !g.milestones || !g.milestones.length) return;
-      const body = el.querySelector('.goal-body');
-      if (!body) return;
-      // Если чипсы уже есть — удаляем (защита от дублирования)
-      const existing = body.querySelector('.goal-milestones');
-      if (existing) existing.remove();
-      const target = body.querySelector('.goal-progress');
-      const html = milestonesHtml(g);
-      if (target) {
-        target.insertAdjacentHTML('beforebegin', html);
-      } else {
-        body.insertAdjacentHTML('beforeend', html);
+      const g = findGoal(gid); if (!g) return;
+
+      // 1. Чипсы этапов
+      if (g.milestones && g.milestones.length) {
+        const body = el.querySelector('.goal-body');
+        if (body) {
+          const existing = body.querySelector('.goal-milestones');
+          if (existing) existing.remove();
+          const target = body.querySelector('.goal-progress');
+          const html = milestonesHtml(g);
+          if (target) target.insertAdjacentHTML('beforebegin', html);
+          else body.insertAdjacentHTML('beforeend', html);
+        }
+      }
+
+      // 2. Если задач нет, но есть этапы — полоса показывает прогресс по этапам
+      const activeTasks = g.tasks.filter(function (t) { return !t.archivedAt; });
+      if (activeTasks.length === 0 && g.milestones && g.milestones.length > 0) {
+        const total = g.milestones.length;
+        const done = g.milestones.filter(function (m) { return m.done; }).length;
+        const prog = Math.round(done / total * 100);
+        const bar = el.querySelector('.goal-progress .bar');
+        const label = el.querySelector('.goal-progress > span');
+        if (bar) bar.style.width = prog + '%';
+        if (label) label.textContent = done + '/' + total;
+        // И уберём подсказку «Нет задач — можно завершить сразу», если есть этапы
+        const hint = el.querySelector('.goal-hint');
+        if (hint && /Нет задач/.test(hint.textContent)) hint.remove();
       }
     });
   };
 
-  // При загрузке — убедимся, что у каждой цели есть массив milestones
   state.goals.forEach(function (g) { if (!Array.isArray(g.milestones)) g.milestones = []; });
-  
 
   // === Клик по чипсу прямо в карточке — переключить отметку ===
   setTimeout(function () {
