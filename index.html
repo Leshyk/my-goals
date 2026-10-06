@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ru" data-theme="dark">
 <head>
 <meta charset="UTF-8" />
@@ -1036,6 +1036,19 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
 }
 .tabs-manage-row .order-btns button:hover { border-color: var(--accent); }
 .tabs-manage-row .order-btns button:disabled { opacity: 0.3; cursor: default; }
+/* === СВОИ ВКЛАДКИ === */
+.custom-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.custom-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; display: flex; gap: 8px; align-items: flex-start; transition: border-color .15s; }
+.custom-card:hover { border-color: var(--accent); }
+.custom-card.done { opacity: .65; }
+.custom-card.done .custom-card-text { text-decoration: line-through; color: var(--muted); }
+.custom-card input[type="checkbox"] { margin-top: 3px; width: 15px; height: 15px; accent-color: var(--color-done); cursor: pointer; flex: 0 0 auto; }
+.custom-card-body { flex: 1 1 auto; min-width: 0; }
+.custom-card-text { font-size: 13px; word-break: break-word; }
+.custom-card-actions { display: flex; gap: 4px; flex: 0 0 auto; }
+.custom-tab-empty { padding: 40px 20px; text-align: center; color: var(--muted); font-size: 13px; border: 1px dashed var(--border); border-radius: 10px; }
+.custom-tab-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.custom-tab-head h2 { font-size: 16px; margin: 0; }
 </style>
 </head>
 <body>
@@ -1309,6 +1322,7 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
         </div>
       </div>
 
+      <div id="viewCustom" hidden></div>
         <div id="viewNotes" hidden>
         <div class="notes-layout">
           <aside class="notes-list-pane">
@@ -1700,6 +1714,49 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
   </div>
 </div>
 
+<!-- Модалка своей вкладки -->
+<div class="modal-backdrop" id="customTabModal" hidden>
+  <div class="modal modal-sm">
+    <header class="modal-head">
+      <div class="modal-title" id="customTabModalTitle">Своя вкладка</div>
+      <button type="button" class="secondary" data-action="close-custom-tab">✕</button>
+    </header>
+    <div class="modal-body">
+      <div style="display:grid; gap:10px;">
+        <div>
+          <label for="customTabIcon">Иконка (эмодзи)</label>
+          <input type="text" id="customTabIcon" maxlength="4" placeholder="⭐" style="text-align:center; font-size:20px;" />
+        </div>
+        <div>
+          <label for="customTabLabel">Название</label>
+          <input type="text" id="customTabLabel" maxlength="30" placeholder="Моя вкладка" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="secondary" data-action="close-custom-tab">Отмена</button>
+      <button type="button" data-action="save-custom-tab">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка карточки на своей вкладке -->
+<div class="modal-backdrop" id="customCardModal" hidden>
+  <div class="modal modal-sm">
+    <header class="modal-head">
+      <div class="modal-title" id="customCardModalTitle">Карточка</div>
+      <button type="button" class="secondary" data-action="close-custom-card">✕</button>
+    </header>
+    <div class="modal-body">
+      <label for="customCardText">Текст</label>
+      <textarea id="customCardText" rows="4" placeholder="Что записать?"></textarea>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="secondary" data-action="close-custom-card">Отмена</button>
+      <button type="button" data-action="save-custom-card">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
 <div class="toast-container" id="toastContainer"></div>
 <button type="button" class="kbd-hint-fab" id="kbdHelpBtn" title="Горячие клавиши (?)">?</button>
 <!-- Модалка установки/смены PIN -->
@@ -1853,7 +1910,7 @@ const DEFAULT_TABS = [
     massMode: false, massSelected: {}, tasksGrouping: 'eisenhower', tagFilter: '',
 notesFilter: 'all',
     density: 'normal',
-     tabs: null, quickInputVisible: true, advancedToolsVisible: false,
+          tabs: null, customTabs: [], quickInputVisible: true, advancedToolsVisible: false,
      ui: { search: '', filter: 'all', sort: 'deadline', tab: 'active', activeTab: 'goals', litTab: 'articles', litSearch: { articles: '', books: '' }, snippetsSearch: '', snippetsSort: 'new', snippetsTagFilter: '', snippetsGroup: 'flat', notesSearch: '' }
   };
 
@@ -2082,6 +2139,7 @@ function waitForLib(name, ms) {
           if (typeof p.notesFilter === 'string') state.notesFilter = p.notesFilter;
           if (typeof p.density === 'string') state.density = p.density;
  	  if (Array.isArray(p.tabs)) state.tabs = p.tabs;
+      if (Array.isArray(p.customTabs)) state.customTabs = p.customTabs.filter(function(t){ return t && typeof t.id === 'string'; });
           if (typeof p.quickInputVisible === 'boolean') state.quickInputVisible = p.quickInputVisible;
  if (typeof p.advancedToolsVisible === 'boolean') state.advancedToolsVisible = p.advancedToolsVisible;
           if (p.ui && typeof p.ui === 'object') state.ui = Object.assign({}, state.ui, p.ui);
@@ -2137,7 +2195,7 @@ scheduleDiskWrite();
     clearTimeout(_savePrefsTimer);
     _savePrefsTimer = setTimeout(function () {
       try {
-        const json = JSON.stringify({ collapsed: state.collapsed, colorTotal: state.colorTotal, colorDone: state.colorDone, calendarVisible: state.calendarVisible, notificationsEnabled: state.notificationsEnabled, tasksGrouping: state.tasksGrouping, tagFilter: state.tagFilter, allCollapsedSnapshot: state.allCollapsedSnapshot, notesFilter: state.notesFilter, density: state.density, tabs: state.tabs, quickInputVisible: state.quickInputVisible,  advancedToolsVisible: state.advancedToolsVisible, ui: state.ui, favorites: state.favorites, readingPos: state.readingPos, pdfPage: state.pdfPage, pdfZoom: state.pdfZoom, pdfInvert: state.pdfInvert, litSort: state.litSort, litFavFilter: state.litFavFilter, listHidden: state.listHidden });
+        const json = JSON.stringify({ collapsed: state.collapsed, colorTotal: state.colorTotal, colorDone: state.colorDone, calendarVisible: state.calendarVisible, notificationsEnabled: state.notificationsEnabled, tasksGrouping: state.tasksGrouping, tagFilter: state.tagFilter, allCollapsedSnapshot: state.allCollapsedSnapshot, notesFilter: state.notesFilter, density: state.density, tabs: state.tabs, customTabs: state.customTabs, quickInputVisible: state.quickInputVisible,  advancedToolsVisible: state.advancedToolsVisible, ui: state.ui, favorites: state.favorites, readingPos: state.readingPos, pdfPage: state.pdfPage, pdfZoom: state.pdfZoom, pdfInvert: state.pdfInvert, litSort: state.litSort, litFavFilter: state.litFavFilter, listHidden: state.listHidden });
         if (json === _lastPrefsHash) return;
         _lastPrefsHash = json;
         localStorage.setItem(PREFS_KEY, json);
@@ -4626,6 +4684,18 @@ function autoArchiveOldCompletedTasks() {
           counter +
         '</button>';
       }).join('');
+            if (Array.isArray(state.customTabs)) {
+        state.customTabs.forEach(function (t) {
+          const sel = state.ui.tab === t.id ? 'true' : 'false';
+          html += '<button class="tab" role="tab" data-tab="' + escapeHtml(t.id) + '" aria-selected="' + sel + '">' +
+            '<span class="tab-icon">' + escapeHtml(t.icon || '⭐') + '</span>' +
+            '<span class="tab-label">' + escapeHtml(t.label) + '</span>' +
+          '</button>';
+        });
+      }
+      html += '<button type="button" class="tab tab-manage" id="customTabAddBtn" title="Создать свою вкладку">' +
+        '<span class="tab-icon">＋</span><span class="tab-label">Своя вкладка</span>' +
+      '</button>';
       html += '<button type="button" class="tab tab-manage" id="tabsManageBtn" title="Управление вкладками">' +
         '<span class="tab-icon">⚙</span><span class="tab-label">Вкладки</span>' +
       '</button>';
@@ -4636,6 +4706,8 @@ function autoArchiveOldCompletedTasks() {
       });
       const mb = document.getElementById('tabsManageBtn');
       if (mb) mb.addEventListener('click', openTabsManageModal);
+      const ctab = document.getElementById('customTabAddBtn');
+      if (ctab) ctab.addEventListener('click', function () { openCustomTabModal(null); });
     }
 
     // Показываем только активное «полотно»
@@ -4646,6 +4718,9 @@ function autoArchiveOldCompletedTasks() {
     document.getElementById('viewNotes').hidden = state.ui.tab !== 'notes';
     document.getElementById('viewHabits').hidden = state.ui.tab !== 'habits';
     document.getElementById('viewAnalytics').hidden = state.ui.tab !== 'analytics';
+    const customActive = Array.isArray(state.customTabs) && state.customTabs.some(function (t) { return t.id === state.ui.tab; });
+    document.getElementById('viewCustom').hidden = !customActive;
+    if (customActive) renderCustomView(state.ui.tab);
 
     // Подвкладки внутри «Литературы» и «Активных»
     document.querySelectorAll('[data-lit-tab]').forEach(function (b) { b.classList.toggle('active', b.dataset.litTab === state.ui.litTab); });
@@ -6546,738 +6621,194 @@ function initKanbanDnD() {
     }, true);
   }
 
-function bindEvents() {
-tickLiveClock();
-setInterval(tickLiveClock, 1000);
-        document.getElementById('settingsBtn').addEventListener('click', function () { document.getElementById('settingsModal').hidden = false; syncToolbarInputs(); renderBackupList(); renderCacheStats(); });
-    document.getElementById('globalSearchBtn').addEventListener('click', openGlobalSearch);
-        document.getElementById('calToggle').addEventListener('click', toggleCalendar);
 
-    document.querySelectorAll('.tab').forEach(function (b) { b.addEventListener('click', function () { switchTab(b.dataset.tab); }); });
-document.querySelectorAll('[data-active-tab-btn]').forEach(function (b) {
-  b.addEventListener('click', function () { switchActiveTab(b.dataset.activeTabBtn); });
-});
-    document.querySelectorAll('[data-lit-tab]').forEach(function (b) { b.addEventListener('click', function () { switchLitTab(b.dataset.litTab); }); });
+  // ============================================================
+  // СВОИ ВКЛАДКИ
+  // ============================================================
+  let _editingCustomTabId = null;
+  let _editingCustomCardId = null;
+  let _editingCustomCardTabId = null;
 
-    document.getElementById('quickAddBtn').addEventListener('click', handleQuickAdd);
-    document.getElementById('quickVoiceBtn').addEventListener('click', function () {
-      if (_voiceRecognitionActive && _voiceRecognition) {
-        try { _voiceRecognition.stop(); } catch (e) {}
-        return;
-      }
-      startVoiceInput();
-    });
-    document.getElementById('quickInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); handleQuickAdd(); } });
+  function findCustomTab(id) {
+    if (!Array.isArray(state.customTabs)) return null;
+    for (let i = 0; i < state.customTabs.length; i++) if (state.customTabs[i].id === id) return state.customTabs[i];
+    return null;
+  }
 
-    document.getElementById('goalForm').addEventListener('submit', function (e) {
-      e.preventDefault();
-      const goalTitleEl = document.getElementById('goalTitle');
-      const title = goalTitleEl.value.trim();
-      if (!title) { markInvalid(goalTitleEl); showToast('Введите название цели', 'warn'); return; }
-      let deadline = document.getElementById('goalDeadline').value || '';
-      if (!deadline && state.calSelectedDate) deadline = state.calSelectedDate;
-      const fields = { title: title, description: document.getElementById('goalDesc').value.trim(), priority: document.getElementById('goalPriority').value, deadline: deadline };
-      addGoal(fields); resetGoalForm(); showToast('Цель добавлена', 'ok');
-    });
-    document.getElementById('goalMoreBtn').addEventListener('click', function () { const el = document.getElementById('goalMoreBody'); el.hidden = !el.hidden; });
-    document.getElementById('taskMoreBtn').addEventListener('click', function () { const el = document.getElementById('taskMoreBody'); el.hidden = !el.hidden; });
-
-    document.getElementById('taskForm').addEventListener('submit', function (e) {
-      e.preventDefault();
-      const taskTextEl = document.getElementById('taskText');
-      const text = taskTextEl.value.trim();
-      if (!text) { markInvalid(taskTextEl); showToast('Введите текст задачи', 'warn'); return; }
-            let deadline = document.getElementById('taskDeadline').value || '';
-      if (!deadline && state.calSelectedDate) deadline = state.calSelectedDate;
-      const goalId = document.getElementById('taskGoal').value;
-     addTask(goalId, { text: text, priority: document.getElementById('taskPriority').value, deadline: deadline, tags: parseTags(document.getElementById('taskTags').value) });
-      const keep = document.getElementById('taskGoal').value;
-      resetTaskForm();
-      document.getElementById('taskGoal').value = keep;
-      document.getElementById('taskText').focus();
-      showToast('Задача добавлена', 'ok');
-    });
-      
-           // === Единые обработчики для списков задач (и целей, и задач) ===
-    function attachTaskListHandlers(element) {
-      if (!element) return;
-      element.addEventListener('click', function (e) {
-        const actionEl = e.target.closest('[data-action]'); if (!actionEl) return;
-        const action = actionEl.dataset.action;
-        const goalEl = actionEl.closest('.goal');
-        const goalId = actionEl.dataset.goalId || (goalEl ? goalEl.dataset.goalId : null);
-        const taskId = actionEl.dataset.taskId;
-
-        // Подзадачи
-        if (action === 'add-subtask-inline') {
-          const inp = element.querySelector('input[data-subtask-input][data-task-id="' + CSS.escape(taskId) + '"]');
-          if (inp) { const v = (inp.value || '').trim(); if (v) { addSubtask(actionEl.dataset.goalId, taskId, v); inp.value = ''; } }
-          return;
-        }
-        if (action === 'edit-subtask') { editSubtask(actionEl.dataset.goalId, taskId, actionEl.dataset.subId); return; }
-        if (action === 'delete-subtask') { deleteSubtask(actionEl.dataset.goalId, taskId, actionEl.dataset.subId); return; }
-
-        // Цели
-        if (action === 'toggle-goal' && goalId) { toggleGoalCollapse(goalId); return; }
-        if (action === 'delete-goal' && goalId) {
-          const _g = findGoal(goalId); if (!_g) return;
-          pgtConfirm({ title: 'Удалить цель?', message: 'Цель «' + (_g.title || '') + '» и все её задачи будут удалены безвозвратно.', yesLabel: 'Да, удалить', onYes: function(){ deleteGoal(goalId); } });
-          return;
-        }
-        if (action === 'edit-goal' && goalId) { openEditGoal(goalId); return; }
-        if (action === 'archive-goal' && goalId) { archiveGoal(goalId); return; }
-        if (action === 'pin-goal' && goalId) { togglePinGoal(goalId); return; }
-        if (action === 'mass-goals-archive') { massActionGoals('archive'); return; }
-        if (action === 'mass-goals-delete') { massActionGoals('delete'); return; }
-
-        // Задачи
-       if (action === 'delete-task' && goalId) {
-          const _g = findGoal(goalId); const _t = _g ? _g.tasks.find(function(x){return x.id===taskId;}) : null;
-          pgtConfirm({ title: 'Удалить задачу?', message: _t ? _t.text : 'Задача будет удалена безвозвратно.', yesLabel: 'Да, удалить', onYes: function(){ deleteTask(goalId, taskId); } });
-          return;
-        }
-        if (action === 'archive-task' && goalId) { archiveTask(goalId, taskId); return; }
-        if (action === 'edit-task' && goalId) { openEditTask(goalId, taskId); return; }
-	if (action === 'kanban-toggle-task') { return; }
-        if (action === 'kanban-open-task' && goalId) { openEditTask(goalId, taskId); return; }
-        if (action === 'pin-task' && goalId) { togglePinTask(goalId, taskId); return; }
-                if (action === 'filter-tag-click') {
-          state.tagFilter = state.tagFilter === actionEl.dataset.tag ? '' : actionEl.dataset.tag;
-          if (state.tagFilter && state.calSelectedDate) { state.calSelectedDate = null; renderCalendar(); syncQuickHint(); }
-          savePrefs(); renderTagFilterSelect(); renderTasks(); return;
-        }
-
-        // Связи цели/задачи с другими разделами
-        if (action === 'open-snippet-from-goal') { openSnippetsModal(); state.editingSnippetId = actionEl.dataset.id; renderSnippetsList(); return; }
-        if (action === 'open-note-from-goal') { switchTab('notes'); state.editingNoteId = actionEl.dataset.id; renderNotesList(); renderNoteEditor(); return; }
-
-        // Массовые операции с задачами
-        if (action === 'mass-done') massAction('done');
-        else if (action === 'mass-archive') massAction('archive');
-        else if (action === 'mass-export') massAction('export');
-        else if (action === 'mass-delete') massAction('delete');
-        else if (action === 'clear-date-filter') { e.preventDefault(); clearDateFilter(); return; }
-      });
-
-      element.addEventListener('change', function (e) {
-        const el = e.target;
-        if (!el.matches) return;
-        if (el.matches('input[data-action="toggle-subtask"]')) toggleSubtask(el.dataset.goalId, el.dataset.taskId, el.dataset.subId);
-        else if (el.matches('input[data-action="toggle-task"]')) toggleTask(el.dataset.goalId, el.dataset.taskId);
-        else if (el.matches('input[data-action="mass-check"]')) toggleMassCheck(el.dataset.goalId, el.dataset.taskId);
-        else if (el.matches('input[data-action="mass-check-goal"]')) toggleMassCheckGoal(el.dataset.goalId);
-	else if (el.matches('input[data-action="kanban-toggle-task"]')) toggleTask(el.dataset.goalId, el.dataset.taskId);
-
-      });
-
-      element.addEventListener('keydown', function (e) {
-        if (e.key !== 'Enter') return;
-        const el = e.target;
-        if (el.matches && el.matches('input[data-subtask-input]')) {
-          e.preventDefault();
-          const v = (el.value || '').trim();
-          if (v) { addSubtask(el.dataset.goalId, el.dataset.taskId, v); el.value = ''; }
-        }
-      });
-
-      element.addEventListener('dblclick', function (e) {
-        const t = e.target.closest('.task-text');
-        if (!t) return;
-        const taskEl = t.closest('.task');
-        if (!taskEl) return;
-        const gid = taskEl.dataset.goalId, tid = taskEl.dataset.taskId;
-        if (gid && tid) openEditTask(gid, tid);
-      });
-
-      element.addEventListener('submit', function (e) {
-        const form = e.target.closest('.inline-task-form'); if (!form) return;
-        e.preventDefault();
-        const t = form.querySelector('input[type="text"]');
-        const d = form.querySelector('input[type="date"]');
-        const text = t.value.trim(); if (!text) return;
-        const goalId = form.dataset.goalId;
-        let deadline = d ? (d.value || '') : '';
-        if (!deadline && state.calSelectedDate) deadline = state.calSelectedDate;
-        refocusInlineTaskFor = goalId;
-        addTask(goalId, { text: text, priority: 'medium', deadline: deadline });
-      });
+  function openCustomTabModal(editId) {
+    _editingCustomTabId = editId || null;
+    const t = editId ? findCustomTab(editId) : null;
+    document.getElementById('customTabModalTitle').textContent = t ? '✎ Своя вкладка' : '＋ Своя вкладка';
+    document.getElementById('customTabIcon').value = t ? (t.icon || '⭐') : '⭐';
+    document.getElementById('customTabLabel').value = t ? (t.label || '') : '';
+    document.getElementById('customTabModal').hidden = false;
+    setTimeout(function () { document.getElementById('customTabLabel').focus(); }, 50);
+  }
+  function closeCustomTabModal() {
+    document.getElementById('customTabModal').hidden = true;
+    _editingCustomTabId = null;
+  }
+  function saveCustomTab() {
+    const icon = (document.getElementById('customTabIcon').value || '').trim() || '⭐';
+    const label = (document.getElementById('customTabLabel').value || '').trim();
+    if (!label) { showToast('Введите название', 'warn'); return; }
+    if (_editingCustomTabId) {
+      const t = findCustomTab(_editingCustomTabId);
+      if (t) { t.icon = icon.slice(0, 4); t.label = label.slice(0, 30); }
+      showToast('Вкладка обновлена', 'ok');
+    } else {
+      const id = 'ct-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      if (!Array.isArray(state.customTabs)) state.customTabs = [];
+      state.customTabs.push({ id: id, icon: icon.slice(0, 4), label: label.slice(0, 30), cards: [], createdAt: Date.now() });
+      state.ui.tab = id;
+      showToast('Вкладка создана', 'ok');
     }
-
-        attachTaskListHandlers(document.getElementById('goalsList'));
-    attachTaskListHandlers(document.getElementById('tasksColumn'));
- initKanbanDnD();
- initTaskToGoalDnD();
-
-    // === Обработчики окна «Управление вкладками» ===
-    (function bindTabsManage() {
-      const modal = document.getElementById('tabsManageModal');
-      if (!modal) return;
-
-      modal.addEventListener('click', function (e) {
-        if (e.target === modal) { closeTabsManageModal(); return; }
-        const el = e.target.closest('[data-action]');
-        if (!el) return;
-        const action = el.dataset.action;
-
-        if (action === 'close-tabs-manage') { closeTabsManageModal(); return; }
-        if (action === 'reset-tabs') {
-                   pgtConfirm({
-            title: 'Сбросить вкладки?',
-            message: 'Все ваши названия, иконки и порядок вкладок вернутся к стандартным.',
-            yesLabel: 'Сбросить',
-            onYes: function () {
-              state.tabs = DEFAULT_TABS.map(function (t) { return Object.assign({}, t); });
-              savePrefs();
-              renderTabsManageList();
-              renderTabs();
-              showToast('Вкладки сброшены к стандарту', 'ok');
-            }
-          });
-          return;
-        }
-
-        const row = el.closest('.tabs-manage-row');
-        if (!row) return;
-        const id = row.dataset.tabId;
-        const idx = findTabIndexById(id);
-        if (idx === -1) return;
-
-        if (action === 'tab-move-up' && idx > 0) {
-          const tmp = state.tabs[idx - 1];
-          state.tabs[idx - 1] = state.tabs[idx];
-          state.tabs[idx] = tmp;
-          savePrefs();
-          renderTabsManageList();
-          renderTabs();
-        } else if (action === 'tab-move-down' && idx < state.tabs.length - 1) {
-          const tmp = state.tabs[idx + 1];
-          state.tabs[idx + 1] = state.tabs[idx];
-          state.tabs[idx] = tmp;
-          savePrefs();
-          renderTabsManageList();
-          renderTabs();
-        }
-      });
-
-      modal.addEventListener('input', function (e) {
-        const el = e.target.closest('[data-action]');
-        if (!el) return;
-        const row = el.closest('.tabs-manage-row');
-        if (!row) return;
-        const idx = findTabIndexById(row.dataset.tabId);
-        if (idx === -1) return;
-
-        if (el.dataset.action === 'tab-icon') {
-          state.tabs[idx].icon = (el.value || '').slice(0, 4) || '📌';
-          savePrefs();
-          renderTabs();
-        } else if (el.dataset.action === 'tab-label') {
-          state.tabs[idx].label = (el.value || '').slice(0, 30) || 'Вкладка';
-          savePrefs();
-          renderTabs();
-        }
-      });
-
-      modal.addEventListener('change', function (e) {
-        const el = e.target.closest('[data-action="tab-toggle-visible"]');
-        if (!el) return;
-        const row = el.closest('.tabs-manage-row');
-        if (!row) return;
-        const idx = findTabIndexById(row.dataset.tabId);
-        if (idx === -1) return;
-
-        if (!el.checked) {
-          const others = state.tabs.filter(function (t, i) { return i !== idx && t.visible; }).length;
-          if (others === 0) {
-            el.checked = true;
-            showToast('Хотя бы одна вкладка должна остаться видимой', 'warn');
-            return;
-          }
-          state.tabs[idx].visible = false;
-        } else {
-          state.tabs[idx].visible = true;
-        }
+    savePrefs();
+    renderTabs();
+    closeCustomTabModal();
+  }
+  function deleteCustomTab(id) {
+    pgtConfirm({
+      title: 'Удалить вкладку?',
+      message: 'Вкладка и все её карточки будут удалены безвозвратно.',
+      yesLabel: 'Удалить',
+      onYes: function () {
+        state.customTabs = state.customTabs.filter(function (t) { return t.id !== id; });
+        if (state.ui.tab === id) state.ui.tab = 'active';
         savePrefs();
         renderTabs();
-      });
-
-      modal.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closeTabsManageModal();
-      });
-    })();
-
-    document.getElementById('massModeToggle').addEventListener('click', toggleMassMode);
-    const mgt = document.getElementById('massModeGoalsToggle');
-    if (mgt) mgt.addEventListener('click', toggleMassModeGoals);
-
-        document.getElementById('editTaskModal').addEventListener('click', function (e) {
-      if (e.target === this) { closeEditTask(); return; }
-      const el = e.target.closest('[data-action]'); if (!el) return;
-      const action = el.dataset.action;
-      if (action === 'close-edit-task') closeEditTask();
-      else if (action === 'save-edit-task') saveEditTask();
-      else if (action === 'delete-task-from-edit') deleteTaskFromEdit();
-      else if (action === 'add-subtask') editAddSubtask();
-      else if (action === 'edit-delete-subtask') editDeleteSubtask(el.dataset.subId);
-    });
-    document.getElementById('editTaskModal').addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') closeEditTask();
-      else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveEditTask(); }
-    });
-
-    document.getElementById('editGoalModal').addEventListener('click', function (e) {
-      if (e.target === this) { closeEditGoal(); return; }
-      const el = e.target.closest('[data-action]'); if (!el) return;
-      const action = el.dataset.action;
-      if (action === 'close-edit-goal') closeEditGoal();
-      else if (action === 'save-edit-goal') saveEditGoal();
-      else if (action === 'delete-goal-from-edit') deleteGoalFromEdit();
-      else if (action === 'delete-goal-journal') deleteGoalJournalEntry(+el.dataset.idx);
-    });
-    document.getElementById('editGoalAddJournalBtn').addEventListener('click', addGoalJournalEntry);
-    document.getElementById('editGoalJournalNew').addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); addGoalJournalEntry(); }
-    });
-    document.getElementById('editGoalModal').addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') closeEditGoal();
-      else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveEditGoal(); }
-    });
-
-        document.getElementById('viewArchive').addEventListener('click', function (e) {
-      const el = e.target.closest('[data-action]'); if (!el) return;
-      const action = el.dataset.action; const gid = el.dataset.goalId, tid = el.dataset.taskId;
-      if (action === 'restore-goal') restoreGoal(gid);
-      else if (action === 'restore-task') restoreTask(gid, tid);
-      else if (action === 'delete-goal') {
-        const g = findGoal(gid);
-        pgtConfirm({ title: 'Удалить цель?', message: g ? ('«' + g.title + '» и все её задачи будут удалены безвозвратно.') : 'Цель будет удалена безвозвратно.', yesLabel: 'Да, удалить', onYes: function(){ deleteGoal(gid); } });
-      }
-      else if (action === 'delete-task') {
-        const g = findGoal(gid); const t = g ? g.tasks.find(function(x){return x.id===tid;}) : null;
-        pgtConfirm({ title: 'Удалить задачу?', message: t ? t.text : 'Задача будет удалена безвозвратно.', yesLabel: 'Да, удалить', onYes: function(){ deleteTask(gid, tid); } });
+        render();
       }
     });
+  }
 
-    SECTIONS.forEach(function (section) {
-      const view = document.getElementById(section === 'articles' ? 'articlesPanel' : 'booksPanel');
-      if (!view) return;
-      view.addEventListener('click', function (e) {
-        const favBtn = e.target.closest('[data-action="toggle-fav"]');
-        if (favBtn) { e.stopPropagation(); toggleFavorite(section, favBtn.dataset.name, false); return; }
-        const item = e.target.closest('.lit-item');
-        if (item && !e.target.closest('[data-action]')) { const name = item.dataset.name; if (name) { selectFile(section, name); return; } }
-        const el = e.target.closest('[data-action]'); if (!el) return;
-        const action = el.dataset.action;
-        const sec = el.dataset.section || section;
-                if (action === 'upload-to-drive') { uploadToDrive(sec); }
-        else if (action === 'refresh-from-drive') { refreshFromDrive(sec); }
-        else if (action === 'pick-folder') { if (fsSupported) pickFolderFSA(sec); else pickFolderFallback(sec); }
-        else if (action === 'pick-files') pickFiles(sec);
-        else if (action === 'refresh-folder') refreshFolder(sec);
-        else if (action === 'disconnect-folder') disconnectFolder(sec);
-        else if (action === 'request-permission') requestPermission(sec);
-        else if (action === 'close-reader') closeReader(sec);
-        else if (action === 'toggle-fullscreen') toggleFullscreen(sec);
-        else if (action === 'toggle-reader-only') toggleReaderOnly(sec);
-        else if (action === 'download-file') downloadFile(sec);
-        else if (action === 'nav-prev') navigateFile(sec, -1);
-        else if (action === 'nav-next') navigateFile(sec, 1);
-        else if (action === 'toggle-list') toggleListVisibility(sec);
-        else if (action === 'save-snippet') saveSelectionAsSnippet();
-        else if (action === 'open-snippets') openSnippetsModal();
-        else if (action === 'index-folder') indexFolder(sec);
-        else if (action === 'search-content') openContentSearch(sec);
-        else if (action === 'speak-text') speakText(sec);
-        else if (action === 'toggle-fav-current') { const name = runtime[sec].selected; if (name) toggleFavorite(sec, name, true); }
-        else if (action === 'toggle-fav-filter') { state.litFavFilter[sec] = !state.litFavFilter[sec]; el.classList.toggle('active', state.litFavFilter[sec]); savePrefs(); renderList(sec); }
-        else if (action === 'pdf-zoom-in') { state.pdfZoom[sec] = clampZoom((state.pdfZoom[sec] || 100) + 10); savePrefs(); rerenderPdfViewer(sec); }
-        else if (action === 'pdf-zoom-out') { state.pdfZoom[sec] = clampZoom((state.pdfZoom[sec] || 100) - 10); savePrefs(); rerenderPdfViewer(sec); }
-        else if (action === 'pdf-zoom-reset') { state.pdfZoom[sec] = 100; savePrefs(); rerenderPdfViewer(sec); }
-        else if (action === 'pdf-invert') { state.pdfInvert[sec] = !state.pdfInvert[sec]; el.classList.toggle('active', state.pdfInvert[sec]); savePrefs(); togglePdfInvert(sec); }
-              });
-      view.addEventListener('input', function (e) { const inp = e.target.closest('[data-action="pdf-page"]'); if (!inp) return; const sec = inp.dataset.section; const name = runtime[sec].selected; if (!name) return; let v = parseInt(inp.value, 10); if (isNaN(v) || v < 1) v = 1; if (!state.pdfPage[sec]) state.pdfPage[sec] = {}; state.pdfPage[sec][name] = v; savePrefs(); });
-      view.addEventListener('change', function (e) { const inp = e.target.closest('[data-action="pdf-page"]'); if (!inp) return; const v = parseInt(inp.value, 10); if (!isNaN(v) && v > 0) scrollToPdfPage(inp.dataset.section, v); });
-      const search = document.getElementById(section + 'SearchInput');
-      if (search) search.addEventListener('input', function () { state.ui.litSearch[section] = search.value; savePrefs(); renderList(section); });
-      const sortSel = view.querySelector('[data-action="set-sort"][data-section="' + section + '"]');
-      if (sortSel) sortSel.addEventListener('change', function () { state.litSort[section] = sortSel.value; savePrefs(); renderList(section); });
-    });
+  function openCustomCardModal(tabId, cardId) {
+    _editingCustomCardTabId = tabId;
+    _editingCustomCardId = cardId || null;
+    const tab = findCustomTab(tabId); if (!tab) return;
+    let card = null;
+    if (cardId && Array.isArray(tab.cards)) {
+      for (let i = 0; i < tab.cards.length; i++) if (tab.cards[i].id === cardId) { card = tab.cards[i]; break; }
+    }
+    document.getElementById('customCardModalTitle').textContent = card ? '✎ Карточка' : '＋ Карточка';
+    document.getElementById('customCardText').value = card ? (card.text || '') : '';
+    document.getElementById('customCardModal').hidden = false;
+    setTimeout(function () { document.getElementById('customCardText').focus(); }, 50);
+  }
+  function closeCustomCardModal() {
+    document.getElementById('customCardModal').hidden = true;
+    _editingCustomCardId = null;
+    _editingCustomCardTabId = null;
+  }
+  function saveCustomCard() {
+    const text = (document.getElementById('customCardText').value || '').trim();
+    if (!text) { showToast('Введите текст', 'warn'); return; }
+    const tab = findCustomTab(_editingCustomCardTabId); if (!tab) { closeCustomCardModal(); return; }
+    if (!Array.isArray(tab.cards)) tab.cards = [];
+    if (_editingCustomCardId) {
+      for (let i = 0; i < tab.cards.length; i++) if (tab.cards[i].id === _editingCustomCardId) { tab.cards[i].text = text.slice(0, 2000); break; }
+    } else {
+      tab.cards.push({ id: 'cc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), text: text.slice(0, 2000), done: false, createdAt: Date.now() });
+    }
+    savePrefs();
+    renderCustomView(tab.id);
+    closeCustomCardModal();
+  }
+  function toggleCustomCardDone(tabId, cardId) {
+    const tab = findCustomTab(tabId); if (!tab || !Array.isArray(tab.cards)) return;
+    for (let i = 0; i < tab.cards.length; i++) if (tab.cards[i].id === cardId) { tab.cards[i].done = !tab.cards[i].done; break; }
+    savePrefs();
+    renderCustomView(tabId);
+  }
+  function deleteCustomCard(tabId, cardId) {
+    const tab = findCustomTab(tabId); if (!tab || !Array.isArray(tab.cards)) return;
+    tab.cards = tab.cards.filter(function (c) { return c.id !== cardId; });
+    savePrefs();
+    renderCustomView(tabId);
+  }
 
-    document.getElementById('notesSearchInput').addEventListener('input', function (e) { state.ui.notesSearch = e.target.value; savePrefs(); renderNotesList(); });
-    document.getElementById('habitForm').addEventListener('submit', function (e) {
-      e.preventDefault();
-      const titleEl = document.getElementById('habitTitle');
-      const iconEl = document.getElementById('habitIcon');
-      addHabitFromForm(titleEl.value, iconEl.value);
-      titleEl.value = '';
-      iconEl.value = '';
-      titleEl.focus();
-    });
-        document.getElementById('habitList').addEventListener('click', function (e) {
+  function renderCustomView(tabId) {
+    const view = document.getElementById('viewCustom');
+    if (!view) return;
+    const tab = findCustomTab(tabId);
+    if (!tab) { view.innerHTML = '<div class="custom-tab-empty">Вкладка не найдена.</div>'; return; }
+    const cards = Array.isArray(tab.cards) ? tab.cards : [];
+    const cardsHtml = cards.length ? cards.map(function (c) {
+      return '<div class="custom-card' + (c.done ? ' done' : '') + '" data-custom-card-id="' + escapeHtml(c.id) + '">' +
+        '<input type="checkbox" ' + (c.done ? 'checked' : '') + ' data-action="custom-card-toggle" data-card-id="' + escapeHtml(c.id) + '" />' +
+        '<div class="custom-card-body"><div class="custom-card-text">' + escapeHtml(c.text) + '</div></div>' +
+        '<div class="custom-card-actions">' +
+          '<button type="button" class="icon-btn" data-action="custom-card-edit" data-card-id="' + escapeHtml(c.id) + '" title="Редактировать">✎</button>' +
+          '<button type="button" class="icon-btn" data-action="custom-card-delete" data-card-id="' + escapeHtml(c.id) + '" title="Удалить">✕</button>' +
+        '</div>' +
+      '</div>';
+    }).join('') : '<div class="custom-tab-empty">Пока нет карточек. Нажмите «＋ Добавить карточку», чтобы создать первую.</div>';
+    view.innerHTML =
+      '<div class="custom-tab-head">' +
+        '<h2>' + escapeHtml(tab.icon || '⭐') + ' ' + escapeHtml(tab.label) + '</h2>' +
+        '<div style="display:flex; gap:6px; flex-wrap:wrap;">' +
+          '<button type="button" data-action="custom-card-add">＋ Добавить карточку</button>' +
+          '<button type="button" class="secondary" data-action="custom-tab-edit">✎ Переименовать</button>' +
+          '<button type="button" class="danger" data-action="custom-tab-delete">🗑 Удалить вкладку</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="custom-cards">' + cardsHtml + '</div>';
+  }
+
+  (function bindCustomView() {
+    const view = document.getElementById('viewCustom');
+    if (!view || view.dataset.bound === '1') return;
+    view.dataset.bound = '1';
+    view.addEventListener('click', function (e) {
       const el = e.target.closest('[data-action]');
       if (!el) return;
       const action = el.dataset.action;
-      const id = el.dataset.habitId;
-      if (action === 'toggle-habit-today') toggleHabitToday(id);
-      else if (action === 'edit-habit') startEditHabit(id);
-      else if (action === 'save-habit-edit') saveHabitEdit(id);
-      else if (action === 'cancel-habit-edit') cancelHabitEdit();
-      else if (action === 'delete-habit') startDeleteHabit(id);
-      else if (action === 'confirm-delete-habit') confirmDeleteHabit(id);
-      else if (action === 'cancel-delete-habit') cancelDeleteHabit();
+      const tabId = state.ui.tab;
+      if (action === 'custom-card-add') openCustomCardModal(tabId, null);
+      else if (action === 'custom-card-edit') openCustomCardModal(tabId, el.dataset.cardId);
+      else if (action === 'custom-card-delete') deleteCustomCard(tabId, el.dataset.cardId);
+      else if (action === 'custom-tab-edit') openCustomTabModal(tabId);
+      else if (action === 'custom-tab-delete') deleteCustomTab(tabId);
     });
-    document.getElementById('habitList').addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' && e.target && e.target.matches && e.target.matches('[data-habit-edit-title], [data-habit-edit-icon]')) {
-        e.preventDefault();
-        if (_editingHabitId) saveHabitEdit(_editingHabitId);
-      } else if (e.key === 'Escape' && _editingHabitId) {
-        e.preventDefault();
-        cancelHabitEdit();
-      }
-    });
-
-    document.getElementById('newNoteBtn').addEventListener('click', function () { addNote({ title: 'Новая заметка', body: '' }); });
-    const dnb = document.getElementById('dailyNoteBtn');
-    if (dnb) dnb.addEventListener('click', openDailyNote);
-    document.getElementById('notesList').addEventListener('click', function (e) {
-      const goalBadge = e.target.closest('[data-action="goto-goal-from-note"]');
-      if (goalBadge) {
-        e.stopPropagation();
-        const gid = goalBadge.dataset.goalId;
-        switchTab('active');
-        if (gid) {
-          state.collapsed[gid] = false; savePrefs(); renderGoals();
-          setTimeout(function () { const g = document.querySelector('.goal[data-goal-id="' + CSS.escape(gid) + '"]'); if (g) g.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100);
-        }
-        return;
-      }
-      const item = e.target.closest('.note-item'); if (!item) return;
-      state.editingNoteId = item.dataset.id; renderNotesList(); renderNoteEditor();
-    });
-    document.getElementById('noteEditor').addEventListener('click', function (e) { const el = e.target.closest('[data-action]'); if (!el) return; const action = el.dataset.action; const id = el.dataset.id; if (action === 'note-delete') { pgtConfirm({ title: 'Удалить заметку?', message: 'Заметка будет удалена безвозвратно.', yesLabel: 'Да, удалить', onYes: function(){ deleteNote(id); } }); } else if (action === 'note-export-md') exportNoteAsMd(id); else if (action === 'note-copy') copyNote(id); });
-
-    document.getElementById('settingsModal').addEventListener('click', function (e) {
-      if (e.target === this) { this.hidden = true; return; }
-      const el = e.target.closest('[data-action]'); if (!el) return;
-      const action = el.dataset.action;
-      if (action === 'close-settings') this.hidden = true;
-      else if (action === 'restore-backup') { restoreBackup(el.dataset.date); }
-    });
-    document.querySelectorAll('[data-theme-opt]').forEach(function (b) { b.addEventListener('click', function () { setTheme(b.dataset.themeOpt); }); });
-        const _tadvBtn = document.getElementById('toggleAdvancedBtn');
-    if (_tadvBtn) _tadvBtn.addEventListener('click', function () {
-      state.advancedToolsVisible = !state.advancedToolsVisible;
-      savePrefs();
-      applyAdvancedToolsVisibility();
-    });
-
-const _tqiBtn = document.getElementById('toggleQuickInputBtn');
-    if (_tqiBtn) _tqiBtn.addEventListener('click', function () {
-      state.quickInputVisible = !state.quickInputVisible;
-      savePrefs();
-      applyQuickInputVisibility();
-    });
-
-    document.getElementById('notifToggle').addEventListener('click', function () { if (state.notificationsEnabled) { state.notificationsEnabled = false; savePrefs(); showToast('Уведомления выключены', 'warn'); updateNotifBtn(); } else requestNotifications(); });
-            // === PIN: обработчики ===
-    const _pinSetupBtn = document.getElementById('pinSetupBtn');
-    if (_pinSetupBtn) _pinSetupBtn.addEventListener('click', function () { openPinSetup('setup'); });
-    const _pinChangeBtn = document.getElementById('pinChangeBtn');
-    if (_pinChangeBtn) _pinChangeBtn.addEventListener('click', function () { openPinSetup('change'); });
-    const _pinRemoveBtn = document.getElementById('pinRemoveBtn');
-        if (_pinRemoveBtn) _pinRemoveBtn.addEventListener('click', function () {
-      pgtConfirm({ title: 'Убрать PIN?', message: 'Приложение перестанет спрашивать PIN при открытии.', yesLabel: 'Убрать', onYes: function(){
-        removePin(); renderPinStatus(); showToast('PIN убран', 'ok');
-      } });
-    });
-    const _pinLockNowBtn = document.getElementById('pinLockNowBtn');
-    if (_pinLockNowBtn) _pinLockNowBtn.addEventListener('click', function () {
-      const sm = document.getElementById('settingsModal');
-      if (sm) sm.hidden = true;
-      lockNow();
-    });
-    const _quickLock = document.getElementById('quickLockBtn');
-    if (_quickLock) _quickLock.addEventListener('click', function () {
-  if (!hasPin()) { if (confirm('PIN не установлен. Установить сейчас?')) openPinSetup('setup'); return; }
-  lockNow();
-});
-
-    const _pinModal = document.getElementById('pinSetupModal');
-    if (_pinModal) {
-      _pinModal.addEventListener('click', function (e) {
-        if (e.target === this) { closePinSetup(); return; }
-        const el = e.target.closest('[data-action]');
-        if (!el) return;
-        if (el.dataset.action === 'close-pin-setup') closePinSetup();
-        else if (el.dataset.action === 'save-pin') savePin();
-      });
-      _pinModal.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closePinSetup();
-        else if (e.key === 'Enter') { e.preventDefault(); savePin(); }
-      });
-    }
-
-    const _lockBtn = document.getElementById('lockSubmitBtn');
-    if (_lockBtn) _lockBtn.addEventListener('click', tryUnlock);
-        const _lockInput = document.getElementById('lockPinInput');
-    if (_lockInput) {
-      let _autoUnlockTimer = null;
-      _lockInput.addEventListener('input', function () {
-        const inp = this;
-        inp.value = inp.value.replace(/\D/g, '');
-        if (isCurrentlyLocked()) return;
-        const expectedLen = getPinLength();
-        if (expectedLen > 0) {
-          if (inp.value.length === expectedLen) tryUnlock();
-        } else if (inp.value.length >= 4) {
-          clearTimeout(_autoUnlockTimer);
-          _autoUnlockTimer = setTimeout(function () { tryUnlock(); }, 400);
-        }
-      });
-      _lockInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); tryUnlock(); }
-      });
-    }
-   const _lockResetBtn = document.getElementById('lockResetBtn');
-        if (_lockResetBtn) _lockResetBtn.addEventListener('click', function () {
-      pgtConfirm({
-        title: 'Сбросить PIN и удалить всё?',
-        message: 'Будут удалены ВСЕ данные приложения: цели, задачи, заметки, настройки. Это необратимо.',
-        yesLabel: 'Удалить всё',
-        onYes: function () {
-          removePin();
-          try {
-            Object.keys(localStorage).forEach(function (k) { if (k.indexOf('pgt_v25_') === 0) localStorage.removeItem(k); });
-            sessionStorage.clear();
-          } catch (e) {}
-          location.reload();
-        }
-      });
-    });
-		
-    const _ssb = document.getElementById('settingsSnippetsBtn');
-    if (_ssb) _ssb.addEventListener('click', function () { document.getElementById('settingsModal').hidden = true; openSnippetsModal(); });
-    document.getElementById('colorTotal').addEventListener('input', function (e) { state.colorTotal = e.target.value; document.documentElement.style.setProperty('--color-total', e.target.value); savePrefs(); });
-    document.getElementById('colorDone').addEventListener('input', function (e) { state.colorDone = e.target.value; document.documentElement.style.setProperty('--color-done', e.target.value); savePrefs(); });
-              document.getElementById('cacheAllBtn').addEventListener('click', async function () {
-      let total = 0, failed = 0;
-      for (const s of SECTIONS) {
-        if (!state.folders[s].files.length) continue;
-        showToast('Кэширование: ' + (s === 'articles' ? 'статьи' : 'книги'), 'ok');
-        const r = await cacheSectionFiles(s);
-        total += r.done; failed += r.failed;
-      }
-      renderCacheStats();
-      showToast('Сохранено: ' + total + (failed ? ', ошибок: ' + failed : ''), total ? 'ok' : 'warn');
-    });
-    document.getElementById('syncCacheBtn').addEventListener('click', async function () {
-      let added = 0, updated = 0, removed = 0, failed = 0;
-      for (const s of SECTIONS) {
-        if (!state.folders[s].files.length) continue;
-        const r = await smartRefreshSection(s);
-        added += r.added; updated += r.updated; removed += r.removed; failed += r.failed;
-      }
-      renderCacheStats();
-      showToast('Обновлено: +' + added + ' ~' + updated + ' −' + removed + (failed ? ' ⚠' + failed : ''), failed ? 'warn' : 'ok');
-    });
-        document.getElementById('clearCacheBtn').addEventListener('click', function () {
-      pgtConfirm({ title: 'Очистить кэш файлов?', message: 'Книги и статьи придётся подключать заново. Цели, задачи, заметки останутся.', yesLabel: 'Очистить', onYes: async function(){
-        await clearCachedFiles(null);
-        renderCacheStats();
-        showToast('Кэш очищен', 'ok');
-      } });
-    });
-    document.getElementById('exportZipBtn').addEventListener('click', exportAllToZip);
-    document.getElementById('importZipInput').addEventListener('change', function (e) {
-      const f = e.target.files[0];
-      if (f) importFromZip(f);
-      e.target.value = '';
-    });
-    // === Дашборд «Сегодня»: обработчики кликов ===
-    const dashContent = document.getElementById('dashContent');
-    if (dashContent) {
-      dashContent.addEventListener('click', function (e) {
-        const el = e.target.closest('[data-action]');
-        if (!el) return;
-        const action = el.dataset.action;
-        const gid = el.dataset.goalId;
-        const tid = el.dataset.taskId;
-        if (action === 'dash-open-task' && gid && tid) { openEditTask(gid, tid); }
-        else if (action === 'dash-open-goal' && gid) { openEditGoal(gid); }
-      });
-      dashContent.addEventListener('change', function (e) {
-        const el = e.target;
-        if (!el.matches) return;
-        if (el.matches('input[data-action="dash-toggle-task"]')) {
-          toggleTask(el.dataset.goalId, el.dataset.taskId);
-          setTimeout(renderDashboard, 50);
-        }
-      });
-    }
-
-    // === ГОРЯЧИЕ КЛАВИШИ-КНОПКА ШПАРГАЛКИ ===
-    const kbdBtn = document.getElementById('kbdHelpBtn');
-    if (kbdBtn) kbdBtn.addEventListener('click', openKbdHelp);
-    const kbdModal = document.getElementById('kbdHelpModal');
-    if (kbdModal) {
-      kbdModal.addEventListener('click', function (e) {
-        if (e.target === this) { closeKbdHelp(); return; }
-        const el = e.target.closest('[data-action]');
-        if (el && el.dataset.action === 'close-kbd-help') closeKbdHelp();
-      });
-    }
-
-        // === ПОДЗАДАЧИ В EDIT-МОДАЛЕ ===
-    const esInp = document.getElementById('editSubtaskNew');
-    if (esInp) esInp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); editAddSubtask(); } });
-    document.getElementById('editTaskModal').addEventListener('change', function (e) {
+    view.addEventListener('change', function (e) {
       const el = e.target;
-      if (el.matches && el.matches('input[data-action="edit-toggle-subtask"]')) editToggleSubtask(el.dataset.subId);
+      if (el.matches && el.matches('input[data-action="custom-card-toggle"]')) {
+        toggleCustomCardDone(state.ui.tab, el.dataset.cardId);
+      }
     });
+  })();
 
-    // === ПОДВКЛАДКИ ЗАМЕТОК ===
-    document.querySelectorAll('[data-notes-filter]').forEach(function (b) {
-      b.addEventListener('click', function () {
-        state.notesFilter = b.dataset.notesFilter;
-        document.querySelectorAll('[data-notes-filter]').forEach(function (x) { x.classList.toggle('active', x.dataset.notesFilter === state.notesFilter); });
-        renderNotesList();
+  (function bindCustomModals() {
+    const ct = document.getElementById('customTabModal');
+    if (ct && ct.dataset.bound !== '1') {
+      ct.dataset.bound = '1';
+      ct.addEventListener('click', function (e) {
+        if (e.target === ct) { closeCustomTabModal(); return; }
+        const el = e.target.closest('[data-action]'); if (!el) return;
+        if (el.dataset.action === 'close-custom-tab') closeCustomTabModal();
+        else if (el.dataset.action === 'save-custom-tab') saveCustomTab();
       });
-    });
-
-    // === ИЗБРАННОЕ ЗАМЕТОК ===
-    document.getElementById('notesList').addEventListener('click', function (e) {
-      const fav = e.target.closest('[data-action="toggle-note-fav"]');
-      if (fav) { e.stopPropagation(); toggleNoteFav(fav.dataset.id); return; }
-    }, true);
-    document.getElementById('pickDataFolderBtn').addEventListener('click', pickDataFolder);
-    document.getElementById('disconnectDataFolderBtn').addEventListener('click', disconnectDataFolder);
-document.getElementById('manualBackupBtn').addEventListener('click', async function () { await makeBackup('manual'); renderBackupList(); showToast('Резервная копия создана', 'ok'); });
-    const cbBtn = document.getElementById('clearBackupsBtn');
-    if (cbBtn) cbBtn.addEventListener('click', clearAllBackups);
-
-    document.getElementById('globalSearchModal').addEventListener('click', function (e) {
-      if (e.target === this) { closeGlobalSearch(); return; }
-      const el = e.target.closest('[data-action]'); if (!el) return;
-      const action = el.dataset.action;
-      if (action === 'close-gsearch') { closeGlobalSearch(); return; }
-      if (action === 'goto-goal') { const gid = el.dataset.id; closeGlobalSearch(); switchTab('active'); if (state.collapsed[gid]) { state.collapsed[gid] = false; savePrefs(); renderGoals(); } setTimeout(function () { const g = document.querySelector('.goal[data-goal-id="' + CSS.escape(gid) + '"]'); if (g) g.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100); }
-      else if (action === 'goto-task') { const gid = el.dataset.goalId; const tid = el.dataset.taskId; closeGlobalSearch(); switchTab('active'); if (state.collapsed[gid]) { state.collapsed[gid] = false; savePrefs(); renderGoals(); } setTimeout(function () { openEditTask(gid, tid); }, 150); }
-      else if (action === 'goto-note') { const nid = el.dataset.id; closeGlobalSearch(); switchTab('notes'); state.editingNoteId = nid; renderNotesList(); renderNoteEditor(); }
-      else if (action === 'goto-snippet') { const sid = el.dataset.id; closeGlobalSearch(); openSnippetsModal(); state.editingSnippetId = sid; renderSnippetsList(); }
-      else if (action === 'goto-file') { const sec = el.dataset.section; const fname = el.dataset.name; closeGlobalSearch(); switchTab('literature'); state.ui.litTab = sec; savePrefs(); renderTabs(); setTimeout(function () { selectFile(sec, fname); }, 100); }
-    });
-    document.getElementById('globalSearchInput').addEventListener('input', debounce(function (e) { performGlobalSearch(e.target.value); }, 180));
-
-       document.getElementById('snippetsModal').addEventListener('click', function (e) {
-      if (e.target === this) { closeSnippetsModal(); return; }
-      const el = e.target.closest('[data-action]'); if (!el) return;
-      const action = el.dataset.action; const id = el.dataset.id;
-      if (action === 'close-snippets') closeSnippetsModal();
-      else if (action === 'clear-snippets') clearAllSnippets();
-            else if (action === 'delete-snippet') {
-        const s = findSnippet(id);
-        pgtConfirm({ title: 'Удалить цитату?', message: s ? (s.text.slice(0, 120) + (s.text.length > 120 ? '…' : '')) : 'Цитата будет удалена безвозвратно.', yesLabel: 'Да, удалить', onYes: function(){ deleteSnippet(id); } });
-      }
-      else if (action === 'edit-snippet') editSnippet(id);
-      else if (action === 'cancel-snippet-edit') cancelSnippetEdit();
-      else if (action === 'save-snippet-edit') saveSnippetEdit(id);
-      else if (action === 'copy-snippet') copySnippetToClipboard(id);
-      else if (action === 'filter-tag') { const t = el.dataset.tag; state.ui.snippetsTagFilter = state.ui.snippetsTagFilter === t ? '' : t; document.getElementById('snippetsTagFilter').value = state.ui.snippetsTagFilter; renderSnippetsList(); }
-      else if (action === 'export-menu') { const fmt = prompt('Формат: doc, md, csv, bib, txt'); if (!fmt) return; const f = fmt.toLowerCase().trim(); if (['doc', 'md', 'csv', 'bib', 'txt'].indexOf(f) === -1) { showToast('Неизвестный формат', 'warn'); return; } exportSnippets(f); }
-    });
-    document.getElementById('snippetsSearch').addEventListener('input', debounce(function (e) { state.ui.snippetsSearch = e.target.value; savePrefs(); renderSnippetsList(); }, 180));
-    document.getElementById('snippetsSort').addEventListener('change', function (e) { state.ui.snippetsSort = e.target.value; savePrefs(); renderSnippetsList(); });
-    document.getElementById('snippetsTagFilter').addEventListener('change', function (e) { state.ui.snippetsTagFilter = e.target.value; savePrefs(); renderSnippetsList(); });
-    document.getElementById('snippetsGroup').addEventListener('change', function (e) { state.ui.snippetsGroup = e.target.value; savePrefs(); renderSnippetsList(); });
-
-    document.getElementById('contentSearchModal').addEventListener('click', function (e) { if (e.target === this) { this.hidden = true; return; } const el = e.target.closest('[data-action]'); if (!el) return; const action = el.dataset.action; if (action === 'close-csearch') this.hidden = true; else if (action === 'open-indexed') { const sec = el.dataset.section; const fname = el.dataset.file; this.hidden = true; switchTab('literature'); state.ui.litTab = sec; savePrefs(); renderTabs(); setTimeout(function () { selectFile(sec, fname); }, 100); } });
-    document.getElementById('contentSearchInput').addEventListener('input', debounce(function (e) { performContentSearch(e.target.value, e.target.dataset.section || 'articles'); }, 200));
-
-   
-    document.getElementById('appCalendar').addEventListener('click', function (e) {
-      const navBtn = e.target.closest('[data-action]');
-      if (navBtn) {
-        const action = navBtn.dataset.action;
-        if (action === 'cal-prev') calPrev();
-        else if (action === 'cal-next') calNext();
-        else if (action === 'cal-today') calToday();
-        else if (action === 'clear-day') clearDateFilter();
-        return;
-      }
-      const cell = e.target.closest('.cal-cell');
-      if (cell && !cell.classList.contains('empty') && cell.dataset.date) selectCalendarDay(cell.dataset.date);
-    });
-
-    document.getElementById('searchInput').addEventListener('input', debounce(function (e) { state.ui.search = e.target.value; savePrefs(); renderTasks(); }, 150));
-    document.getElementById('filterSelect').addEventListener('change', function (e) { state.ui.filter = e.target.value; savePrefs(); renderTasks(); });
-    document.getElementById('sortSelect').addEventListener('change', function (e) { state.ui.sort = e.target.value; savePrefs(); renderTasks(); });
-    document.getElementById('groupSelect').addEventListener('change', function (e) { state.tasksGrouping = e.target.value; savePrefs(); renderTasks(); });
-    document.getElementById('tagFilterSelect').addEventListener('change', function (e) { state.tagFilter = e.target.value; savePrefs(); renderTasks(); });
-    document.getElementById('toggleAllBtn').addEventListener('click', function () { const goals = visibleGoals(); const allCollapsed = goals.length > 0 && goals.every(function (g) { return state.collapsed[g.id]; }); if (allCollapsed) expandAll(); else collapseAll(); });
-
-    document.getElementById('exportBtn').addEventListener('click', exportData);
-    document.getElementById('exportMdBtn').addEventListener('click', exportMarkdownReport);
-    const icsBtn = document.getElementById('exportIcsBtn');
-    if (icsBtn) icsBtn.addEventListener('click', exportIcs);
-    document.getElementById('importInput').addEventListener('change', importData);
-    const csvInp = document.getElementById('importCsvInput');
-    if (csvInp) csvInp.addEventListener('change', function (e) {
-      const f = e.target.files[0]; if (!f) return;
-      const r = new FileReader();
-      r.onload = function () { importFromCsv(String(r.result || '')); e.target.value = ''; };
-      r.readAsText(f);
-    });
-    document.getElementById('clearBtn').addEventListener('click', clearAllData);
-
-    document.addEventListener('keydown', function (e) {
-      const ae = document.activeElement;
-      const inField = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT' || ae.isContentEditable);
-      const anyModal = document.querySelector('.modal-backdrop:not([hidden])');
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z' || e.key === 'я' || e.key === 'Я')) { if (!inField) { e.preventDefault(); performUndo(); return; } }
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'S' || e.key === 's' || e.key === 'Ы' || e.key === 'ы')) { if (state.ui.tab === 'literature') { e.preventDefault(); saveSelectionAsSnippet(); } return; }
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K' || e.key === 'л' || e.key === 'Л')) { e.preventDefault(); toggleCalendar(); return; }
-      if ((e.ctrlKey || e.metaKey) && (e.key === '/' || e.key === '.')) { e.preventDefault(); openGlobalSearch(); return; }
-      if (e.key === 'Escape') { if (anyModal) { anyModal.hidden = true; if (anyModal.id === 'editTaskModal') { state.editingTaskId = null; state.editingTaskGoalId = null; } if (anyModal.id === 'editGoalModal') { state.editingGoalId = null; } return; } let handled = false; SECTIONS.forEach(function (s) { const pane = document.getElementById(s + 'Reader'); if (pane && pane.classList.contains('fullscreen')) { pane.classList.remove('fullscreen'); handled = true; } }); if (!handled && state.ui.tab === 'literature' && !inField) closeReader(state.ui.litTab); return; }
-      if (!anyModal && !inField && state.ui.tab === 'literature') { if (e.key === 'ArrowLeft') { e.preventDefault(); navigateFile(state.ui.litTab, -1); } else if (e.key === 'ArrowRight') { e.preventDefault(); navigateFile(state.ui.litTab, 1); } }
-    });
-    // === ГОРЯЧИЕ КЛАВИШИ ===
-    document.addEventListener('keydown', function (e) {
-      const ae = document.activeElement;
-      const inField = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT' || ae.isContentEditable);
-      const anyModal = document.querySelector('.modal-backdrop:not([hidden])');
-      if (inField || anyModal) return;
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
-      const k = (e.key || '').toLowerCase();
-      if (k === 'n') { e.preventDefault(); document.getElementById('taskText').focus(); }
-      else if (k === 'g') { e.preventDefault(); document.getElementById('goalTitle').focus(); }
-      else if (e.key === '?') { e.preventDefault(); openKbdHelp(); }
-    });
-    window.addEventListener('beforeunload', function () {
-      if (_dataFolderHandle && _dataFolderWriteTimer) {
-        clearTimeout(_dataFolderWriteTimer);
-        _dataFolderWriteTimer = null;
-        try { writeAllToDisk(); } catch (e) {}
-      }
-    });
-    window.addEventListener('beforeunload', function () { if (runtime.articles.selected) saveCurrentPosition('articles'); if (runtime.books.selected) saveCurrentPosition('books'); if (window.speechSynthesis) window.speechSynthesis.cancel(); });
-               window.addEventListener('storage', function (e) {
-          if (!e.key) return;
-          const bases = [DATA_KEY, PREFS_KEY, SNIPPETS_KEY, NOTES_KEY, TEMPLATES_KEY];
-          const hit = bases.some(function (b) {
-            return e.key === b || e.key.indexOf(b + '_') === 0;
-          });
-          if (hit) {
-            loadState();
-            _searchIndexDirty = true;
-            applyTheme();
-            applyColors();
-            syncToolbarInputs();
-            applyCalendarVisibility();
-            render();
-          }
-        });
-     }     
-		// === Часы реального времени в шапке ===
+      ct.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeCustomTabModal();
+        else if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveCustomTab(); }
+      });
+    }
+    const cc = document.getElementById('customCardModal');
+    if (cc && cc.dataset.bound !== '1') {
+      cc.dataset.bound = '1';
+      cc.addEventListener('click', function (e) {
+        if (e.target === cc) { closeCustomCardModal(); return; }
+        const el = e.target.closest('[data-action]'); if (!el) return;
+        if (el.dataset.action === 'close-custom-card') closeCustomCardModal();
+        else if (el.dataset.action === 'save-custom-card') saveCustomCard();
+      });
+      cc.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeCustomCardModal();
+        else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveCustomCard(); }
+      });
+    }
+  })();
+	// === Часы реального времени в шапке ===
     
 function tickLiveClock() {
       const el = document.getElementById('liveClock');
