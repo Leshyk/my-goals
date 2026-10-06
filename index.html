@@ -1143,6 +1143,17 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
   gap: 12px;
   align-items: start;
 }
+.tab.tab-drop-target {
+  background: var(--color-total) !important;
+  color: #fff !important;
+  border-color: var(--color-total) !important;
+  box-shadow: 0 0 0 3px rgba(63,185,80,.35);
+  transform: scale(1.05);
+  z-index: 60;
+}
+.tab.tab-drop-target .tab-count {
+  background: rgba(0,0,0,.35) !important;
+}
 .custom-card {
   position: relative;
   background: var(--card);
@@ -7726,6 +7737,7 @@ function findCustomTab(id) {
   }
 
     // === ПЕРЕТАСКИВАНИЕ КАРТОЧЕК ВНУТРИ ОДНОЙ ВКЛАДКИ ===
+    // === ПЕРЕТАСКИВАНИЕ КАРТОЧЕК ВНУТРИ ОДНОЙ ВКЛАДКИ И МЕЖДУ ВКЛАДКАМИ ===
   function initCustomCardsDnD() {
     const view = document.getElementById('viewCustom');
     if (!view || view.dataset.dndBound === '1') return;
@@ -7740,12 +7752,11 @@ function findCustomTab(id) {
     let activePointerId = null;
     let longPressTimer = null;
     let blockNextClick = false;
+    let hoverTabId = null;   // id вкладки, над которой висит курсор
     const THRESHOLD = 8;
     const LONG_PRESS_MS = 300;
 
     function activeContainer() {
-      // Первая .custom-cards — это активные карточки.
-      // Архивные лежат внутри .custom-archive-body.
       return view.querySelector('.custom-cards');
     }
 
@@ -7783,6 +7794,21 @@ function findCustomTab(id) {
       });
     }
 
+    function setHoverTab(id) {
+      if (hoverTabId === id) return;
+      if (hoverTabId) {
+        const prev = document.querySelector('.tab[data-tab="' + CSS.escape(hoverTabId) + '"]');
+        if (prev) prev.classList.remove('tab-drop-target');
+      }
+      hoverTabId = id;
+      if (id) {
+        const t = document.querySelector('.tab[data-tab="' + CSS.escape(id) + '"]');
+        if (t) t.classList.add('tab-drop-target');
+      }
+    }
+
+    function clearHoverTab() { setHoverTab(null); }
+
     function startDrag(x, y) {
       if (started || !dragging) return;
       started = true;
@@ -7812,6 +7838,11 @@ function findCustomTab(id) {
       clearTimeout(longPressTimer);
       longPressTimer = null;
 
+      const droppedOnTab = hoverTabId;
+      const draggedCardId = dragging.dataset.customCardId;
+      const sourceTabId = tabId;
+      const wasStarted = started;
+
       if (ghost) {
         const target = dragging.getBoundingClientRect();
         ghost.style.transition = 'left .2s cubic-bezier(0.22,0.61,0.36,1), top .2s cubic-bezier(0.22,0.61,0.36,1), width .2s, transform .2s, opacity .2s';
@@ -7827,24 +7858,30 @@ function findCustomTab(id) {
 
       if (dragging) dragging.classList.remove('dragging-card');
       document.body.classList.remove('pgt-dragging');
+      clearHoverTab();
 
-      if (started) {
+      if (wasStarted) {
         blockNextClick = true;
-        setTimeout(function () { blockNextClick = false; }, 60);
-        // Сохранить новый порядок в state
-        if (state.ui.tab === tabId) {
-          applyNewOrder();
-        }
+        setTimeout(function () { blockNextClick = false; }, 80);
       }
 
       dragging = null;
       tabId = null;
       started = false;
       activePointerId = null;
+
+      // === Логика дропа ===
+      if (wasStarted && droppedOnTab && droppedOnTab !== sourceTabId) {
+        // переносим в другую вкладку
+        moveCardBetweenTabs(sourceTabId, droppedOnTab, draggedCardId);
+      } else if (wasStarted) {
+        // остались на месте — применяем новый порядок внутри вкладки
+        applyNewOrder(sourceTabId);
+      }
     }
 
-    function applyNewOrder() {
-      const tab = findCustomTab(tabId);
+    function applyNewOrder(srcTabId) {
+      const tab = findCustomTab(srcTabId);
       if (!tab || !Array.isArray(tab.cards)) return;
       const c = activeContainer();
       if (!c) return;
@@ -7864,6 +7901,33 @@ function findCustomTab(id) {
       savePrefs();
     }
 
+    function moveCardBetweenTabs(srcTabId, dstTabId, cardId) {
+      const src = findCustomTab(srcTabId);
+      const dst = findCustomTab(dstTabId);
+      if (!src || !dst || src === dst) return;
+      if (!Array.isArray(src.cards)) return;
+      const idx = src.cards.findIndex(function (c) { return c.id === cardId; });
+      if (idx === -1) return;
+
+      const card = src.cards.splice(idx, 1)[0];
+      if (!Array.isArray(dst.cards)) dst.cards = [];
+      dst.cards.push(card);
+      savePrefs();
+
+      renderCustomView(srcTabId);
+      updateCustomTabCounters();
+
+      const icon = dst.icon || '⭐';
+      const label = dst.label || 'без имени';
+      showToast(
+        'Карточка → ' + icon + ' ' + label,
+        'ok',
+        'Открыть',
+        function () { switchTab(dstTabId); },
+        5000
+      );
+    }
+
     view.addEventListener('pointerdown', function (e) {
       if (e.button && e.button !== 0) return;
       const card = e.target.closest('.custom-card');
@@ -7881,6 +7945,7 @@ function findCustomTab(id) {
       grabDY = e.clientY - r.top;
       started = false;
       activePointerId = e.pointerId;
+      hoverTabId = null;
 
       if (e.pointerType === 'touch') {
         const x0 = e.clientX, y0 = e.clientY;
@@ -7911,6 +7976,29 @@ function findCustomTab(id) {
         ghost.style.top = (e.clientY - grabDY) + 'px';
       }
 
+            // === 1. Проверяем, над какой вкладкой мы (по bounding rect, не через elementFromPoint) ===
+      const allTabs = document.querySelectorAll('#tabsNav .tab[data-tab]');
+      let hitTab = null;
+      for (let i = 0; i < allTabs.length; i++) {
+        const t = allTabs[i];
+        const r = t.getBoundingClientRect();
+        if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
+          hitTab = t;
+          break;
+        }
+      }
+
+      const validTab = hitTab
+        && hitTab.dataset.tab !== tabId
+        && findCustomTab(hitTab.dataset.tab);
+
+      if (validTab) {
+        setHoverTab(hitTab.dataset.tab);
+        return; // карточки не переставляем, пока висим над вкладкой
+      }
+      clearHoverTab();
+
+      // === 2. Иначе — обычная перестановка внутри сетки ===
       const el = document.elementFromPoint(e.clientX, e.clientY);
       if (!el) return;
       const targetCard = el.closest('.custom-card');
@@ -7943,12 +8031,10 @@ function findCustomTab(id) {
     document.addEventListener('pointerup', endDrag);
     document.addEventListener('pointercancel', endDrag);
 
-    // На мобильных: как только начали drag — гасим скролл
     document.addEventListener('touchmove', function (e) {
       if (started && dragging) e.preventDefault();
     }, { passive: false });
 
-    // Блокируем click после drag (чтобы чекбокс/кнопка не сработали)
     view.addEventListener('click', function (e) {
       if (blockNextClick) {
         e.stopPropagation();
