@@ -5057,12 +5057,44 @@ function autoArchiveOldCompletedTasks() {
     document.addEventListener('pointerup', endDrag);
     document.addEventListener('pointercancel', endDrag);
 
-        nav.addEventListener('click', function (e) {
+            // === КЛИК + ДВОЙНОЙ КЛИК ===
+    // switchTab() пересоздаёт DOM вкладок через renderTabs(), поэтому нативный
+    // 'dblclick' не срабатывает (браузер требует два клика по ОДНОМУ узлу).
+    // Ловим двойной клик вручную — по времени, на стабильном родителе nav.
+    let _lastTabClickId = null;
+    let _lastTabClickTs = 0;
+
+    nav.addEventListener('click', function (e) {
       if (blockNextClick) {
         e.stopPropagation();
         e.preventDefault();
         blockNextClick = false;
+        _lastTabClickId = null;
+        _lastTabClickTs = 0;
+        return;
       }
+      const tabBtn = e.target.closest('.tab[data-tab]');
+      if (!tabBtn) return;
+      // уже в режиме переименования — не мешаем полям ввода
+      if (tabBtn.querySelector('.tab-rename-icon')) return;
+
+      const id = tabBtn.dataset.tab;
+      const now = Date.now();
+
+      if (_lastTabClickId === id && now - _lastTabClickTs < 400) {
+        // ── ДВОЙНОЙ КЛИК ──
+        _lastTabClickId = null;
+        _lastTabClickTs = 0;
+        e.stopPropagation();
+        e.preventDefault();
+        const stdTab = state.tabs.find(function (x) { return x.id === id; });
+        const ct = !stdTab ? findCustomTab(id) : null;
+        if (stdTab || ct) startInlineTabRename(tabBtn, stdTab, ct);
+        return;
+      }
+      _lastTabClickId = id;
+      _lastTabClickTs = now;
+      // обычный клик — пусть долетит до обработчика switchTab
     }, true);
 
     // === ДВОЙНОЙ КЛИК — ПЕРЕИМЕНОВАНИЕ ===
