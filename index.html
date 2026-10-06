@@ -3159,59 +3159,119 @@ const dataFolderSupported = (typeof window.showDirectoryPicker === 'function');
 let _voiceRecognition = null;
   let _voiceRecognitionActive = false;
 
+    let _voiceRestartTimer = null;
+  let _voiceShouldBeActive = false;
+
   function startVoiceInput() {
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRec) {
-      showToast('Голосовой ввод не поддерживается этим браузером. Попробуйте Chrome / Edge / Safari.', 'warn', null, null, 6000);
+      showToast('Голосовой ввод не поддерживается. Попробуйте Chrome / Safari.', 'warn', null, null, 6000);
       return;
     }
     const input = document.getElementById('quickInput');
     const btn = document.getElementById('quickVoiceBtn');
-    const beforeText = (input.value || '').trim();
 
-    const rec = new SpeechRec();
-    rec.lang = 'ru-RU';
-    rec.interimResults = true;
-    rec.continuous = false;
-    rec.maxAlternatives = 1;
-
-    let finalText = '';
-
-    rec.onstart = function () {
-      _voiceRecognitionActive = true;
-      if (btn) btn.classList.add('recording');
-      showToast('🎤 Говорите…', 'ok', null, null, 4000);
-    };
-
-    rec.onresult = function (event) {
-      let interim = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const res = event.results[i];
-        if (res.isFinal) finalText += res[0].transcript;
-        else interim += res[0].transcript;
-      }
-      const combined = (beforeText ? beforeText + ' ' : '') + (finalText || interim);
-      input.value = combined.trim();
-    };
-
-    rec.onerror = function (e) {
-      const msg = e && e.error === 'not-allowed' ? 'Доступ к микрофону запрещён'
-              : e && e.error === 'no-speech' ? 'Речь не распознана'
-              : 'Ошибка распознавания: ' + (e && e.error || 'unknown');
-      showToast(msg, 'warn');
-    };
-
-    rec.onend = function () {
-      _voiceRecognitionActive = false;
-      if (btn) btn.classList.remove('recording');
-      input.focus();
-    };
-
-    try { rec.start(); _voiceRecognition = rec; }
-    catch (e) {
-      showToast('Не удалось запустить микрофон', 'error');
-      if (btn) btn.classList.remove('recording');
+    // Если уже идёт — остановим
+    if (_voiceShouldBeActive && _voiceRecognition) {
+      _voiceShouldBeActive = false;
+      try { _voiceRecognition.stop(); } catch (e) {}
+      return;
     }
+
+    const beforeText = (input.value || '').trim();
+    _voiceShouldBeActive = true;
+
+    function createAndStart() {
+      if (!_voiceShouldBeActive) return;
+
+      const rec = new SpeechRec();
+      rec.lang = 'ru-RU';
+      rec.interimResults = true;
+      rec.continuous = true;        // ← важно: не рвёмся на первой паузе
+      rec.maxAlternatives = 1;
+      _voiceRecognition = rec;
+
+      let finalText = '';
+      let lastRestartAt = 0;
+
+      rec.onstart = function () {
+        _voiceRecognitionActive = true;
+        if (btn) btn.classList.add('recording');
+      };
+
+      rec.onresult = function (event) {
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const res = event.results[i];
+          if (res.isFinal) finalText += res[0].transcript;
+          else interim += res[0].transcript;
+        }
+        const combined = (beforeText ? beforeText + ' ' : '') + (finalText || interim);
+        input.value = combined.trim();
+      };
+
+      rec.onerror = function (e) {
+        const err = e && e.error ? e.error : 'unknown';
+
+        // Безобидные ошибки — не пугаем пользователя
+        if (err === 'aborted' || err === 'no-speech' || err === 'network') {
+          return; // просто попробуем перезапустить в onend
+        }
+        if (err === 'not-allowed' || err === 'service-not-allowed') {
+          _voiceShouldBeActive = false;
+          if (btn) btn.classList.remove('recording');
+          showToast('Доступ к микрофону запрещён. Разрешите его в настройках браузера.', 'warn', null, null, 6000);
+          return;
+        }
+        if (err === 'audio-capture') {
+          _voiceShouldBeActive = false;
+          if (btn) btn.classList.remove('recording');
+          showToast('Микрофон не найден. Проверьте, что он подключён.', 'warn', null, null, 6000);
+          return;
+        }
+        console.warn('[voice]', err);
+      };
+
+      rec.onend = function () {
+        _voiceRecognitionActive = false;
+
+        // Если пользователь не остановил — попробуем перезапустить,
+        // но не чаще 1 раза в секунду (защита от бесконечного цикла).
+        if (_voiceShouldBeActive) {
+          const now = Date.now();
+          if (now - lastRestartAt < 1000) {
+            // Слишком часто — значит что-то не так. Остановимся.
+            _voiceShouldBeActive = false;
+            if (btn) btn.classList.remove('recording');
+            input.focus();
+            return;
+          }
+          lastRestartAt = now;
+          clearTimeout(_voiceRestartTimer);
+          _voiceRestartTimer = setTimeout(function () {
+            if (_voiceShouldBeActive) {
+              try { createAndStart(); } catch (e) { _voiceShouldBeActive = false; }
+            }
+          }, 250);
+          return;
+        }
+
+        // Пользователь сам остановил
+        if (btn) btn.classList.remove('recording');
+        input.focus();
+      };
+
+      try { rec.start(); }
+      catch (e) {
+        // "already started" — попробуем остановить и запустить заново
+        try { rec.stop(); } catch (e2) {}
+        _voiceShouldBeActive = false;
+        if (btn) btn.classList.remove('recording');
+        showToast('Не удалось запустить микрофон', 'error');
+      }
+    }
+
+    createAndStart();
   }
 
 function handleQuickAdd() {
