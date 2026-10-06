@@ -2411,7 +2411,7 @@ scheduleDiskWrite();
     clearTimeout(_savePrefsTimer);
     _savePrefsTimer = setTimeout(function () {
       try {
-        const json = JSON.stringify({ collapsed: state.collapsed, colorTotal: state.colorTotal, colorDone: state.colorDone, calendarVisible: state.calendarVisible, notificationsEnabled: state.notificationsEnabled, tasksGrouping: state.tasksGrouping, tagFilter: state.tagFilter, allCollapsedSnapshot: state.allCollapsedSnapshot, notesFilter: state.notesFilter, density: state.density, ttabs: state.tabs, customTabs: state.customTabs, customArchiveOpen: state.customArchiveOpen || {}, quickInputVisible: state.quickInputVisible,  advancedToolsVisible: state.advancedToolsVisible, ui: state.ui, favorites: state.favorites, readingPos: state.readingPos, pdfPage: state.pdfPage, pdfZoom: state.pdfZoom, pdfInvert: state.pdfInvert, litSort: state.litSort, litFavFilter: state.litFavFilter, listHidden: state.listHidden });
+        const json = JSON.stringify({ collapsed: state.collapsed, colorTotal: state.colorTotal, colorDone: state.colorDone, calendarVisible: state.calendarVisible, notificationsEnabled: state.notificationsEnabled, tasksGrouping: state.tasksGrouping, tagFilter: state.tagFilter, allCollapsedSnapshot: state.allCollapsedSnapshot, notesFilter: state.notesFilter, density: state.density, tabs: state.tabs, customTabs: state.customTabs, customArchiveOpen: state.customArchiveOpen || {}, quickInputVisible: state.quickInputVisible,  advancedToolsVisible: state.advancedToolsVisible, ui: state.ui, favorites: state.favorites, readingPos: state.readingPos, pdfPage: state.pdfPage, pdfZoom: state.pdfZoom, pdfInvert: state.pdfInvert, litSort: state.litSort, litFavFilter: state.litFavFilter, listHidden: state.listHidden });
         if (json === _lastPrefsHash) return;
         _lastPrefsHash = json;
         localStorage.setItem(PREFS_KEY, json);
@@ -7284,10 +7284,7 @@ let _confirmDeleteCustomTabId = null;
         savePrefs();
     renderCustomView(tabId);
     updateCustomTabCounters();
-    if (becameDone) {
-      showToast('🎉 МОЛОДЕЦ! Дело сделано', 'ok', null, null, 3500);
-    }
-
+    
     let undone = false;
     showToast('Карточка удалена', 'warn', 'Отменить', function () {
       if (undone) return;
