@@ -931,20 +931,6 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
 .kanban-card-row { display: flex; gap: 6px; align-items: flex-start; }
 .kanban-card-check { margin: 3px 0 0 0; width: 15px; height: 15px; accent-color: var(--color-done); cursor: pointer; flex: 0 0 auto; }
 .kanban-card-check:hover { filter: brightness(1.25); }
-/* === МАТРИЦА ЭЙЗЕНХАУЭРА === */
-.eisenhower-board { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-@media (max-width: 700px) { .eisenhower-board { grid-template-columns: 1fr; } }
-.eisenhower-quad { background: var(--card-alt); border: 1px solid var(--border); border-radius: 10px; padding: 10px; min-height: 140px; }
-.eisenhower-quad-head { margin-bottom: 8px; font-size: 12px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap; }
-.eisenhower-quad-sub { font-size: 10px; color: var(--muted); font-weight: 400; margin-left: 4px; text-transform: none; letter-spacing: 0; }
-.eisenhower-quad[data-quad="q1"] { border-color: rgba(255,123,114,.55); }
-.eisenhower-quad[data-quad="q1"] .eisenhower-quad-head { color: var(--danger); }
-.eisenhower-quad[data-quad="q2"] { border-color: rgba(88,166,255,.55); }
-.eisenhower-quad[data-quad="q2"] .eisenhower-quad-head { color: var(--accent); }
-.eisenhower-quad[data-quad="q3"] { border-color: rgba(245,197,24,.55); }
-.eisenhower-quad[data-quad="q3"] .eisenhower-quad-head { color: var(--gold); }
-.eisenhower-quad[data-quad="q4"] { border-color: rgba(140,155,175,.55); }
-.eisenhower-quad[data-quad="q4"] .eisenhower-quad-head { color: var(--muted); }
 /* === ПОДТАБЫ АКТИВНОГО РАЗДЕЛА === */
 .active-subtabs { display: flex; gap: 8px; margin: 12px 0 14px; }
 .active-subtab {
@@ -1019,6 +1005,32 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
   }
   body.tabs-dragging { user-select: none; cursor: grabbing; }
   body.tabs-dragging .tab:hover { border-color: var(--border); }
+  /* === ПЕРЕТАСКИВАНИЕ ВКЛАДОК С АНИМАЦИЕЙ === */
+  .tab { cursor: grab; user-select: none; }
+  .tab.dragging-tab {
+    opacity: 0.25;
+    border-style: dashed;
+    border-color: var(--accent);
+    background: rgba(88,166,255,.08);
+  }
+  .dragging-ghost {
+    background: var(--card);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    pointer-events: none;
+    user-select: none;
+    will-change: left, top, transform;
+  }
+  body.tabs-dragging,
+  body.tabs-dragging * { cursor: grabbing !important; user-select: none !important; }
 .tab.tab-manage:hover {
   color: var(--accent);
   border-color: var(--accent);
@@ -1308,8 +1320,7 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
                 <option value="priority">По приоритету</option>
                 <option value="created">По дате</option>
               </select>
-                <select id="groupSelect">
-                <option value="eisenhower">Матрица Эйзенхауэра</option>
+                              <select id="groupSelect">
                 <option value="kanban">Kanban-доска</option>
                 <option value="none">Без группировки</option>
                 <option value="date">По датам</option>
@@ -2109,7 +2120,7 @@ const DEFAULT_TABS = [
     calYear: new Date().getFullYear(), calMonth: new Date().getMonth(),
     calSelectedDate: null, calendarVisible: true,
     theme: 'dark', notificationsEnabled: false, lastNotifCheck: 0, lastBackupCheck: 0,
-    massMode: false, massSelected: {}, tasksGrouping: 'eisenhower', tagFilter: '',
+        massMode: false, massSelected: {}, tasksGrouping: 'kanban', tagFilter: '',
 notesFilter: 'all',
     density: 'normal',
           tabs: null, customTabs: [], quickInputVisible: true, advancedToolsVisible: false,
@@ -2335,7 +2346,9 @@ function waitForLib(name, ms) {
           if (typeof p.colorDone === 'string') state.colorDone = p.colorDone;
           if (typeof p.calendarVisible === 'boolean') state.calendarVisible = p.calendarVisible;
           if (typeof p.notificationsEnabled === 'boolean') state.notificationsEnabled = p.notificationsEnabled;
-          if (typeof p.tasksGrouping === 'string') state.tasksGrouping = p.tasksGrouping;
+                    if (typeof p.tasksGrouping === 'string') {
+            state.tasksGrouping = (p.tasksGrouping === 'eisenhower') ? 'kanban' : p.tasksGrouping;
+          }
           if (typeof p.tagFilter === 'string') state.tagFilter = p.tagFilter;
           if (typeof p.allCollapsedSnapshot === 'boolean') state.allCollapsedSnapshot = p.allCollapsedSnapshot;
           if (typeof p.notesFilter === 'string') state.notesFilter = p.notesFilter;
@@ -4866,15 +4879,18 @@ function autoArchiveOldCompletedTasks() {
   }  
 
   // === ПЕРЕТАСКИВАНИЕ ВКЛАДОК МЫШЬЮ / ПАЛЬЦЕМ ===
-  function initTabsDragAndDrop() {
+    function initTabsDragAndDrop() {
     const nav = document.getElementById('tabsNav');
     if (!nav || nav.dataset.dndBound === '1') return;
     nav.dataset.dndBound = '1';
 
-    let dragging = null;
-    let dragType = null;      // 'std' | 'custom'
+    let dragging = null;       // оригинал (placeholder)
+    let ghost = null;          // летающий клон
+    let dragType = null;       // 'std' | 'custom'
+    let dragId = null;
     let activePointerId = null;
     let startX = 0, startY = 0;
+    let grabDX = 0, grabDY = 0;
     let started = false;
     let blockNextClick = false;
     const THRESHOLD = 8;
@@ -4883,14 +4899,33 @@ function autoArchiveOldCompletedTasks() {
       return type === 'std' ? state.tabs : state.customTabs;
     }
 
-    function swapTabs(idA, idB, type) {
-      const arr = findArr(type);
-      if (!Array.isArray(arr)) return false;
-      const ia = arr.findIndex(function (t) { return t.id === idA; });
-      const ib = arr.findIndex(function (t) { return t.id === idB; });
-      if (ia === -1 || ib === -1 || ia === ib) return false;
-      const tmp = arr[ia]; arr[ia] = arr[ib]; arr[ib] = tmp;
-      return true;
+    function captureRects() {
+      const rects = new Map();
+      nav.querySelectorAll('.tab[data-tab]').forEach(function (el) {
+        rects.set(el.dataset.tab, el.getBoundingClientRect());
+      });
+      return rects;
+    }
+
+    function playFlip(oldRects) {
+      nav.querySelectorAll('.tab[data-tab]').forEach(function (el) {
+        const id = el.dataset.tab;
+        const oldR = oldRects.get(id);
+        if (!oldR) return;
+        const newR = el.getBoundingClientRect();
+        const dx = oldR.left - newR.left;
+        const dy = oldR.top - newR.top;
+        if (dx === 0 && dy === 0) return;
+        el.style.transition = 'none';
+        el.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
+        requestAnimationFrame(function () {
+          el.style.transition = 'transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1)';
+          el.style.transform = '';
+          setTimeout(function () {
+            if (el) { el.style.transition = ''; el.style.transform = ''; }
+          }, 260);
+        });
+      });
     }
 
     nav.addEventListener('pointerdown', function (e) {
@@ -4898,15 +4933,19 @@ function autoArchiveOldCompletedTasks() {
       const tab = e.target.closest('.tab[data-tab]');
       if (!tab) return;
       if (e.target.closest('.tab-manage')) return;
-      const tabId = tab.dataset.tab;
-      const isStd = Array.isArray(state.tabs) && state.tabs.some(function (t) { return t.id === tabId; });
-      const isCustom = Array.isArray(state.customTabs) && state.customTabs.some(function (t) { return t.id === tabId; });
+      const id = tab.dataset.tab;
+      const isStd = Array.isArray(state.tabs) && state.tabs.some(function (t) { return t.id === id; });
+      const isCustom = Array.isArray(state.customTabs) && state.customTabs.some(function (t) { return t.id === id; });
       if (!isStd && !isCustom) return;
       dragging = tab;
+      dragId = id;
       dragType = isStd ? 'std' : 'custom';
       activePointerId = e.pointerId;
       startX = e.clientX;
       startY = e.clientY;
+      const r = tab.getBoundingClientRect();
+      grabDX = e.clientX - r.left;
+      grabDY = e.clientY - r.top;
       started = false;
     });
 
@@ -4915,43 +4954,87 @@ function autoArchiveOldCompletedTasks() {
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
       const dist = Math.sqrt(dx * dx + dy * dy);
+
       if (!started) {
         if (dist < THRESHOLD) return;
         started = true;
+        // создаём ghost
+        const r = dragging.getBoundingClientRect();
+        ghost = dragging.cloneNode(true);
+        ghost.style.position = 'fixed';
+        ghost.style.left = r.left + 'px';
+        ghost.style.top = r.top + 'px';
+        ghost.style.width = r.width + 'px';
+        ghost.style.height = r.height + 'px';
+        ghost.style.zIndex = '9999';
+        ghost.style.margin = '0';
+        ghost.style.boxShadow = '0 12px 32px rgba(0,0,0,.5), 0 0 0 2px rgba(88,166,255,.4)';
+        ghost.style.transform = 'scale(1.05)';
+        ghost.style.transition = 'transform .15s ease, box-shadow .15s ease';
+        ghost.style.opacity = '0.95';
+        ghost.classList.add('dragging-ghost');
+        document.body.appendChild(ghost);
+
         dragging.classList.add('dragging-tab');
         document.body.classList.add('tabs-dragging');
+        if (navigator.vibrate) { try { navigator.vibrate(15); } catch (err) {} }
       }
+
+      if (ghost) {
+        ghost.style.left = (e.clientX - grabDX) + 'px';
+        ghost.style.top = (e.clientY - grabDY) + 'px';
+      }
+
       const el = document.elementFromPoint(e.clientX, e.clientY);
       const over = el ? el.closest('.tab[data-tab]') : null;
       if (!over || over === dragging) return;
-      // Меняем только внутри своего типа (стандартные со стандартными, свои — со своими)
-      const overId = over.dataset.tab;
-      const overIsStd = Array.isArray(state.tabs) && state.tabs.some(function (t) { return t.id === overId; });
-      const overIsCustom = Array.isArray(state.customTabs) && state.customTabs.some(function (t) { return t.id === overId; });
-      const overType = overIsStd ? 'std' : (overIsCustom ? 'custom' : null);
-      if (overType !== dragType) return;
-      const dragId = dragging.dataset.tab;
-      if (!swapTabs(dragId, overId, dragType)) return;
+
+      const arr = findArr(dragType);
+      const ia = arr.findIndex(function (t) { return t.id === dragId; });
+      const ib = arr.findIndex(function (t) { return t.id === over.dataset.tab; });
+      if (ia === -1 || ib === -1 || ia === ib) return;
+
+      const oldRects = captureRects();
+      const tmp = arr[ia]; arr[ia] = arr[ib]; arr[ib] = tmp;
       renderTabs();
-      // после перерисовки — переподхватываем новый DOM-элемент
-      const newEl = document.querySelector('.tab[data-tab="' + CSS.escape(dragId) + '"]');
-      if (newEl) {
-        newEl.classList.add('dragging-tab');
-        dragging = newEl;
+      playFlip(oldRects);
+
+      const newPlace = document.querySelector('.tab[data-tab="' + CSS.escape(dragId) + '"]');
+      if (newPlace) {
+        newPlace.classList.add('dragging-tab');
+        dragging = newPlace;
       }
     });
 
     function endDrag(e) {
       if (!dragging || (e && e.pointerId !== activePointerId)) return;
+
+      if (ghost) {
+        // плавно уронить ghost в место placeholder'а
+        const target = dragging.getBoundingClientRect();
+        ghost.style.transition = 'left .2s cubic-bezier(0.22,0.61,0.36,1), top .2s cubic-bezier(0.22,0.61,0.36,1), width .2s, height .2s, transform .2s, opacity .2s';
+        ghost.style.left = target.left + 'px';
+        ghost.style.top = target.top + 'px';
+        ghost.style.width = target.width + 'px';
+        ghost.style.height = target.height + 'px';
+        ghost.style.transform = 'scale(1)';
+        ghost.style.opacity = '0';
+        const g = ghost;
+        setTimeout(function () { if (g && g.parentNode) g.parentNode.removeChild(g); }, 230);
+        ghost = null;
+      }
+
       if (started) {
         blockNextClick = true;
         setTimeout(function () { blockNextClick = false; }, 60);
         savePrefs();
       }
+
       if (dragging) dragging.classList.remove('dragging-tab');
       document.body.classList.remove('tabs-dragging');
       dragging = null;
       dragType = null;
+      dragId = null;
       started = false;
       activePointerId = null;
     }
@@ -4959,7 +5042,6 @@ function autoArchiveOldCompletedTasks() {
     document.addEventListener('pointerup', endDrag);
     document.addEventListener('pointercancel', endDrag);
 
-    // Блокируем обычный клик после перетаскивания
     nav.addEventListener('click', function (e) {
       if (blockNextClick) {
         e.stopPropagation();
@@ -5274,8 +5356,8 @@ function renderKanbanHtml(items) {
       } else banner.hidden = true;
     }
 
-    if (state.tasksGrouping === 'kanban' || state.tasksGrouping === 'eisenhower') {
-      list.innerHTML = state.tasksGrouping === 'kanban' ? renderKanbanHtml(items) : renderEisenhowerHtml(items);
+        if (state.tasksGrouping === 'kanban') {
+      list.innerHTML = renderKanbanHtml(items);
       if (col) col.scrollTop = st;
       return;
     }
