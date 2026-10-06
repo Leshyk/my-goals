@@ -21,6 +21,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/docx-preview@0.3.2/dist/docx-preview.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
@@ -1622,7 +1623,8 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
             <div style="display:flex;gap:6px;">
               <button type="button" id="newNoteBtn" style="flex:1;">+ Новая</button>
               <button type="button" class="secondary" id="dailyNoteBtn" title="Заметка на сегодня">📅 Сегодня</button>
-            </div>
+            <button type="button" class="secondary" id="graphBtn" title="Граф связей">🕸 Граф</button>
+			</div>
             <div class="notes-subtabs">
               <button type="button" class="notes-subtab active" data-notes-filter="all">Все</button>
               <button type="button" class="notes-subtab" data-notes-filter="fav">⭐ Избранное</button>
@@ -1993,7 +1995,18 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
   </div>
 </div>
 
-
+<!-- Окно графа связей -->
+<div class="modal-backdrop" id="graphModal" hidden>
+  <div class="modal" style="width: min(1200px, 100%); height: 80vh;">
+    <header class="modal-head">
+      <div class="modal-title">🕸 Граф связей заметок</div>
+      <button type="button" class="secondary" data-action="close-graph">✕</button>
+    </header>
+    <div class="modal-body" style="padding: 0; flex: 1; display: flex;">
+      <div id="graphContainer" style="width: 100%; height: 100%; background: var(--bg-overlay);"></div>
+    </div>
+  </div>
+</div>
 <!-- Универсальное подтверждение -->
 <div class="modal-backdrop" id="pgtConfirmModal" hidden>
   <div class="modal modal-sm">
@@ -9809,6 +9822,129 @@ applyQuickInputVisibility();
     if (!state.readingPos[section]) state.readingPos[section] = {};
     state.readingPos[section][name] = body.scrollTop;
   }, true);
+   
+   // ============================================================
+// === FEATURE 5: NOTE GRAPH (Граф связей) ===
+// ============================================================
+function openGraphModal() {
+  const modal = document.getElementById('graphModal');
+  if (!modal) return;
+  modal.hidden = false;
+  renderGraph();
+}
+
+function closeGraphModal() {
+  const modal = document.getElementById('graphModal');
+  if (modal) modal.hidden = true;
+}
+
+function renderGraph() {
+  const container = document.getElementById('graphContainer');
+  if (!container) return;
+  if (!window.vis) {
+    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);">Библиотека для графа не загрузилась. Проверьте интернет.</div>';
+    return;
+  }
+
+  const nodes = [];
+  const edges = [];
+  const nodeIds = new Set();
+
+  // 1. Добавляем заметки
+  state.notes.forEach(n => {
+    nodes.push({ id: 'note_' + n.id, label: n.title, group: 'notes', title: n.title });
+    nodeIds.add('note_' + n.id);
+  });
+
+  // 2. Добавляем цели
+  state.goals.forEach(g => {
+    if (g.archivedAt) return;
+    nodes.push({ id: 'goal_' + g.id, label: '🎯 ' + g.title, group: 'goals', title: g.title });
+    nodeIds.add('goal_' + g.id);
+  });
+
+  // 3. Добавляем теги
+  const allTags = getAllTags();
+  allTags.forEach(tag => {
+    nodes.push({ id: 'tag_' + tag, label: '#' + tag, group: 'tags', title: '#' + tag });
+    nodeIds.add('tag_' + tag);
+  });
+
+  // 4. Связи: Заметки <-> Цели
+  state.notes.forEach(n => {
+    if (n.goalId && nodeIds.has('goal_' + n.goalId)) {
+      edges.push({ from: 'note_' + n.id, to: 'goal_' + n.goalId, color: 'var(--accent)' });
+    }
+  });
+
+  // 5. Связи: Заметки <-> Теги
+  state.notes.forEach(n => {
+    (n.tags || []).forEach(tag => {
+      if (nodeIds.has('tag_' + tag)) {
+        edges.push({ from: 'note_' + n.id, to: 'tag_' + tag, color: 'var(--gold)' });
+      }
+    });
+  });
+
+  // 6. Связи: Цели <-> Теги (через задачи)
+  state.goals.forEach(g => {
+     if (g.archivedAt) return;
+     g.tasks.forEach(t => {
+        (t.tags || []).forEach(tag => {
+           if (nodeIds.has('tag_' + tag)) {
+             edges.push({ from: 'goal_' + g.id, to: 'tag_' + tag, color: 'var(--muted)', dashes: true });
+           }
+        });
+     });
+  });
+
+  const data = { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) };
+  const options = {
+    nodes: {
+      shape: 'dot',
+      size: 16,
+      font: { size: 14, color: 'var(--text)', face: 'system-ui' },
+      borderWidth: 2,
+      color: {
+        background: 'var(--card-alt)',
+        border: 'var(--accent)',
+        highlight: { background: 'var(--accent)', border: 'var(--text)' }
+      }
+    },
+    groups: {
+      notes: { color: { background: 'var(--card)', border: 'var(--accent)' }, shape: 'box', font: { color: 'var(--text)' } },
+      goals: { color: { background: 'var(--danger)', border: 'var(--danger)' }, shape: 'box', font: { color: '#fff' } },
+      tags: { color: { background: 'var(--gold)', border: 'var(--gold)' }, shape: 'dot', font: { color: '#000' } }
+    },
+    edges: {
+      width: 1.5,
+      smooth: { type: 'continuous' },
+      color: { color: 'var(--border)', highlight: 'var(--accent)' }
+    },
+    physics: {
+      stabilization: true,
+      barnesHut: { gravitationalConstant: -3000, centralGravity: 0.3, springLength: 120 }
+    },
+    interaction: { hover: true, tooltipDelay: 200 }
+  };
+
+  new vis.Network(container, data, options);
+}
+
+// Привязываем кнопки
+setTimeout(function() {
+  const graphBtn = document.getElementById('graphBtn');
+  if (graphBtn) graphBtn.addEventListener('click', openGraphModal);
+  
+  const graphModal = document.getElementById('graphModal');
+  if (graphModal) {
+    graphModal.addEventListener('click', function(e) {
+      if (e.target === this) { closeGraphModal(); return; }
+      const el = e.target.closest('[data-action]');
+      if (el && el.dataset.action === 'close-graph') closeGraphModal();
+    });
+  }
+}, 300);
    
     // ============================================================
   // === FEATURE 4: MILESTONES (этапы у целей) ===
