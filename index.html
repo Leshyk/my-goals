@@ -106,16 +106,18 @@
     -webkit-overflow-scrolling: touch;
   }
   .app-header-right::-webkit-scrollbar { display: none; }
-  .live-clock { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; padding: 4px 10px; border-radius: 6px; background: var(--bar-bg); font-family: ui-monospace, monospace; letter-spacing: .03em; }
+    .live-clock { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; padding: 4px 10px; border-radius: 6px; background: var(--bar-bg); font-family: ui-monospace, monospace; letter-spacing: .03em; min-width: 92px; text-align: center; }
   .save-indicator { font-size: 11px; color: var(--success); opacity: 0; transition: opacity .3s ease; padding: 4px 10px; border-radius: 6px; background: var(--success-glow); border: 1px solid var(--success); }
   .save-indicator.show { opacity: 1; }
-    .sync-status {
+      .sync-status {
     font-size: 11px;
     color: var(--muted);
     padding: 4px 8px;
     border-radius: 6px;
     background: var(--bar-bg);
     max-width: 160px;
+    min-width: 92px;
+    text-align: center;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -137,8 +139,26 @@
   .sync-dot.active { background: var(--accent); opacity: 1; animation: syncPulse 1s infinite; }
   .sync-dot.ok { background: var(--success); opacity: 1; animation: none; }
   .sync-dot.error { background: var(--danger); opacity: 1; animation: none; }
-  .sync-dot.auth { background: var(--gold); opacity: 1; animation: none; }
+   .sync-dot.auth { background: var(--gold); opacity: 1; animation: none; }
   @keyframes syncPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  /* Показываем кнопки синхронизации / профиля / PIN-замка
+     сразу при отрисовке, если по данным из localStorage видно,
+     что пользователь вошёл. Убирает "прыжок" шапки. */
+  html[data-pgt-authed="1"] #syncBtn,
+   /* user-badge по умолчанию скрыт */
+  #userBadge { display: none !important; }
+  /* но если пользователь вошёл (по данным localStorage) — показываем сразу */
+  html[data-pgt-authed="1"] #userBadge {
+    display: inline-block !important;
+  }
+  /* если внутри бейджа пустой текст — нечего показывать, прячем */
+  html[data-pgt-authed="1"] #userBadge:empty {
+    display: none !important;
+  }
+  html[data-pgt-has-pin="1"] #quickLockBtn {
+    display: inline-flex !important;
+  }
   .header-btn { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
   .header-btn:hover { border-color: var(--accent); }
   .header-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
@@ -1803,8 +1823,33 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
 
   /* === КОНТРАСТ ФОКУСА В СВЕТЛОЙ ТЕМЕ ===
      Синяя рамка #0969da на белом фоне видна хуже, чем на тёмном. */
-  :root[data-theme="light"] :focus-visible { outline: 2px solid #0550ae; outline-offset: 2px; }
+    :root[data-theme="light"] :focus-visible { outline: 2px solid #0550ae; outline-offset: 2px; }
 </style>
+<script>
+/* Пред-установка видимости кнопок шапки ДО первого рендера.
+   Читает localStorage и вешает data-атрибуты на <html>.
+   Благодаря этому CSS сразу показывает нужные кнопки —
+   и шапка не прыгает при загрузке. */
+(function () {
+  try {
+    var email = localStorage.getItem('pgt_v25_user_email') || '';
+    var rawT  = localStorage.getItem('pgt_v25_google_token');
+    var hasToken = false;
+    if (rawT) {
+      try {
+        var t = JSON.parse(rawT);
+        if (t && t.expiresAt && Date.now() < t.expiresAt) hasToken = true;
+      } catch (e) {}
+    }
+    if (email && hasToken) {
+      document.documentElement.setAttribute('data-pgt-authed', '1');
+    }
+    if (localStorage.getItem('pgt_v25_pin_hash')) {
+      document.documentElement.setAttribute('data-pgt-has-pin', '1');
+    }
+  } catch (e) { /* storage недоступен — не критично */ }
+})();
+</script>
 </head>
 <body>
 <div class="container">
@@ -1817,7 +1862,7 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
       <span class="live-clock" id="liveClock"></span>
 	  <span class="save-indicator" id="saveIndicator">✓ Сохранено</span>
       <span class="sync-status" id="syncStatus"></span>
-       <span class="user-badge" id="userBadge" hidden></span>
+        <span class="user-badge" id="userBadge"></span>
 	<button type="button" class="header-btn" id="todayWidgetBtn" title="Сегодня">📊 <span id="todayWidgetText" class="header-btn-text">—</span></button>
        <span class="sync-dot" id="syncDot" title="Не синхронизировано"></span>
       <button type="button" class="header-btn" id="syncBtn" title="Синхронизировать" hidden>☁️ Синхро</button>
@@ -4437,10 +4482,13 @@ function initPin() {
     document.body.classList.remove('login-gate-open');
   }
 
-  function updateUserBadge() {
+    function updateUserBadge() {
     const el = document.getElementById('userBadge');
     if (!el) return;
-    const email = (window.__pgtDrive && window.__pgtDrive.getUserEmail && window.__pgtDrive.getUserEmail()) || '';
+    let email = (window.__pgtDrive && window.__pgtDrive.getUserEmail && window.__pgtDrive.getUserEmail()) || '';
+    if (!email) {
+      try { email = localStorage.getItem('pgt_v25_user_email') || ''; } catch (e) {}
+    }
     if (email) {
       el.textContent = '👤 ' + email;
       el.hidden = false;
