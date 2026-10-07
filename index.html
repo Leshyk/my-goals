@@ -69,9 +69,43 @@
   h1, h2 { margin: 0 0 8px; } h1 { font-size: 22px; } h2 { font-size: 15px; }
   small, .muted { color: var(--muted); }
 
-  .app-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
-  .app-header-left { min-width: 0; flex: 1 1 auto; }
-  .app-header-right { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: nowrap;
+    min-height: 44px;
+  }
+  .app-header-left {
+    min-width: 0;
+    flex: 0 1 auto;
+    overflow: hidden;
+  }
+  .app-header-left h1 {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .app-header-left small {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .app-header-right {
+    display: flex;
+    gap: 6px;
+    flex-wrap: nowrap;
+    align-items: center;
+    flex: 1 1 auto;
+    justify-content: flex-end;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .app-header-right::-webkit-scrollbar { display: none; }
   .live-clock { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; padding: 4px 10px; border-radius: 6px; background: var(--bar-bg); font-family: ui-monospace, monospace; letter-spacing: .03em; }
   .save-indicator { font-size: 11px; color: var(--success); opacity: 0; transition: opacity .3s ease; padding: 4px 10px; border-radius: 6px; background: var(--success-glow); border: 1px solid var(--success); }
   .save-indicator.show { opacity: 1; }
@@ -472,7 +506,20 @@
 .milestone-list-row { display: flex; gap: 6px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .milestone-list-row input[type="text"] { flex: 1; font-size: 12px; padding: 4px 8px; }
 .milestone-list-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--color-total); cursor: pointer; flex: 0 0 auto; }
-  .toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column-reverse; gap: 8px; z-index: 3000; pointer-events: none; max-width: 400px; }
+    .toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column-reverse; gap: 8px; z-index: 3000; pointer-events: none; max-width: 400px; }
+  /* На телефоне тосты — сверху: не перекрывают контент под большим пальцем */
+  @media (max-width: 700px) {
+    .toast-container {
+      top: max(70px, calc(env(safe-area-inset-top, 0px) + 70px));
+      bottom: auto;
+      left: 8px;
+      right: 8px;
+      max-width: none;
+      flex-direction: column-reverse;
+    }
+    .toast { transform: translateY(-20px); }
+    .toast.show { transform: translateY(0); }
+  }
   .toast { background: var(--toast-bg); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 10px; font-size: 13px; box-shadow: 0 12px 32px rgba(0,0,0,.6); transform: translateX(20px); opacity: 0; transition: transform .25s, opacity .25s; display: flex; align-items: center; gap: 10px; pointer-events: auto; }
   .toast.show { transform: translateX(0); opacity: 1; }
   .toast.ok { border-color: var(--color-total); }
@@ -3733,7 +3780,7 @@ let _voiceRecognition = null;
     let _voiceRestartTimer = null;
   let _voiceShouldBeActive = false;
 
-  function startVoiceInput() {
+    function startVoiceInput() {
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRec) {
       showToast('Голосовой ввод не поддерживается. Попробуйте Chrome / Safari.', 'warn', null, null, 6000);
@@ -3742,31 +3789,46 @@ let _voiceRecognition = null;
     const input = document.getElementById('quickInput');
     const btn = document.getElementById('quickVoiceBtn');
 
+    // Прибиваем возможный «зависший» таймер от предыдущей сессии
+    clearTimeout(_voiceRestartTimer);
+    _voiceRestartTimer = null;
+
     // Если уже идёт — остановим
-    if (_voiceShouldBeActive && _voiceRecognition) {
+    if (_voiceShouldBeActive) {
       _voiceShouldBeActive = false;
-      try { _voiceRecognition.stop(); } catch (e) {}
+      if (_voiceRecognition) {
+        try { _voiceRecognition.stop(); } catch (e) {}
+      }
       return;
     }
 
-        const beforeText = (input.value || '').trim();
-    // finalText теперь ВНЕ createAndStart: переживает перезапуски Safari
+           const beforeText = (input.value || '').trim();
+    // finalText и lastRestartAt — ВНЕ createAndStart: переживают перезапуски.
     let finalText = '';
+    let lastRestartAt = 0;
     _voiceShouldBeActive = true;
 
     function createAndStart() {
       if (!_voiceShouldBeActive) return;
 
+      // Если остался «живой» старый экземпляр — прибиваем его перед созданием
+      // нового, иначе Safari откажется запускать запись второй раз.
+      if (_voiceRecognition) {
+        try { _voiceRecognition.abort(); } catch (e) {
+          try { _voiceRecognition.stop(); } catch (e2) {}
+        }
+        _voiceRecognition = null;
+      }
+
       const rec = new SpeechRec();
       rec.lang = 'ru-RU';
       rec.interimResults = true;
-      rec.continuous = true;        // ← важно: не рвёмся на первой паузе
+      rec.continuous = true;
       rec.maxAlternatives = 1;
       _voiceRecognition = rec;
 
-      let lastRestartAt = 0;
-
       rec.onstart = function () {
+        if (_voiceRecognition !== rec) return; // чужой экземпляр
         _voiceRecognitionActive = true;
         if (btn) btn.classList.add('recording');
       };
@@ -3804,7 +3866,10 @@ let _voiceRecognition = null;
         console.warn('[voice]', err);
       };
 
-          rec.onend = function () {
+              rec.onend = function () {
+        // Если уже создан новый экземпляр — не трогаем общее состояние.
+        if (_voiceRecognition !== rec) return;
+        _voiceRecognition = null;
         _voiceRecognitionActive = false;
 
         // Если пользователь не остановил — попробуем перезапустить,
@@ -3841,9 +3906,9 @@ let _voiceRecognition = null;
         }
       };
 
-      try { rec.start(); }
+            try { rec.start(); }
       catch (e) {
-        // "already started" — попробуем остановить и запустить заново
+        if (_voiceRecognition === rec) _voiceRecognition = null;
         try { rec.stop(); } catch (e2) {}
         _voiceShouldBeActive = false;
         if (btn) btn.classList.remove('recording');
@@ -9243,7 +9308,7 @@ function tickLiveClock() {
       const el = document.getElementById('taskMoreBody');
       el.hidden = !el.hidden;
     });
-    const _tf = document.getElementById('taskForm');
+        const _tf = document.getElementById('taskForm');
     if (_tf) _tf.addEventListener('submit', function (e) {
       e.preventDefault();
       const textEl = document.getElementById('taskText');
@@ -9261,6 +9326,10 @@ function tickLiveClock() {
       const keep = goalId;
       resetTaskForm();
       document.getElementById('taskGoal').value = keep;
+      // Принудительно перерисовываем списки, пока фокус ещё не в поле:
+      // render() внутри addTask мог быть пропущен из-за isTypingNow().
+      renderGoals();
+      renderTasks();
       document.getElementById('taskText').focus();
       showToast('Задача добавлена', 'ok');
     });
