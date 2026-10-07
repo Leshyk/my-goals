@@ -1099,8 +1099,24 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
       background: rgba(255,255,255,.32);
     }
 
-    /* «Своя вкладка» и «Вкладки» на мобильном скрываем — не помещаются */
-    .tab.tab-manage { display: none; }
+       /* Служебные кнопки в нижней панели: корзина, управление вкладками, создать вкладку */
+    .tab.tab-manage {
+      display: flex;
+      min-width: 54px;
+      margin-top: 0;
+      background: var(--bar-bg);
+      border: 1px dashed var(--border);
+      color: var(--muted);
+    }
+    .tab.tab-manage:active {
+      background: var(--highlight-bg);
+      color: var(--accent);
+    }
+    .tab.tab-manage .tab-icon { font-size: 18px; }
+    .tab.tab-manage .tab-count {
+      position: static;
+      background: var(--danger);
+    }
 
     /* Плавающие кнопки — выше панели вкладок */
     .mobile-fab {
@@ -1539,6 +1555,7 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
   </div>
 </div>
  <button type="button" class="header-btn" id="globalSearchBtn" title="Поиск (Ctrl+/)">🔍 Поиск</button>
+<button type="button" class="header-btn" id="trashHeaderBtn" title="Корзина">🗑 Корзина <span id="trashHeaderCount" style="background:var(--danger); color:#fff; border-radius:999px; padding:0 6px; font-size:10px; font-weight:700; margin-left:2px;">0</span></button>
 	    <button type="button" class="header-btn" id="quickLockBtn" title="Заблокировать" hidden>🔒</button>
  <button type="button" class="header-btn" id="installPwaBtn" title="Установить как приложение" hidden>📥 Установить</button>
       <button type="button" class="header-btn active" id="calToggle" title="Календарь (Ctrl+Shift+K)">📅 Календарь</button>
@@ -2010,15 +2027,7 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
           <button type="button" class="danger" id="clearBtn">🗑 Очистить всё</button>
         </div>
       </div>
-     <div class="settings-section">
-  <h3>🗑 Корзина</h3>
-  <div class="muted" style="font-size:11px; margin-bottom:8px;">Удалённые цели, задачи, заметки и цитаты хранятся 30 дней и потом удаляются автоматически. Можно восстановить в любой момент.</div>
-  <div style="display:flex; gap:6px; flex-wrap:wrap;">
-    <button type="button" class="secondary" id="trashOpenBtn">🗑 Открыть корзину</button>
-  </div>
-</div>
- <div class="settings-section">
-        <h3>Уведомления</h3>
+             <h3>Уведомления</h3>
         <div class="settings-row">
           <div><label>О задачах с дедлайном</label><span class="muted">Проверка раз в 15 минут</span></div>
           <button type="button" class="secondary" id="notifToggle">Включить</button>
@@ -2667,12 +2676,20 @@ function mergeTabs(userTabs) {
   function findSnippet(id) { for (let i = 0; i < state.snippets.length; i++) if (state.snippets[i].id === id) return state.snippets[i]; return null; }
   function findNote(id) { for (let i = 0; i < state.notes.length; i++) if (state.notes[i].id === id) return state.notes[i]; return null; }
     // === КОРЗИНА ===
-  function saveTrash() {
+    function saveTrash() {
     try { localStorage.setItem(TRASH_KEY, JSON.stringify(state.trash)); } catch (e) {}
-    const btn = document.getElementById('trashOpenBtn');
-    if (btn) {
-      const n = state.trash.length;
-      btn.textContent = '🗑 Открыть корзину' + (n ? ' (' + n + ')' : '');
+    const n = state.trash.length;
+    // Счётчик в шапке (ПК)
+    const hdr = document.getElementById('trashHeaderCount');
+    if (hdr) {
+      hdr.textContent = String(n);
+      hdr.style.display = n ? '' : 'none';
+    }
+    // Счётчик на кнопке в нижней навигации (телефон)
+    const tcnt = document.getElementById('trashTabCount');
+    if (tcnt) {
+      tcnt.textContent = String(n);
+      tcnt.style.display = n ? '' : 'none';
     }
   }
 
@@ -6105,8 +6122,12 @@ function autoArchiveOldCompletedTasks() {
       html += '<button type="button" class="tab tab-manage" id="customTabAddBtn" title="Создать свою вкладку">' +
         '<span class="tab-icon">＋</span><span class="tab-label">Своя вкладка</span>' +
       '</button>';
-      html += '<button type="button" class="tab tab-manage" id="tabsManageBtn" title="Управление вкладками">' +
+            html += '<button type="button" class="tab tab-manage" id="tabsManageBtn" title="Управление вкладками">' +
         '<span class="tab-icon">⚙</span><span class="tab-label">Вкладки</span>' +
+      '</button>';
+      html += '<button type="button" class="tab tab-manage" id="trashTabBtn" title="Корзина">' +
+        '<span class="tab-icon">🗑</span><span class="tab-label">Корзина</span>' +
+        '<span class="tab-count" id="trashTabCount" style="display:none;">0</span>' +
       '</button>';
       nav.innerHTML = html;
 
@@ -9904,14 +9925,25 @@ applyQuickInputVisibility();
  setTimeout(initDataFolder, 500);
  setTimeout(autoArchiveOldCompletedTasks, 1500);
   setTimeout(autoCleanTrash, 2000);
-  setTimeout(function () {
-    // Кнопка «Открыть корзину» в настройках
-    const trashBtn = document.getElementById('trashOpenBtn');
-    if (trashBtn) trashBtn.addEventListener('click', function () {
-      const sm = document.getElementById('settingsModal');
-      if (sm) sm.hidden = true;
-      openTrashModal();
-    });
+      setTimeout(function () {
+       // Кнопка «Корзина» в шапке (ПК)
+       const trashHdr = document.getElementById('trashHeaderBtn');
+       if (trashHdr) trashHdr.addEventListener('click', openTrashModal);
+
+       // Кнопка «Корзина» в нижней навигации (телефон) —
+       // привязываем через делегирование, потому что nav пересоздаётся
+       const tabsNavForTrash = document.getElementById('tabsNav');
+       if (tabsNavForTrash && tabsNavForTrash.dataset.trashBound !== '1') {
+         tabsNavForTrash.dataset.trashBound = '1';
+         tabsNavForTrash.addEventListener('click', function (e) {
+           const trashBtn = e.target.closest('#trashTabBtn');
+           if (trashBtn) {
+             e.stopPropagation();
+             e.preventDefault();
+             openTrashModal();
+           }
+         }, true);
+       }
     // Кнопки в модалке корзины
     const trashModal = document.getElementById('trashModal');
     if (trashModal) {
