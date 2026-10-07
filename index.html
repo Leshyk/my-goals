@@ -10604,7 +10604,7 @@ applyQuickInputVisibility();
         try { await migrateIdbBlobsToOpfs(); } catch (e) {}
   })();
 
-  // === PWA: установка приложения + регистрация Service Worker ===
+   // === PWA: установка приложения + регистрация Service Worker + автообновление ===
   (function initPwa() {
     const btn = document.getElementById('installPwaBtn');
     let deferred = null;
@@ -10632,15 +10632,47 @@ applyQuickInputVisibility();
       if (btn) btn.hidden = true;
       showToast('Приложение установлено! 🎉', 'ok');
     });
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js').then(function () {
-          console.log('[PWA] Service Worker зарегистрирован');
-        }).catch(function (err) {
-          console.warn('[PWA] Ошибка SW:', err.message);
-        });
-      });
+
+    if (!('serviceWorker' in navigator)) return;
+
+    // Показываем плашку «Доступно обновление» с кнопкой «Обновить»
+    function showUpdateToast(worker) {
+      showToast('🎉 Доступно обновление', 'ok', 'Обновить', function () {
+        try { worker.postMessage({ type: 'SKIP_WAITING' }); } catch (e) {}
+        setTimeout(function () { window.location.reload(); }, 400);
+      }, 60000);
     }
+
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('./sw.js').then(function (reg) {
+        // Если новый воркер уже ждёт — сразу предложим
+        if (reg.waiting) showUpdateToast(reg.waiting);
+
+        // Ловим появление нового воркера
+        reg.addEventListener('updatefound', function () {
+          const newWorker = reg.installing;
+          if (!newWorker) return;
+          newWorker.addEventListener('statechange', function () {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              showUpdateToast(newWorker);
+            }
+          });
+        });
+
+        // Раз в час проверяем обновления
+        setInterval(function () { reg.update().catch(function () {}); }, 60 * 60 * 1000);
+      }).catch(function (err) {
+        console.warn('[PWA] Ошибка SW:', err.message);
+      });
+
+      // Когда новый воркер стал контроллером — перезагружаем
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+      });
+    });
   })();
     // ============================================================
   // МОСТ ДЛЯ GOOGLE DRIVE (sync.js ↔ index.html)
