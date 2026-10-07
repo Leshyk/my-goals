@@ -1807,6 +1807,90 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
   border-radius: 10px;
   grid-column: 1 / -1;
 }
+  /* === ПРАВАЯ ПАНЕЛЬ НА ПК: переключаемые разделы === */
+  .side-panel-tabs {
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    margin: -2px -2px 8px;
+    background: var(--bar-bg);
+    border-radius: 8px;
+  }
+  .side-panel-tabs .side-tab {
+    flex: 1 1 0;
+    background: transparent;
+    border: 0;
+    color: var(--muted);
+    padding: 6px 0;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+    line-height: 1;
+    transition: background .15s, color .15s;
+  }
+  .side-panel-tabs .side-tab:hover { color: var(--text); }
+  .side-panel-tabs .side-tab.active {
+    background: var(--accent);
+    color: #fff;
+  }
+  .side-panel-body { display: block; }
+  .side-panel-body[hidden] { display: none !important; }
+
+  /* Списки в правой панели */
+  .side-list { display: flex; flex-direction: column; gap: 6px; }
+  .side-list-empty {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+    padding: 14px 8px;
+    font-style: italic;
+  }
+  .side-item {
+    background: var(--card-alt);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 8px;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .side-item:hover {
+    border-color: var(--accent);
+    background: var(--highlight-bg);
+  }
+  .side-item-text {
+    font-size: 12px;
+    word-break: break-word;
+    color: var(--text);
+  }
+  .side-item-meta {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 3px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .side-item-meta .overdue { color: var(--danger); font-weight: 700; }
+  .side-item-meta .soon { color: var(--gold); font-weight: 700; }
+  .side-item-meta .tag { color: var(--accent); }
+
+  .side-add-input {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .side-add-input input {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+  .side-add-input button {
+    flex: 0 0 auto;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
 
   /* === УВАЖАЕМ «УМЕНЬШИТЬ ДВИЖЕНИЕ» ===
      Отключаем анимации и плавные переходы для тех, у кого в системе включено
@@ -2153,17 +2237,30 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
       </div>
     </div>
 
-    <aside class="app-calendar" id="appCalendar">
-      <div class="cal-header">
-        <span class="cal-title" id="calTitle">Месяц</span>
-        <div class="cal-nav">
-          <button type="button" data-action="cal-prev" title="Предыдущий">←</button>
-          <button type="button" class="cal-today-btn" data-action="cal-today">Сегодня</button>
-          <button type="button" data-action="cal-next" title="Следующий">→</button>
-        </div>
+        <aside class="app-calendar" id="appCalendar">
+      <div class="side-panel-tabs" id="sidePanelTabs">
+        <button type="button" class="side-tab active" data-side-panel="calendar" title="Календарь">📅</button>
+        <button type="button" class="side-tab" data-side-panel="today" title="Задачи на сегодня">📌</button>
+        <button type="button" class="side-tab" data-side-panel="notes" title="Быстрые заметки">📝</button>
       </div>
-            <div class="cal-grid" id="calGrid"></div>
-      <div class="cal-info" id="calInfo"></div>
+      <div class="side-panel-body" data-side-panel-body="calendar">
+        <div class="cal-header">
+          <span class="cal-title" id="calTitle">Месяц</span>
+          <div class="cal-nav">
+            <button type="button" data-action="cal-prev" title="Предыдущий">←</button>
+            <button type="button" class="cal-today-btn" data-action="cal-today">Сегодня</button>
+            <button type="button" data-action="cal-next" title="Следующий">→</button>
+          </div>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+        <div class="cal-info" id="calInfo"></div>
+      </div>
+      <div class="side-panel-body" data-side-panel-body="today" hidden>
+        <div id="sideTodayList" class="side-list"></div>
+      </div>
+      <div class="side-panel-body" data-side-panel-body="notes" hidden>
+        <div id="sideNotesList" class="side-list"></div>
+      </div>
     </aside>
   </div>
   </div><!-- /main-layout -->
@@ -2850,7 +2947,8 @@ const DEFAULT_TABS = [
         massMode: false, massSelected: {}, tasksGrouping: 'kanban', tagFilter: '',
 notesFilter: 'all',
     density: 'normal',
-    tabOrder: null, tabs: null, customTabs: [], customArchiveOpen: {}, quickInputVisible: true, advancedToolsVisible: false,
+       tabOrder: null, tabs: null, customTabs: [], customArchiveOpen: {}, quickInputVisible: true, advancedToolsVisible: false,
+    sidePanel: 'calendar',
      ui: { search: '', filter: 'all', sort: 'deadline', tab: 'active', activeTab: 'goals', litTab: 'articles', litSearch: { articles: '', books: '' }, snippetsSearch: '', snippetsSort: 'new', snippetsTagFilter: '', snippetsGroup: 'flat', notesSearch: '' }
   };
 
@@ -3286,8 +3384,9 @@ function waitForLib(name, ms) {
           if (Array.isArray(p.tabOrder)) state.tabOrder = p.tabOrder;
       if (Array.isArray(p.customTabs)) state.customTabs = p.customTabs.filter(function(t){ return t && typeof t.id === 'string'; });
           if (p.customArchiveOpen && typeof p.customArchiveOpen === 'object') state.customArchiveOpen = p.customArchiveOpen;
-          if (typeof p.quickInputVisible === 'boolean') state.quickInputVisible = p.quickInputVisible;
+                    if (typeof p.quickInputVisible === 'boolean') state.quickInputVisible = p.quickInputVisible;
  if (typeof p.advancedToolsVisible === 'boolean') state.advancedToolsVisible = p.advancedToolsVisible;
+          if (typeof p.sidePanel === 'string' && ['calendar','today','notes'].indexOf(p.sidePanel) !== -1) state.sidePanel = p.sidePanel;
           if (p.ui && typeof p.ui === 'object') state.ui = Object.assign({}, state.ui, p.ui);
           if (!state.ui.litSearch || typeof state.ui.litSearch !== 'object') state.ui.litSearch = { articles: '', books: '' };
           if (!state.ui.litTab) state.ui.litTab = 'articles';
@@ -3351,7 +3450,7 @@ scheduleDiskWrite();
     clearTimeout(_savePrefsTimer);
     _savePrefsTimer = setTimeout(function () {
       try {
-        const json = JSON.stringify({ collapsed: state.collapsed, colorTotal: state.colorTotal, colorDone: state.colorDone, calendarVisible: state.calendarVisible, notificationsEnabled: state.notificationsEnabled, tasksGrouping: state.tasksGrouping, tagFilter: state.tagFilter, allCollapsedSnapshot: state.allCollapsedSnapshot, notesFilter: state.notesFilter, density: state.density, tabOrder: state.tabOrder, tabs: state.tabs, customTabs: state.customTabs, customArchiveOpen: state.customArchiveOpen || {}, quickInputVisible: state.quickInputVisible,  advancedToolsVisible: state.advancedToolsVisible, ui: state.ui, favorites: state.favorites, readingPos: state.readingPos, pdfPage: state.pdfPage, pdfZoom: state.pdfZoom, pdfInvert: state.pdfInvert, litSort: state.litSort, litFavFilter: state.litFavFilter, listHidden: state.listHidden });
+                const json = JSON.stringify({ collapsed: state.collapsed, colorTotal: state.colorTotal, colorDone: state.colorDone, calendarVisible: state.calendarVisible, notificationsEnabled: state.notificationsEnabled, tasksGrouping: state.tasksGrouping, tagFilter: state.tagFilter, allCollapsedSnapshot: state.allCollapsedSnapshot, notesFilter: state.notesFilter, density: state.density, tabOrder: state.tabOrder, tabs: state.tabs, customTabs: state.customTabs, customArchiveOpen: state.customArchiveOpen || {}, quickInputVisible: state.quickInputVisible,  advancedToolsVisible: state.advancedToolsVisible, sidePanel: state.sidePanel, ui: state.ui, favorites: state.favorites, readingPos: state.readingPos, pdfPage: state.pdfPage, pdfZoom: state.pdfZoom, pdfInvert: state.pdfInvert, litSort: state.litSort, litFavFilter: state.litFavFilter, listHidden: state.listHidden });
         if (json === _lastPrefsHash) return;
         _lastPrefsHash = json;
         localStorage.setItem(PREFS_KEY, json);
@@ -7603,7 +7702,79 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
     }
     box.innerHTML = html;
   }
-   
+ // === ПРАВАЯ ПАНЕЛЬ: переключаемые разделы ===
+function switchSidePanel(name) {
+  if (['calendar','today','notes'].indexOf(name) === -1) name = 'calendar';
+  state.sidePanel = name;
+  savePrefs();
+  document.querySelectorAll('#sidePanelTabs .side-tab').forEach(function (b) {
+    b.classList.toggle('active', b.dataset.sidePanel === name);
+  });
+  document.querySelectorAll('.side-panel-body').forEach(function (el) {
+    el.hidden = el.dataset.sidePanelBody !== name;
+  });
+  if (name === 'calendar') renderCalendar();
+  if (name === 'today') renderSidePanelToday();
+  if (name === 'notes') renderSidePanelNotes();
+}
+
+function renderSidePanelToday() {
+  const box = document.getElementById('sideTodayList');
+  if (!box) return;
+  const items = getTodayTasks();
+  if (!items.length) {
+    box.innerHTML = '<div class="side-list-empty">На сегодня пусто ✨</div>';
+    return;
+  }
+  box.innerHTML = items.map(function (it) {
+    const t = it.task, g = it.goal;
+    const meta = [];
+    if (!g.isInbox) meta.push('<span class="tag">' + escapeHtml(g.title) + '</span>');
+    if (it.overdue) meta.push('<span class="overdue">просрочено</span>');
+    if (t.priority === 'high') meta.push('высокий');
+    if (t.deadline) meta.push(relativeDate(t.deadline));
+    return '<div class="side-item" data-action="side-open-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '">' +
+      '<div class="side-item-text">' + escapeHtml(t.text) + '</div>' +
+      (meta.length ? '<div class="side-item-meta">' + meta.join(' · ') + '</div>' : '') +
+    '</div>';
+  }).join('');
+}
+
+function renderSidePanelNotes() {
+  const box = document.getElementById('sideNotesList');
+  if (!box) return;
+  const notes = state.notes.slice().sort(function (a, b) { return b.updatedAt - a.updatedAt; }).slice(0, 10);
+  let html = '<div class="side-add-input">' +
+    '<input type="text" id="sideNoteQuickInput" placeholder="Новая заметка…" />' +
+    '<button type="button" id="sideNoteAddBtn">+</button>' +
+  '</div>';
+  if (!notes.length) {
+    html += '<div class="side-list-empty">Пока нет заметок</div>';
+  } else {
+    html += '<div class="side-list">' + notes.map(function (n) {
+      return '<div class="side-item" data-action="side-open-note" data-id="' + escapeHtml(n.id) + '">' +
+        '<div class="side-item-text">' + escapeHtml(n.title || 'Без названия') + '</div>' +
+        '<div class="side-item-meta">' + formatDateTime(n.updatedAt) + '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+  box.innerHTML = html;
+
+  const inp = document.getElementById('sideNoteQuickInput');
+  const btn = document.getElementById('sideNoteAddBtn');
+  function addQuickNote() {
+    const v = (inp.value || '').trim();
+    if (!v) return;
+    addNote({ title: v.slice(0, 200), body: '' });
+    inp.value = '';
+    renderSidePanelNotes();
+  }
+  if (btn) btn.addEventListener('click', addQuickNote);
+  if (inp) inp.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); addQuickNote(); }
+  });
+}
+  
 function toggleCalendar() { state.calendarVisible = !state.calendarVisible; savePrefs(); applyCalendarVisibility(); if (state.calendarVisible) renderCalendar(); syncQuickHint(); }
   function applyCalendarVisibility() { const shell = document.getElementById('appShell'); const btn = document.getElementById('calToggle'); if (shell) shell.classList.toggle('with-cal', !!state.calendarVisible); if (btn) btn.classList.toggle('active', !!state.calendarVisible); }
 
@@ -9483,8 +9654,33 @@ function tickLiveClock() {
     });
     const _gsb = document.getElementById('globalSearchBtn');
     if (_gsb) _gsb.addEventListener('click', openGlobalSearch);
-    const _ct = document.getElementById('calToggle');
+        const _ct = document.getElementById('calToggle');
     if (_ct) _ct.addEventListener('click', toggleCalendar);
+
+    // === Переключение разделов правой панели ===
+    const _sideTabs = document.getElementById('sidePanelTabs');
+    if (_sideTabs) {
+      _sideTabs.addEventListener('click', function (e) {
+        const btn = e.target.closest('.side-tab');
+        if (!btn) return;
+        switchSidePanel(btn.dataset.sidePanel);
+      });
+    }
+    const _appCalClick = document.getElementById('appCalendar');
+    if (_appCalClick) {
+      _appCalClick.addEventListener('click', function (e) {
+        const el = e.target.closest('[data-action]');
+        if (!el) return;
+        if (el.dataset.action === 'side-open-task') {
+          openEditTask(el.dataset.goalId, el.dataset.taskId);
+        } else if (el.dataset.action === 'side-open-note') {
+          switchTab('notes');
+          state.editingNoteId = el.dataset.id;
+          renderNotesList();
+          renderNoteEditor();
+        }
+      });
+    }
 
     // Подвкладки активного раздела
     document.querySelectorAll('[data-active-tab-btn]').forEach(function (b) {
@@ -10502,8 +10698,9 @@ initLoginGate();
   applyTheme();
   applyColors();
   syncToolbarInputs();
-  applyCalendarVisibility();
+    applyCalendarVisibility();
 applyQuickInputVisibility();
+  switchSidePanel(state.sidePanel || 'calendar');
   applyAdvancedToolsVisibility();
   bindEvents();
  initTabsDragAndDrop();
@@ -11350,32 +11547,79 @@ function closeGraphModal() {
      });
   });
 
+   // vis-network рисует на <canvas> и не понимает CSS-переменные.
+  // Читаем актуальные цвета из документа — это работает и в тёмной,
+  // и в светлой теме, и меняется автоматически при смене темы.
+  function cssVar(name, fallback) {
+    try {
+      const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      return v || fallback;
+    } catch (e) { return fallback; }
+  }
+  const cText    = cssVar('--text',     '#f2f6fb');
+  const cMuted   = cssVar('--muted',    '#b8c7db');
+  const cCard    = cssVar('--card',     '#151f32');
+  const cCardAlt = cssVar('--card-alt', '#0d1525');
+  const cAccent  = cssVar('--accent',   '#58a6ff');
+  const cDanger  = cssVar('--danger',   '#ff7b72');
+  const cGold    = cssVar('--gold',     '#f5c518');
+  const cBorder  = cssVar('--border',   '#2a3a55');
+
   const data = { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) };
   const options = {
     nodes: {
-      shape: 'dot',
+      shape: 'box',
       size: 16,
-      font: { size: 14, color: 'var(--text)', face: 'system-ui' },
       borderWidth: 2,
+      margin: { top: 8, bottom: 8, left: 12, right: 12 },
+      font: {
+        size: 14,
+        color: cText,
+        face: 'system-ui',
+        strokeWidth: 0,
+        align: 'center',
+        bold: { color: cText, size: 14 }
+      },
+      shadow: { enabled: true, color: 'rgba(0,0,0,0.35)', size: 6, x: 0, y: 2 },
       color: {
-        background: 'var(--card-alt)',
-        border: 'var(--accent)',
-        highlight: { background: 'var(--accent)', border: 'var(--text)' }
+        background: cCardAlt,
+        border: cAccent,
+        highlight: { background: cAccent, border: cText },
+        hover:     { background: cCardAlt, border: cGold }
       }
     },
     groups: {
-      notes: { color: { background: 'var(--card)', border: 'var(--accent)' }, shape: 'box', font: { color: 'var(--text)' } },
-      goals: { color: { background: 'var(--danger)', border: 'var(--danger)' }, shape: 'box', font: { color: '#fff' } },
-      tags: { color: { background: 'var(--gold)', border: 'var(--gold)' }, shape: 'dot', font: { color: '#000' } }
+      // Заметки — нейтральные с синей рамкой
+      notes: {
+        shape: 'box',
+        color: { background: cCardAlt, border: cAccent },
+        font: { color: cText }
+      },
+      // Цели — красная рамка, текст светлый
+      goals: {
+        shape: 'box',
+        color: { background: cCardAlt, border: cDanger },
+        font: { color: cText }
+      },
+      // Теги — золотая рамка и золотой текст
+      tags: {
+        shape: 'box',
+        color: { background: cCardAlt, border: cGold },
+        font: { color: cGold }
+      }
     },
     edges: {
       width: 1.5,
       smooth: { type: 'continuous' },
-      color: { color: 'var(--border)', highlight: 'var(--accent)' }
+      color: {
+        color: cBorder,
+        highlight: cAccent,
+        hover: cAccent
+      }
     },
     physics: {
       stabilization: true,
-      barnesHut: { gravitationalConstant: -3000, centralGravity: 0.3, springLength: 120 }
+      barnesHut: { gravitationalConstant: -3000, centralGravity: 0.3, springLength: 130 }
     },
     interaction: { hover: true, tooltipDelay: 200 }
   };
