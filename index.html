@@ -2339,7 +2339,8 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
         </div>
         <div id="advancedToolsBlock" hidden style="margin-top:10px; display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:8px;">
           <button type="button" class="secondary" id="exportBtn">💾 JSON</button>
-          <button type="button" class="secondary" id="exportMdBtn">📄 Markdown-отчёт</button>
+                    <button type="button" class="secondary" id="exportMdBtn">📄 Markdown-отчёт</button>
+          <button type="button" class="secondary" id="exportCsvBtn">📊 CSV (задачи)</button>
           <button type="button" class="secondary" id="exportIcsBtn">📅 .ics</button>
           <label class="file-label">📁 Загрузить JSON<input type="file" id="importInput" accept=".json,application/json" hidden /></label>
           <label class="file-label">📊 Импорт CSV<input type="file" id="importCsvInput" accept=".csv,text/csv" hidden /></label>
@@ -5190,6 +5191,47 @@ function autoArchiveOldCompletedTasks() {
       showToast('Все бэкапы удалены', 'ok');
     } });
   }
+  // === ЭКСПОРТ ЗАДАЧ В CSV ===
+  function exportTasksCsv() {
+    const rows = [[
+      'Цель', 'Задача', 'Приоритет', 'Статус', 'Дедлайн',
+      'Теги', 'Создано', 'Выполнено', 'Подзадачи'
+    ]];
+    function esc(v) {
+      const s = String(v == null ? '' : v);
+      if (/[",\n;]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+      return s;
+    }
+    const STATUS_LABEL = { todo: 'К выполнению', doing: 'В работе', blocked: 'Блок', done: 'Готово' };
+    let total = 0;
+    state.goals.forEach(function (g) {
+      g.tasks.forEach(function (t) {
+        const subs = (t.subtasks || []).map(function (s) { return (s.done ? '✓' : '○') + ' ' + s.text; }).join(' | ');
+        rows.push([
+          g.isInbox ? '—' : (g.title || ''),
+          t.text || '',
+          PRIORITY_LABEL[t.priority] || '',
+          STATUS_LABEL[t.status] || (t.done ? 'Готово' : 'К выполнению'),
+          t.deadline || '',
+          (t.tags || []).map(function (x) { return '#' + x; }).join(' '),
+          t.createdAt ? formatDateTime(t.createdAt) : '',
+          t.doneAt ? formatDateTime(t.doneAt) : '',
+          subs
+        ]);
+        total++;
+      });
+    });
+    // BOM для корректной кириллицы в Excel
+    const csv = '\ufeff' + rows.map(function (r) { return r.map(esc).join(';'); }).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'задачи_' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+    showToast('CSV сохранён: ' + total + ' задач', 'ok');
+  }
 
   function exportMarkdownReport() {
     const stamp = new Date().toISOString().slice(0, 10);
@@ -6634,7 +6676,7 @@ function autoArchiveOldCompletedTasks() {
         else meta.push('<span class="no-deadline">без срока</span>');
         if (t.repeat) { const rmap = { daily: 'ежедн', weekdays: 'будни', weekly: 'нед', monthly: 'мес' }; meta.push('<span class="repeat-badge">🔁 ' + rmap[t.repeat.type] + '</span>'); }
         if (t.tags && t.tags.length) t.tags.forEach(function (tag) { meta.push('<span class="tag">#' + escapeHtml(tag) + '</span>'); });
-        return '<div class="task ' + (t.done ? 'done' : '') + (t.pinned ? ' pinned' : '') + '" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '"><input type="checkbox" ' + (t.done ? 'checked' : '') + ' data-action="toggle-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" /><div class="task-content"><div class="task-text">' + escapeHtml(t.text) + '</div><div class="task-meta">' + meta.join(' • ') + '</div></div><div class="task-actions"><button type="button" class="icon-btn' + (t.pinned ? ' pinned' : '') + '" data-action="pin-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="Закрепить">📌</button><button type="button" class="icon-btn" data-action="edit-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="Редактировать">✎</button>' + (t.done ? '<button type="button" class="icon-btn" data-action="archive-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="В архив">📦</button>' : '') + '<button type="button" class="icon-btn" data-action="delete-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="Удалить">✕</button></div></div>';
+              return '<div class="task ' + (t.done ? 'done' : '') + (t.pinned ? ' pinned' : '') + '" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '"><input type="checkbox" ' + (t.done ? 'checked' : '') + ' data-action="toggle-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" /><div class="task-content"><div class="task-text">' + escapeHtml(t.text) + '</div><div class="task-meta">' + meta.join(' • ') + '</div></div><div class="task-actions"><button type="button" class="icon-btn' + (t.pinned ? ' pinned' : '') + '" data-action="pin-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="Закрепить">📌</button><button type="button" class="icon-btn" data-action="duplicate-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="Дублировать">📋</button><button type="button" class="icon-btn" data-action="edit-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="Редактировать">✎</button>' + (t.done ? '<button type="button" class="icon-btn" data-action="archive-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="В архив">📦</button>' : '') + '<button type="button" class="icon-btn" data-action="delete-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="Удалить">✕</button></div></div>';
       }).join('');
       const relatedSnippets = state.snippets.filter(function (s) { return s.goalId === g.id; });
       const relatedNotes = state.notes.filter(function (n) { return n.goalId === g.id; });
@@ -6649,7 +6691,7 @@ function autoArchiveOldCompletedTasks() {
       const bodyHtml = isCollapsed ? '' : '<div class="goal-body">' + (g.description ? '<div class="goal-desc">' + escapeHtml(g.description) + '</div>' : '') + goalTagsHtml + (allDone ? '<div class="goal-hint">Все задачи выполнены — можно завершить ✓</div>' : (total === 0 ? '<div class="goal-hint">Нет задач — можно завершить сразу</div>' : '')) + '<div class="goal-progress"><div class="bar-container"><div class="bar" style="width:' + prog + '%"></div></div><span>' + done + '/' + total + '</span></div>' + quotesHtml + notesHtml + journalHtml + '<div class="goal-tasks">' + (tasksHtml || '<div class="goal-empty">Нет задач.</div>') + '</div><form class="inline-task-form" data-goal-id="' + escapeHtml(g.id) + '"><input type="text" placeholder="Новая задача..." /><input type="date" /><button type="submit" class="secondary">+</button></form></div>';
       const goalCls = 'goal' + (allDone ? ' all-done' : '') + (hasOverdue && !allDone ? ' has-overdue' : '') + (g.pinned ? ' pinned' : '') + (selected ? ' selected' : '');
       const massCheckbox = state.massModeGoals ? '<label class="goal-mass-check-wrap"><input type="checkbox" class="goal-mass-check" data-action="mass-check-goal" data-goal-id="' + escapeHtml(g.id) + '" ' + (selected ? 'checked' : '') + ' /></label>' : '';
-      return '<article class="' + goalCls + '" data-goal-id="' + escapeHtml(g.id) + '"><div class="goal-head">' + massCheckbox + '<button type="button" class="goal-toggle" data-action="toggle-goal" data-goal-id="' + escapeHtml(g.id) + '" aria-expanded="' + (!isCollapsed) + '"><span class="chev">▶</span><span class="goal-toggle-text"><span class="goal-name">' + escapeHtml(g.title) + '</span><span class="goal-meta">' + metaParts.join(' • ') + '</span></span></button><div class="goal-actions"><button type="button" class="icon-btn' + (g.pinned ? ' pinned' : '') + '" data-action="pin-goal" data-goal-id="' + escapeHtml(g.id) + '" title="Закрепить">📌</button><button type="button" class="icon-btn' + (allDone ? ' success done-hint' : '') + (total === 0 ? ' success' : '') + '" data-action="archive-goal" data-goal-id="' + escapeHtml(g.id) + '" title="Завершить">✓</button><button type="button" class="icon-btn" data-action="edit-goal" data-goal-id="' + escapeHtml(g.id) + '" title="Редактировать">✎</button><button type="button" class="icon-btn" data-action="delete-goal" data-goal-id="' + escapeHtml(g.id) + '" title="Удалить">✕</button></div></div>' + bodyHtml + '</article>';
+           return '<article class="' + goalCls + '" data-goal-id="' + escapeHtml(g.id) + '"><div class="goal-head">' + massCheckbox + '<button type="button" class="goal-toggle" data-action="toggle-goal" data-goal-id="' + escapeHtml(g.id) + '" aria-expanded="' + (!isCollapsed) + '"><span class="chev">▶</span><span class="goal-toggle-text"><span class="goal-name">' + escapeHtml(g.title) + '</span><span class="goal-meta">' + metaParts.join(' • ') + '</span></span></button><div class="goal-actions"><button type="button" class="icon-btn' + (g.pinned ? ' pinned' : '') + '" data-action="pin-goal" data-goal-id="' + escapeHtml(g.id) + '" title="Закрепить">📌</button><button type="button" class="icon-btn' + (allDone ? ' success done-hint' : '') + (total === 0 ? ' success' : '') + '" data-action="archive-goal" data-goal-id="' + escapeHtml(g.id) + '" title="Завершить">✓</button><button type="button" class="icon-btn" data-action="duplicate-goal" data-goal-id="' + escapeHtml(g.id) + '" title="Дублировать">📋</button><button type="button" class="icon-btn" data-action="edit-goal" data-goal-id="' + escapeHtml(g.id) + '" title="Редактировать">✎</button><button type="button" class="icon-btn" data-action="delete-goal" data-goal-id="' + escapeHtml(g.id) + '" title="Удалить">✕</button></div></div>' + bodyHtml + '</article>';
     }).join('');
     const massCount = Object.keys(state.massSelectedGoals).length;
     if (state.massModeGoals && massCount > 0) {
@@ -6854,8 +6896,12 @@ function renderKanbanHtml(items) {
     } else html = items.map(renderTaskItem).join('');
     const massCount = Object.keys(state.massSelected).length;
     if (state.massMode && massCount > 0) {
-      html += '<div class="mass-bar"><span>Выбрано: ' + massCount + '</span><div class="mass-actions">' +
+            html += '<div class="mass-bar"><span>Выбрано: ' + massCount + '</span><div class="mass-actions">' +
         '<button type="button" data-action="mass-done">✓ Выполнить</button>' +
+        '<button type="button" data-action="mass-priority">⚡ Приоритет</button>' +
+        '<button type="button" data-action="mass-deadline">📅 Дедлайн</button>' +
+        '<button type="button" data-action="mass-tag">🏷 Теги</button>' +
+        '<button type="button" data-action="mass-move">🎯 Цель</button>' +
         '<button type="button" data-action="mass-archive">📦 Архив</button>' +
         '<button type="button" data-action="mass-export">⬇ Экспорт</button>' +
         '<button type="button" class="danger" data-action="mass-delete">🗑 Удалить</button>' +
@@ -6895,6 +6941,7 @@ function renderKanbanHtml(items) {
       '<div class="task-content"><div class="task-text">' + escapeHtml(t.text) + '</div><div class="task-meta">' + meta.join(' • ') + '</div>' + subtasksHtml + '</div>' +
       '<div class="task-actions">' +
         '<button type="button" class="icon-btn' + (t.pinned ? ' pinned' : '') + '" data-action="pin-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="Закрепить">📌</button>' +
+                '<button type="button" class="icon-btn" data-action="duplicate-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="Дублировать">📋</button>' +
         '<button type="button" class="icon-btn" data-action="edit-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="Редактировать">✎</button>' +
         (t.done ? '<button type="button" class="icon-btn" data-action="archive-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="В архив">📦</button>' : '') +
         '<button type="button" class="icon-btn" data-action="delete-task" data-goal-id="' + escapeHtml(g.id) + '" data-task-id="' + escapeHtml(t.id) + '" title="Удалить">✕</button>' +
@@ -7576,7 +7623,7 @@ function toggleCalendar() { state.calendarVisible = !state.calendarVisible; save
     }
     massActionApply(action);
   }
-  function massActionApply(action) {
+   function massActionApply(action) {
     const ids = Object.keys(state.massSelected);
     if (!ids.length) return;
     const snapshot = [];
@@ -7584,6 +7631,88 @@ function toggleCalendar() { state.calendarVisible = !state.calendarVisible; save
     saveData(); state.massSelected = {}; render();
     if (action === 'delete' || action === 'archive') pushUndo(function () { snapshot.forEach(function (s) { const g = findGoal(s.goalId); if (g) g.tasks.push(s.task); }); saveData(); render(); }, 'массовое ' + (action === 'delete' ? 'удаление' : 'архивирование'));
     showToast('Обработано: ' + ids.length + ' задач', 'ok');
+  }
+
+  // === МАССОВАЯ ПРАВКА: приоритет / дедлайн / тег / цель ===
+  function massSetPriority() {
+    const ids = Object.keys(state.massSelected);
+    if (!ids.length) return;
+    const ans = prompt('Новый приоритет для ' + ids.length + ' задач:\n\nhigh = высокий\nmedium = средний\nlow = низкий', 'medium');
+    if (ans === null) return;
+    const v = String(ans).trim().toLowerCase();
+    if (['high','medium','low'].indexOf(v) === -1) { showToast('Неверное значение. Введите high, medium или low.', 'warn', null, null, 4000); return; }
+    let n = 0;
+    ids.forEach(function (taskId) {
+      const info = state.massSelected[taskId];
+      const g = findGoal(info.goalId); if (!g) return;
+      const t = g.tasks.find(function (x) { return x.id === taskId; }); if (!t) return;
+      t.priority = v; n++;
+    });
+    saveData(); render();
+    showToast('Приоритет обновлён: ' + n, 'ok');
+  }
+
+  function massSetDeadline() {
+    const ids = Object.keys(state.massSelected);
+    if (!ids.length) return;
+    const ans = prompt('Новый дедлайн (ГГГГ-ММ-ДД). Пусто = убрать дедлайн.\nПример: 2026-12-31', '');
+    if (ans === null) return;
+    const v = String(ans).trim();
+    if (v && !/^\d{4}-\d{2}-\d{2}$/.test(v)) { showToast('Неверный формат. Нужно ГГГГ-ММ-ДД', 'warn', null, null, 4000); return; }
+    let n = 0;
+    ids.forEach(function (taskId) {
+      const info = state.massSelected[taskId];
+      const g = findGoal(info.goalId); if (!g) return;
+      const t = g.tasks.find(function (x) { return x.id === taskId; }); if (!t) return;
+      t.deadline = v; n++;
+    });
+    saveData(); render();
+    showToast('Дедлайн обновлён: ' + n, 'ok');
+  }
+
+  function massAddTag() {
+    const ids = Object.keys(state.massSelected);
+    if (!ids.length) return;
+    const ans = prompt('Добавить тег (без #). Например: работа', '');
+    if (ans === null) return;
+    const v = String(ans).replace(/^#+/, '').trim().toLowerCase();
+    if (!v) { showToast('Пустой тег', 'warn'); return; }
+    let n = 0;
+    ids.forEach(function (taskId) {
+      const info = state.massSelected[taskId];
+      const g = findGoal(info.goalId); if (!g) return;
+      const t = g.tasks.find(function (x) { return x.id === taskId; }); if (!t) return;
+      if (!Array.isArray(t.tags)) t.tags = [];
+      if (t.tags.indexOf(v) === -1) { t.tags.push(v); n++; }
+    });
+    saveData(); render();
+    showToast('Тег «#' + v + '» добавлен к ' + n + ' задачам', 'ok');
+  }
+
+  function massMoveGoal() {
+    const ids = Object.keys(state.massSelected);
+    if (!ids.length) return;
+    const goals = state.goals.filter(function (g) { return !g.archivedAt && !g.isInbox; });
+    const list = goals.map(function (g, i) { return (i + 1) + '. ' + g.title; }).join('\n');
+    const ans = prompt('В какую цель перенести ' + ids.length + ' задач?\n\n0 = без цели (в «Быстрые задачи»)\n\n' + list, '0');
+    if (ans === null) return;
+    const num = parseInt(ans, 10);
+    if (isNaN(num) || num < 0 || num > goals.length) { showToast('Неверный номер', 'warn'); return; }
+    const target = num === 0 ? ensureInboxGoal() : goals[num - 1];
+    if (!target) return;
+    let n = 0;
+    ids.forEach(function (taskId) {
+      const info = state.massSelected[taskId];
+      const src = findGoal(info.goalId); if (!src) return;
+      if (src.id === target.id) return;
+      const t = src.tasks.find(function (x) { return x.id === taskId; }); if (!t) return;
+      src.tasks = src.tasks.filter(function (x) { return x.id !== taskId; });
+      target.tasks.push(t);
+      n++;
+    });
+    state.massSelected = {};
+    saveData(); render();
+    showToast('Перенесено: ' + n + ' → ' + target.title, 'ok');
   }
  
   function exportData() { const blob = new Blob([JSON.stringify({ goals: state.goals, folders: state.folders, snippets: state.snippets, notes: state.notes, templates: state.templates }, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'backup_' + new Date().toISOString().slice(0, 10) + '.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); }
@@ -7769,9 +7898,62 @@ function toggleCalendar() { state.calendarVisible = !state.calendarVisible; save
     const t = g.tasks.find(function (x) { return x.id === taskId; }); if (!t) return;
     t.pinned = !t.pinned; saveData(); render();
   }
-  function togglePinGoal(goalId) {
+    function togglePinGoal(goalId) {
     const g = findGoal(goalId); if (!g) return;
     g.pinned = !g.pinned; saveData(); render();
+  }
+
+  // === ДУБЛИРОВАНИЕ ЗАДАЧИ ===
+  function duplicateTask(goalId, taskId) {
+    const g = findGoal(goalId); if (!g) return;
+    const t = g.tasks.find(function (x) { return x.id === taskId; }); if (!t) return;
+    const copy = JSON.parse(JSON.stringify(t));
+    copy.id = uid();
+    copy.done = false;
+    copy.doneAt = null;
+    copy.status = 'todo';
+    copy.archivedAt = null;
+    copy.pinned = false;
+    copy.createdAt = Date.now();
+    if (Array.isArray(copy.subtasks)) {
+      copy.subtasks.forEach(function (s) {
+        s.id = uid(); s.done = false; s.createdAt = Date.now();
+      });
+    }
+    copy.text = (copy.text || '').slice(0, 950) + ' (копия)';
+    const idx = g.tasks.indexOf(t);
+    g.tasks.splice(idx + 1, 0, copy);
+    saveData(); render();
+    showToast('Задача продублирована', 'ok');
+  }
+
+  // === ДУБЛИРОВАНИЕ ЦЕЛИ ===
+  function duplicateGoal(goalId) {
+    const g = findGoal(goalId); if (!g) return;
+    const copy = JSON.parse(JSON.stringify(g));
+    copy.id = uid();
+    copy.title = (copy.title || '').slice(0, 480) + ' (копия)';
+    copy.archivedAt = null;
+    copy.pinned = false;
+    copy.createdAt = Date.now();
+    copy.journal = [];
+    if (Array.isArray(copy.tasks)) {
+      copy.tasks.forEach(function (t) {
+        t.id = uid();
+        t.done = false; t.doneAt = null; t.status = 'todo';
+        t.archivedAt = null; t.pinned = false; t.createdAt = Date.now();
+        if (Array.isArray(t.subtasks)) {
+          t.subtasks.forEach(function (s) { s.id = uid(); s.done = false; s.createdAt = Date.now(); });
+        }
+      });
+    }
+    if (Array.isArray(copy.milestones)) {
+      copy.milestones.forEach(function (m) { m.id = uid(); m.done = false; m.createdAt = Date.now(); });
+    }
+    const idx = state.goals.indexOf(g);
+    state.goals.splice(idx + 1, 0, copy);
+    saveData(); render();
+    showToast('Цель продублирована', 'ok');
   }
 
   // === ВАЛИДАЦИЯ ===
@@ -9404,7 +9586,9 @@ function tickLiveClock() {
           pgtConfirm({ title: 'Удалить цель?', message: g ? ('«' + g.title + '» и все её задачи будут удалены безвозвратно.') : 'Цель будет удалена безвозвратно.', yesLabel: 'Да, удалить', onYes: function(){ deleteGoal(gid); } });
           return;
         }
-        if (action === 'pin-task') { togglePinTask(gid, tid); return; }
+             if (action === 'pin-task') { togglePinTask(gid, tid); return; }
+        if (action === 'duplicate-task') { duplicateTask(gid, tid); return; }
+        if (action === 'duplicate-goal') { duplicateGoal(gid); return; }
         if (action === 'edit-task') { openEditTask(gid, tid); return; }
         if (action === 'archive-task') { archiveTask(gid, tid); return; }
         if (action === 'delete-task') {
@@ -9424,7 +9608,11 @@ function tickLiveClock() {
         if (action === 'mass-goals-archive') { massActionGoals('archive'); return; }
         if (action === 'mass-goals-delete') { massActionGoals('delete'); return; }
         if (action === 'mass-check') { toggleMassCheck(gid, tid); return; }
-        if (action === 'mass-done') { massAction('done'); return; }
+               if (action === 'mass-done') { massAction('done'); return; }
+        if (action === 'mass-priority') { massSetPriority(); return; }
+        if (action === 'mass-deadline') { massSetDeadline(); return; }
+        if (action === 'mass-tag') { massAddTag(); return; }
+        if (action === 'mass-move') { massMoveGoal(); return; }
         if (action === 'mass-archive') { massAction('archive'); return; }
         if (action === 'mass-export') { massAction('export'); return; }
         if (action === 'mass-delete') { massAction('delete'); return; }
@@ -10161,8 +10349,10 @@ function tickLiveClock() {
     // Экспорт/импорт
     const _eb = document.getElementById('exportBtn');
     if (_eb) _eb.addEventListener('click', exportData);
-    const _emb = document.getElementById('exportMdBtn');
+      const _emb = document.getElementById('exportMdBtn');
     if (_emb) _emb.addEventListener('click', exportMarkdownReport);
+    const _ecv = document.getElementById('exportCsvBtn');
+    if (_ecv) _ecv.addEventListener('click', exportTasksCsv);
     const _eib = document.getElementById('exportIcsBtn');
     if (_eib) _eib.addEventListener('click', exportIcs);
     const _ii = document.getElementById('importInput');
