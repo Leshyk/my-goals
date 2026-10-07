@@ -10644,7 +10644,7 @@ applyQuickInputVisibility();
     }
 
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('./sw.js').then(function (reg) {
+     navigator.serviceWorker.register('./sw-v2.js').then(function (reg) {
         // Если новый воркер уже ждёт — сразу предложим
         if (reg.waiting) showUpdateToast(reg.waiting);
 
