@@ -43,7 +43,7 @@
     --shadow: 0 10px 28px rgba(0,0,0,0.4);
     --toast-bg: rgba(21, 31, 50, 0.97);
     --highlight-bg: rgba(88, 166, 255, 0.15);
-    --cal-width: 300px;
+    --cal-width: 240px;
     --overdue-glow: rgba(255, 123, 114, 0.35);
   }
   :root[data-theme="light"] {
@@ -111,7 +111,7 @@
    
   .app-shell { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; margin-top: 12px; }
   .app-shell.with-cal { grid-template-columns: minmax(0, 1fr) var(--cal-width); }
-  .app-calendar { display: none; position: sticky; top: 10px; max-height: calc(100vh - 20px); overflow-y: auto; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; box-shadow: var(--shadow); }
+    .app-calendar { display: none; position: sticky; top: 10px; max-height: calc(100vh - 20px); overflow-y: auto; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 9px 10px; box-shadow: var(--shadow); }
   .app-shell.with-cal .app-calendar { display: block; }
   .app-main { min-width: 0; overflow: hidden; }
   @media (max-width: 1100px) { .app-shell.with-cal { grid-template-columns: minmax(0, 1fr); } .app-calendar { position: static; max-height: none; } }
@@ -190,15 +190,14 @@
   .column-title { font-size: 14px; font-weight: 700; }
   .column-head-actions { display: flex; gap: 6px; }
 
-  .cal-header { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
-  .cal-title { font-size: 13px; font-weight: 700; }
+   .cal-header { display: flex; justify-content: space-between; align-items: center; gap: 4px; margin-bottom: 6px; flex-wrap: wrap; }
+   .cal-title { font-size: 12px; font-weight: 700; }
   .cal-nav { display: flex; gap: 4px; }
   .cal-nav button { padding: 3px 8px; font-size: 12px; background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-family: inherit; }
   .cal-nav button:hover { border-color: var(--accent); }
   .cal-nav button.cal-today-btn { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-  .cal-dow { text-align: center; font-size: 9px; color: var(--muted); font-weight: 700; text-transform: uppercase; padding: 4px 0; }
-  .cal-cell { background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 3px 4px; min-height: 42px; display: flex; flex-direction: column; cursor: pointer; position: relative; overflow: hidden; }
+  .cal-dow { text-align: center; font-size: 9px; color: var(--muted); font-weight: 700; text-transform: uppercase; padding: 4px 0; }  .cal-cell { background: transparent; border: 1px solid transparent; border-radius: 5px; padding: 2px 3px; min-height: 28px; display: flex; flex-direction: column; cursor: pointer; position: relative; overflow: hidden; }
   .cal-cell:hover { border-color: var(--accent); background: var(--bar-bg); }
     .cal-cell.today { background: var(--highlight-bg); border-color: var(--accent); }
   .cal-cell.selected { background: rgba(88,166,255,.22); border-color: var(--accent); }
@@ -211,12 +210,12 @@
   .cal-cell.has-overdue-items.today { background: rgba(255,123,114,.24); }
   .cal-cell.has-overdue-items.selected { background: rgba(255,123,114,.34); }
   .cal-cell.empty { cursor: default; visibility: hidden; }
-  .cal-daynum { font-size: 10px; font-weight: 700; color: var(--muted); }
+    .cal-daynum { font-size: 10px; font-weight: 700; color: var(--muted); line-height: 1; }
   .cal-cell.today .cal-daynum, .cal-cell.selected .cal-daynum { color: var(--accent); }
   .cal-dots { display: flex; gap: 2px; flex-wrap: wrap; margin-top: auto; }
   .cal-dot { display: inline-block; width: 4px; height: 4px; border-radius: 50%; }
   .cal-dot.task { background: var(--accent); } .cal-dot.goal { background: var(--danger); } .cal-dot.overdue { background: var(--danger); }
-  .cal-info { font-size: 10px; color: var(--muted); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap; }
+   .cal-info { font-size: 9px; color: var(--muted); margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap; }
   .cal-info .clear-day-btn { background: transparent; border: 0; color: var(--accent); cursor: pointer; font-size: 10px; font-family: inherit; font-weight: 600; }
 
   .goals-list { display: grid; gap: 8px; }
@@ -529,13 +528,21 @@
   .snippet-text { font-size: 13px; background: var(--bar-bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; word-break: break-word; max-height: 240px; overflow-y: auto; line-height: 1.55; }
   .snippet-edit-area { display: grid; gap: 6px; }
   
-  /* === УЛУЧШЕНИЯ === */
+   /* === УЛУЧШЕНИЯ === */
+  /* Компактный календарь на телефоне */
   @media (max-width: 700px) {
-    .cal-cell { min-height: 54px; padding: 5px 6px; }
-    .cal-daynum { font-size: 13px; }
-    .cal-dow { font-size: 10px; padding: 6px 0; }
-    .cal-dot { width: 5px; height: 5px; }
-    .cal-grid { gap: 3px; }
+    .cal-cell { min-height: 30px; padding: 2px 3px; border-radius: 5px; }
+    .cal-daynum { font-size: 11px; font-weight: 600; }
+    .cal-dow { font-size: 9px; padding: 3px 0; font-weight: 600; }
+    .cal-dot { width: 3px; height: 3px; }
+    .cal-dots { gap: 1px; margin-top: 1px; }
+    .cal-grid { gap: 2px; }
+    .app-calendar { padding: 8px; border-radius: 10px; }
+    .cal-header { margin-bottom: 5px; gap: 3px; }
+    .cal-title { font-size: 12px; }
+    .cal-nav button { padding: 2px 7px; font-size: 11px; }
+    .cal-nav button.cal-today-btn { padding: 2px 9px; }
+    .cal-info { font-size: 9px; margin-top: 5px; padding-top: 5px; }
   }
   input.invalid, textarea.invalid, select.invalid {
     border-color: var(--danger) !important;
@@ -1127,7 +1134,7 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
     }
   }
 
-  /* На совсем узких экранах — уменьшаем отступы */
+   /* На совсем узких экранах — уменьшаем отступы */
   @media (max-width: 400px) {
     .tabs { padding: 4px 6px calc(4px + env(safe-area-inset-bottom, 0px)); }
     .tab {
@@ -1136,6 +1143,16 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
       min-height: 50px;
     }
     .tab-icon { font-size: 18px; }
+  }
+  /* Очень компактный календарь на узких телефонах */
+  @media (max-width: 400px) {
+    .cal-cell { min-height: 26px; padding: 1px 2px; }
+    .cal-daynum { font-size: 10px; }
+    .cal-dow { font-size: 8px; padding: 2px 0; }
+    .cal-grid { gap: 1px; }
+    .app-calendar { padding: 6px 7px; }
+    .cal-title { font-size: 11px; }
+    .cal-nav button { padding: 1px 5px; font-size: 10px; }
   }
 /* === КОРЗИНА === */
 .trash-item { display: flex; gap: 10px; padding: 10px 12px; background: var(--card-alt); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; align-items: center; }
