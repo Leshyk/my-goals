@@ -3760,7 +3760,7 @@ let _voiceRecognition = null;
         console.warn('[voice]', err);
       };
 
-      rec.onend = function () {
+          rec.onend = function () {
         _voiceRecognitionActive = false;
 
         // Если пользователь не остановил — попробуем перезапустить,
@@ -3784,9 +3784,17 @@ let _voiceRecognition = null;
           return;
         }
 
-        // Пользователь сам остановил
+        // Пользователь сам остановил запись.
+        // Если в поле что-то распознано — автоматически добавляем задачу,
+        // чтобы не нужно было тыкать «Добавить». Если поле пустое (просто
+        // случайный тап по 🎤) — оставляем как было: возвращаем фокус.
         if (btn) btn.classList.remove('recording');
-        input.focus();
+        const recognized = (input.value || '').trim();
+        if (recognized) {
+          handleQuickAdd();
+        } else {
+          input.focus();
+        }
       };
 
       try { rec.start(); }
@@ -6359,15 +6367,17 @@ function autoArchiveOldCompletedTasks() {
     document.getElementById('booksPanel').hidden = state.ui.litTab !== 'books';
     applyActiveTab();
   }
-        function switchTab(tab) {
+          function switchTab(tab) {
     if (!state.scrollPositions) state.scrollPositions = {};
     state.scrollPositions[state.ui.tab] = window.scrollY || window.pageYOffset || 0;
     if (state.ui.tab === 'literature') saveCurrentPosition(state.ui.litTab);
-        state.ui.tab = tab;
+    state.ui.tab = tab;
     savePrefs();
-    // renderTabs() НЕ вызываем здесь — его вызовет render() ниже,
-    // через scheduleDeferredRender. Это убирает двойную перестройку DOM
-    // и вместе с ней ghost-иконки в Safari.
+    // renderTabs() обязателен: он обновляет aria-selected, показывает/скрывает
+    // нужные viewXxx, перерисовывает счётчики. Ghost-иконки в Safari теперь
+    // предотвращаются CSS-свойствами contain:layout paint и isolation:isolate
+    // на .tabs — двойная перестройка DOM их не провоцирует.
+    renderTabs();
     if (tab === 'today') renderDashboard();
     if (tab === 'habits') renderHabits();
     if (tab === 'notes') { renderNotesList(); renderNoteEditor(); }
