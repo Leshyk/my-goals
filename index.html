@@ -129,7 +129,8 @@
   .form-extra { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   .form-extra input, .form-extra select { flex: 1 1 auto; min-width: 120px; }
 
-  .quick-input-wrap { margin: 12px 0 8px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; box-shadow: var(--shadow); }
+    .quick-input-wrap { margin: 10px 0 6px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; box-shadow: var(--shadow); }
+  .quick-input { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; align-items: center; }
   .quick-input { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
   .quick-input input { width: 100%; background: var(--input-bg); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; outline: none; }
   .quick-input input:focus { border-color: var(--accent); }
@@ -1063,6 +1064,55 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
     #settingsModal .modal { max-height: 92vh; }
     #settingsModal .modal-body { padding: 12px 14px; }
   }
+  /* === КОМПАКТНАЯ ШАПКА + БЫСТРЫЙ ВВОД НА ТЕЛЕФОНЕ === */
+  @media (max-width: 700px) {
+    /* Заголовок и подзаголовок — компактнее */
+    .app-header-left h1 { font-size: 17px; line-height: 1.2; }
+    .app-header-left small { display: none; }
+
+    /* Шапка — заголовок в одну строку, кнопки в одну строку под ним */
+    .app-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .app-header-right {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      overflow-y: hidden;
+      gap: 4px;
+      padding-bottom: 2px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      isolation: isolate;
+      contain: layout paint;
+    }
+    .app-header-right::-webkit-scrollbar { display: none; }
+
+    /* Кнопки шапки — компактные, только иконки + счётчики */
+    .app-header-right .header-btn {
+      flex: 0 0 auto;
+      padding: 6px 9px;
+      font-size: 15px;
+      gap: 4px;
+      border-radius: 7px;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    /* Скрываем текстовые подписи внутри кнопок на телефоне.
+       Остаются только иконки + счётчики. */
+    .app-header-right .header-btn-text { display: none; }
+
+    /* Счётчик мини-задач — компактнее */
+    .app-header-right .header-btn .mini-tasks-count {
+      font-size: 9px;
+      padding: 0 4px;
+      min-width: 14px;
+      margin-left: 2px;
+    }
+  }
   /* === КОМПАКТНАЯ ШАПКА НА ТЕЛЕФОНЕ === */
   @media (max-width: 700px) {
     /* Меньше вертикальных отступов — больше полезного пространства */
@@ -1092,6 +1142,39 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
     .app-header-right > #trashHeaderBtn {
       display: none !important;
     }
+  /* Компактный быстрый ввод на телефоне */
+  @media (max-width: 700px) {
+    .quick-input-wrap {
+      margin: 8px 0 6px;
+      padding: 8px 10px;
+      border-radius: 10px;
+    }
+    .quick-input {
+      grid-template-columns: 1fr auto auto;
+      gap: 6px;
+    }
+    .quick-input input {
+      padding: 9px 10px;
+      font-size: 14px;
+      min-width: 0;
+    }
+    .quick-input button {
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+    /* Кнопка голосового ввода — компактнее */
+    #quickVoiceBtn {
+      padding: 8px 10px;
+      font-size: 15px;
+    }
+
+    /* Подсказки «завтра / послезавтра / пн / 15.11 / +3 …» —
+       прячем на телефоне: они занимают много места и всё равно
+       редко читаются. Пользователь может нажать «?» в настройках. */
+    .quick-hint {
+      display: none;
+    }
+  }
 
     /* Оставшиеся кнопки — компактные и в один ряд */
     .app-header-right .header-btn {
@@ -1115,7 +1198,9 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
       padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
     }
 
-    /* Сама панель вкладок — прилипает к низу */
+        /* Сама панель вкладок — прилипает к низу.
+       isolation:isolate и contain:layout paint — не дают Safari
+       рисовать ghost-копии иконок при скролле. */
     .tabs {
       position: fixed;
       top: auto;
@@ -1140,10 +1225,12 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
       align-self: auto;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
+      isolation: isolate;
+      contain: layout paint;
     }
     .tabs::-webkit-scrollbar { display: none; }
 
-       /* Кнопка вкладки — компактная, чтобы помещалось больше */
+         /* Кнопка вкладки — компактная, без transition (Safari ghost-баг) */
     .tab {
       flex: 0 0 auto;
       min-width: 40px;
@@ -1156,17 +1243,22 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
       min-height: 44px;
       width: auto;
       text-align: center;
+      transition: none;
+      transform: none;
+      will-change: auto;
+      backface-visibility: visible;
+      /* Фиксируем композитинг: один слой на вкладку, без анимаций */
+      -webkit-transform: translateZ(0);
+      transform: translateZ(0);
     }
     .tab-icon { font-size: 17px; line-height: 1; }
-    /* Устраняем «ghost» иконок при скролле в Safari */
-    .tabs {
-      transform: translateZ(0);
-      backface-visibility: hidden;
-      will-change: scroll-position;
-      overscroll-behavior-x: contain;
-      scroll-snap-type: x proximity;
+    .tab[aria-selected="true"] {
+      background: var(--accent);
+      color: #fff;
+      /* Убираем box-shadow — он тоже даёт ghost */
+      box-shadow: none;
     }
-    .tab { scroll-snap-align: center; }
+
     .tab-count {
       position: static;
       top: auto;
@@ -1637,22 +1729,22 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
 	  <span class="save-indicator" id="saveIndicator">✓ Сохранено</span>
       <span class="sync-status" id="syncStatus"></span>
        <span class="user-badge" id="userBadge" hidden></span>
-	          <button type="button" class="header-btn" id="todayWidgetBtn" title="Сегодня">📊 <span id="todayWidgetText">—</span></button>
+	<button type="button" class="header-btn" id="todayWidgetBtn" title="Сегодня">📊 <span id="todayWidgetText" class="header-btn-text">—</span></button>
        <span class="sync-dot" id="syncDot" title="Не синхронизировано"></span>
       <button type="button" class="header-btn" id="syncBtn" title="Синхронизировать" hidden>☁️ Синхро</button>
      <div class="mini-tasks-btn" style="position:relative;">
-  <button type="button" class="header-btn" id="miniTasksBtn" title="Задачи на сегодня">📌 Сегодня<span class="mini-tasks-count zero" id="miniTasksCount">0</span></button>
+ <button type="button" class="header-btn" id="miniTasksBtn" title="Задачи на сегодня">📌<span class="header-btn-text"> Сегодня</span><span class="mini-tasks-count zero" id="miniTasksCount">0</span></button>
   <div class="mini-tasks-panel" id="miniTasksPanel" hidden>
     <div class="mini-tasks-head"><span>📌 Задачи на сегодня</span><span class="muted" id="miniTasksSub"></span></div>
     <div class="mini-tasks-list" id="miniTasksList"></div>
   </div>
 </div>
- <button type="button" class="header-btn" id="globalSearchBtn" title="Поиск (Ctrl+/)">🔍 Поиск</button>
-<button type="button" class="header-btn" id="trashHeaderBtn" title="Корзина">🗑 Корзина <span id="trashHeaderCount" style="background:var(--danger); color:#fff; border-radius:999px; padding:0 6px; font-size:10px; font-weight:700; margin-left:2px;">0</span></button>
+  <button type="button" class="header-btn" id="globalSearchBtn" title="Поиск (Ctrl+/)">🔍<span class="header-btn-text"> Поиск</span></button>
+<button type="button" class="header-btn" id="trashHeaderBtn" title="Корзина">🗑<span class="header-btn-text"> Корзина</span> <span id="trashHeaderCount" style="background:var(--danger); color:#fff; border-radius:999px; padding:0 6px; font-size:10px; font-weight:700; margin-left:2px;">0</span></button>
 	    <button type="button" class="header-btn" id="quickLockBtn" title="Заблокировать" hidden>🔒</button>
  <button type="button" class="header-btn" id="installPwaBtn" title="Установить как приложение" hidden>📥 Установить</button>
       <button type="button" class="header-btn active" id="calToggle" title="Календарь (Ctrl+Shift+K)">📅 Календарь</button>
-      <button type="button" class="header-btn" id="settingsBtn">⚙ Настройки</button>
+            <button type="button" class="header-btn" id="settingsBtn">⚙<span class="header-btn-text"> Настройки</span></button>
     </div>
   </header>
 
@@ -6271,9 +6363,11 @@ function autoArchiveOldCompletedTasks() {
     if (!state.scrollPositions) state.scrollPositions = {};
     state.scrollPositions[state.ui.tab] = window.scrollY || window.pageYOffset || 0;
     if (state.ui.tab === 'literature') saveCurrentPosition(state.ui.litTab);
-    state.ui.tab = tab;
+        state.ui.tab = tab;
     savePrefs();
-    renderTabs();
+    // renderTabs() НЕ вызываем здесь — его вызовет render() ниже,
+    // через scheduleDeferredRender. Это убирает двойную перестройку DOM
+    // и вместе с ней ghost-иконки в Safari.
     if (tab === 'today') renderDashboard();
     if (tab === 'habits') renderHabits();
     if (tab === 'notes') { renderNotesList(); renderNoteEditor(); }
