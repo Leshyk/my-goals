@@ -17,12 +17,13 @@
 
 <title>Мои цели и задачи</title>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<!-- PDF.js загружается лениво, при первом открытии PDF -->
 <script defer src="https://cdn.jsdelivr.net/npm/docx-preview@0.3.2/dist/docx-preview.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
-<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<!-- vis-network загружается лениво, при открытии графа -->
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
@@ -1031,6 +1032,103 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
     .mobile-fab { display: flex; }
     .kbd-hint-fab { bottom: 88px !important; }
   }
+    /* === НИЖНЯЯ НАВИГАЦИЯ НА ТЕЛЕФОНЕ === */
+  @media (max-width: 700px) {
+    /* Главный контейнер — одна колонка, отступ снизу под табы */
+    .main-layout {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0;
+      padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* Сама панель вкладок — прилипает к низу */
+    .tabs {
+      position: fixed;
+      top: auto;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      flex-direction: row;
+      overflow-x: auto;
+      overflow-y: hidden;
+      gap: 2px;
+      margin: 0;
+      padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+      border-radius: 0;
+      border-left: 0;
+      border-right: 0;
+      border-bottom: 0;
+      border-top: 1px solid var(--border);
+      background: var(--card);
+      box-shadow: 0 -4px 20px rgba(0,0,0,.4);
+      z-index: 900;
+      justify-content: flex-start;
+      align-self: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+
+    /* Кнопка вкладки — вертикально: иконка сверху, счётчик снизу */
+    .tab {
+      flex: 0 0 auto;
+      min-width: 62px;
+      padding: 6px 8px;
+      border: 0;
+      border-radius: 10px;
+      flex-direction: column;
+      gap: 2px;
+      justify-content: center;
+      min-height: 54px;
+      width: auto;
+      text-align: center;
+    }
+    .tab-icon { font-size: 20px; line-height: 1; }
+    .tab-count {
+      position: static;
+      top: auto;
+      right: auto;
+      margin-left: 0;
+      font-size: 9px;
+      padding: 0 5px;
+      min-width: 16px;
+      line-height: 1.35;
+      background: rgba(88,166,255,.25);
+    }
+    .tab[aria-selected="true"] .tab-count {
+      background: rgba(255,255,255,.32);
+    }
+
+    /* «Своя вкладка» и «Вкладки» на мобильном скрываем — не помещаются */
+    .tab.tab-manage { display: none; }
+
+    /* Плавающие кнопки — выше панели вкладок */
+    .mobile-fab {
+      bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+    .kbd-hint-fab {
+      bottom: calc(152px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+  }
+
+  /* На совсем узких экранах — уменьшаем отступы */
+  @media (max-width: 400px) {
+    .tabs { padding: 4px 6px calc(4px + env(safe-area-inset-bottom, 0px)); }
+    .tab {
+      min-width: 56px;
+      padding: 5px 6px;
+      min-height: 50px;
+    }
+    .tab-icon { font-size: 18px; }
+  }
+/* === КОРЗИНА === */
+.trash-item { display: flex; gap: 10px; padding: 10px 12px; background: var(--card-alt); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; align-items: center; }
+.trash-item:hover { border-color: var(--accent); }
+.trash-body { flex: 1 1 auto; min-width: 0; }
+.trash-type { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
+.trash-title { font-size: 13px; font-weight: 600; margin-top: 2px; word-break: break-word; color: var(--text); }
+.trash-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.trash-actions { display: flex; gap: 4px; flex: 0 0 auto; }
 .habit-empty { font-size: 12px; color: var(--muted); padding: 24px 16px; text-align: center; border: 1px dashed var(--border); border-radius: 10px; }
 /* === СВАЙПЫ НА МОБИЛЬНЫХ === */
 .task { position: relative; touch-action: pan-y; }
@@ -1912,7 +2010,13 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
           <button type="button" class="danger" id="clearBtn">🗑 Очистить всё</button>
         </div>
       </div>
-     
+     <div class="settings-section">
+  <h3>🗑 Корзина</h3>
+  <div class="muted" style="font-size:11px; margin-bottom:8px;">Удалённые цели, задачи, заметки и цитаты хранятся 30 дней и потом удаляются автоматически. Можно восстановить в любой момент.</div>
+  <div style="display:flex; gap:6px; flex-wrap:wrap;">
+    <button type="button" class="secondary" id="trashOpenBtn">🗑 Открыть корзину</button>
+  </div>
+</div>
  <div class="settings-section">
         <h3>Уведомления</h3>
         <div class="settings-row">
@@ -2086,6 +2190,19 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
     <div class="modal-body" style="padding: 0; flex: 1; display: flex;">
       <div id="graphContainer" style="width: 100%; height: 100%; background: var(--bg-overlay);"></div>
     </div>
+  </div>
+</div>
+<!-- Корзина -->
+<div class="modal-backdrop" id="trashModal" hidden>
+  <div class="modal">
+    <header class="modal-head">
+      <div class="modal-title">🗑 Корзина: <span id="trashCount">0</span></div>
+      <div class="modal-head-actions">
+        <button type="button" class="danger" data-action="trash-empty">🗑 Очистить всё</button>
+        <button type="button" class="secondary" data-action="close-trash">✕</button>
+      </div>
+    </header>
+    <div class="modal-body" id="trashList"></div>
   </div>
 </div>
 <!-- Универсальное подтверждение -->
@@ -2311,6 +2428,8 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
   const NOTES_KEY = 'pgt_v25_notes';
   const TEMPLATES_KEY = 'pgt_v25_templates';
   const THEME_KEY = 'pgt_v25_theme';
+const TRASH_KEY = 'pgt_v25_trash';
+const TRASH_TTL_DAYS = 30;
   const IDB_NAME = 'pgt_handles_v25';
   const IDB_HANDLES = 'handles';
   const IDB_INDEX = 'file_index';
@@ -2385,7 +2504,7 @@ const DEFAULT_TABS = [
 
   const state = {
     goals: [], folders: { articles: emptySection('Статьи'), books: emptySection('Книги') },
-    snippets: [], notes: [], templates: [], habits: [],
+    snippets: [], notes: [], templates: [], habits: [], trash: [],
     collapsed: {}, colorTotal: DEFAULT_TOTAL_COLOR, colorDone: DEFAULT_DONE_COLOR,
     favorites: { articles: {}, books: {} },
     readingPos: { articles: {}, books: {} }, pdfPage: { articles: {}, books: {} },
@@ -2455,13 +2574,55 @@ let _searchIndexDirty = true;
   }
 
     // pdf.js может быть ещё не загружен — ждём и настраиваем воркер
-  waitForLib('pdfjsLib', 15000).then(function (lib) {
+  // === ЛЕНИВАЯ ЗАГРУЗКА БИБЛИОТЕК ===
+const _lazyLibs = {};
+function lazyLoadScript(url, globalName) {
+  if (globalName && window[globalName]) return Promise.resolve(window[globalName]);
+  if (_lazyLibs[url]) return _lazyLibs[url];
+  _lazyLibs[url] = new Promise(function (resolve, reject) {
+    const s = document.createElement('script');
+    s.src = url;
+    s.async = true;
+    s.onload = function () {
+      if (globalName && !window[globalName]) {
+        // Глобал ещё не появился — подождём немного
+        const t0 = Date.now();
+        const iv = setInterval(function () {
+          if (window[globalName]) { clearInterval(iv); resolve(window[globalName]); }
+          else if (Date.now() - t0 > 3000) { clearInterval(iv); reject(new Error(globalName + ' не появился')); }
+        }, 50);
+        return;
+      }
+      resolve(window[globalName] || true);
+    };
+    s.onerror = function () { delete _lazyLibs[url]; reject(new Error('Не удалось загрузить: ' + url)); };
+    document.head.appendChild(s);
+  });
+  return _lazyLibs[url];
+}
+
+function ensurePdfJs() {
+  if (window.pdfjsLib) {
+    if (window.pdfjsLib.GlobalWorkerOptions && !window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+    return Promise.resolve(window.pdfjsLib);
+  }
+  return lazyLoadScript(
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+    'pdfjsLib'
+  ).then(function (lib) {
     if (lib && lib.GlobalWorkerOptions) {
       lib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     }
-  }).catch(function () {
-    console.warn('[pdf.js] не загрузился за 15 секунд');
+    return lib;
   });
+}
+
+function ensureVisNetwork() {
+  if (window.vis && window.vis.Network) return Promise.resolve(window.vis);
+  return lazyLoadScript('https://unpkg.com/vis-network/standalone/umd/vis-network.min.js', 'vis');
+}
 
 // Собираем итоговый список вкладок:
 // - что пользователь настроил — оставляем
@@ -2505,7 +2666,159 @@ function mergeTabs(userTabs) {
   function findGoal(id) { for (let i = 0; i < state.goals.length; i++) if (state.goals[i].id === id) return state.goals[i]; return null; }
   function findSnippet(id) { for (let i = 0; i < state.snippets.length; i++) if (state.snippets[i].id === id) return state.snippets[i]; return null; }
   function findNote(id) { for (let i = 0; i < state.notes.length; i++) if (state.notes[i].id === id) return state.notes[i]; return null; }
-  function findTemplate(id) { for (let i = 0; i < state.templates.length; i++) if (state.templates[i].id === id) return state.templates[i]; return null; }
+    // === КОРЗИНА ===
+  function saveTrash() {
+    try { localStorage.setItem(TRASH_KEY, JSON.stringify(state.trash)); } catch (e) {}
+    const btn = document.getElementById('trashOpenBtn');
+    if (btn) {
+      const n = state.trash.length;
+      btn.textContent = '🗑 Открыть корзину' + (n ? ' (' + n + ')' : '');
+    }
+  }
+
+  function moveToTrash(type, data, meta) {
+    meta = meta || {};
+    if (!Array.isArray(state.trash)) state.trash = [];
+    const entry = {
+      id: 'trash-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      type: type,
+      data: data,
+      deletedAt: Date.now(),
+      goalId: meta.goalId || null,
+      goalTitle: meta.goalTitle || ''
+    };
+    state.trash.push(entry);
+    saveTrash();
+    return entry;
+  }
+
+  function restoreFromTrash(trashId) {
+    if (!Array.isArray(state.trash)) return;
+    const idx = state.trash.findIndex(function(t) { return t.id === trashId; });
+    if (idx === -1) return;
+    const entry = state.trash[idx];
+    try {
+      if (entry.type === 'goal') {
+        if (!Array.isArray(state.goals)) state.goals = [];
+        // если такой id уже есть — обновим id, чтобы не было конфликта
+        if (state.goals.some(function(g) { return g.id === entry.data.id; })) entry.data.id = uid();
+        state.goals.push(entry.data);
+        showToast('Цель восстановлена: ' + entry.data.title, 'ok');
+      } else if (entry.type === 'task') {
+        const g = entry.goalId ? findGoal(entry.goalId) : ensureInboxGoal();
+        if (!g) { showToast('Цель не найдена — задача потеряна', 'error'); return; }
+        if (!Array.isArray(g.tasks)) g.tasks = [];
+        if (g.tasks.some(function(t) { return t.id === entry.data.id; })) entry.data.id = uid();
+        g.tasks.push(entry.data);
+        showToast('Задача восстановлена в «' + g.title + '»', 'ok');
+      } else if (entry.type === 'note') {
+        if (!Array.isArray(state.notes)) state.notes = [];
+        if (state.notes.some(function(n) { return n.id === entry.data.id; })) entry.data.id = uid();
+        state.notes.push(entry.data);
+        showToast('Заметка восстановлена', 'ok');
+      } else if (entry.type === 'snippet') {
+        if (!Array.isArray(state.snippets)) state.snippets = [];
+        if (state.snippets.some(function(s) { return s.id === entry.data.id; })) entry.data.id = uid();
+        state.snippets.push(entry.data);
+        showToast('Цитата восстановлена', 'ok');
+      }
+      state.trash.splice(idx, 1);
+      saveTrash();
+      saveData();
+      if (typeof saveNotes === 'function') saveNotes();
+      if (typeof saveSnippets === 'function') saveSnippets();
+      render();
+      if (state.ui.tab === 'notes') { renderNotesList(); renderNoteEditor(); }
+      if (typeof updateSnippetsBadges === 'function') updateSnippetsBadges();
+      if (typeof renderTrashList === 'function') renderTrashList();
+    } catch (e) {
+      showToast('Ошибка восстановления: ' + e.message, 'error');
+    }
+  }
+
+  function permanentlyDeleteFromTrash(trashId) {
+    const before = state.trash.length;
+    state.trash = state.trash.filter(function(t) { return t.id !== trashId; });
+    if (state.trash.length !== before) saveTrash();
+    renderTrashList();
+  }
+
+  function emptyTrash() {
+    if (!state.trash.length) return;
+    pgtConfirm({
+      title: 'Очистить корзину?',
+      message: 'Все ' + state.trash.length + ' записей будут удалены безвозвратно. Это действие нельзя отменить.',
+      yesLabel: 'Очистить',
+      onYes: function () {
+        state.trash = [];
+        saveTrash();
+        renderTrashList();
+        showToast('Корзина очищена', 'ok');
+      }
+    });
+  }
+
+  function openTrashModal() {
+    const m = document.getElementById('trashModal');
+    if (!m) return;
+    m.hidden = false;
+    renderTrashList();
+  }
+
+  function closeTrashModal() {
+    const m = document.getElementById('trashModal');
+    if (m) m.hidden = true;
+  }
+
+  function renderTrashList() {
+    const box = document.getElementById('trashList');
+    if (!box) return;
+    const items = (state.trash || []).slice().sort(function(a, b) { return b.deletedAt - a.deletedAt; });
+    const countEl = document.getElementById('trashCount');
+    if (countEl) countEl.textContent = items.length;
+    if (!items.length) {
+      box.innerHTML = '<div class="modal-empty">Корзина пуста. Удалённые элементы будут появляться здесь.</div>';
+      return;
+    }
+    const TYPE_LABEL = { goal: '🎯 Цель', task: '✓ Задача', note: '📝 Заметка', snippet: '📄 Цитата' };
+    box.innerHTML = items.map(function(t) {
+      let title = '';
+      if (t.type === 'goal') title = (t.data && t.data.title) || '';
+      else if (t.type === 'task') title = (t.data && t.data.text) || '';
+      else if (t.type === 'note') title = (t.data && t.data.title) || '';
+      else if (t.type === 'snippet') title = ((t.data && t.data.text) || '').slice(0, 100);
+      const sub = [];
+      if (t.type === 'task' && t.goalTitle) sub.push('в «' + t.goalTitle + '»');
+      sub.push('удалено ' + formatDateTime(t.deletedAt));
+      const days = Math.floor((Date.now() - t.deletedAt) / (24 * 60 * 60 * 1000));
+      const ttl = TRASH_TTL_DAYS - days;
+      if (ttl > 0) sub.push('останется ' + ttl + ' дн.');
+      return '<div class="trash-item">' +
+        '<div class="trash-body">' +
+          '<div class="trash-type">' + (TYPE_LABEL[t.type] || t.type) + '</div>' +
+          '<div class="trash-title">' + escapeHtml(title || '—') + '</div>' +
+          '<div class="trash-sub">' + escapeHtml(sub.join(' · ')) + '</div>' +
+        '</div>' +
+        '<div class="trash-actions">' +
+          '<button type="button" class="icon-btn success" data-action="trash-restore" data-id="' + escapeHtml(t.id) + '" title="Восстановить">↺</button>' +
+          '<button type="button" class="icon-btn" data-action="trash-delete" data-id="' + escapeHtml(t.id) + '" title="Удалить навсегда">✕</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function autoCleanTrash() {
+    if (!Array.isArray(state.trash) || !state.trash.length) return;
+    const cutoff = Date.now() - TRASH_TTL_DAYS * 24 * 60 * 60 * 1000;
+    const before = state.trash.length;
+    state.trash = state.trash.filter(function(t) { return t.deletedAt > cutoff; });
+    const removed = before - state.trash.length;
+    if (removed > 0) {
+      saveTrash();
+      showToast('Из корзины удалено ' + removed + ' старых записей', 'warn');
+    }
+  }
+function findTemplate(id) { for (let i = 0; i < state.templates.length; i++) if (state.templates[i].id === id) return state.templates[i]; return null; }
   function clampZoom(z) { if (isNaN(z)) z = 100; if (z < 50) z = 50; if (z > 300) z = 300; return Math.round(z); }
   function parseTags(str) { return (str || '').split(/[\s,]+/).map(function (t) { return t.replace(/^#+/, '').trim(); }).filter(Boolean); }
   function normalizeTags(arr) { if (!Array.isArray(arr)) return []; const out = []; const seen = {}; arr.forEach(function (t) { const v = String(t || '').replace(/^#+/, '').trim().toLowerCase(); if (v && !seen[v]) { seen[v] = true; out.push(v); } }); return out; }
@@ -2654,7 +2967,17 @@ function waitForLib(name, ms) {
     try { const raw = localStorage.getItem(SNIPPETS_KEY) || localStorage.getItem('pgt_v24_snippets'); if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) state.snippets = arr.map(normalizeSnippet).filter(Boolean); } } catch (e) {}
     try { const raw = localStorage.getItem(NOTES_KEY) || localStorage.getItem('pgt_v24_notes'); if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) state.notes = arr.map(normalizeNote).filter(Boolean); } } catch (e) {}
     try { const raw = localStorage.getItem(TEMPLATES_KEY) || localStorage.getItem('pgt_v24_templates'); if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) state.templates = arr.filter(function (t) { return t && typeof t === 'object' && typeof t.text === 'string'; }); } } catch (e) {}
-    try { const raw = localStorage.getItem('pgt_v25_habits'); if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) state.habits = arr.filter(function (h) { return h && typeof h === 'object' && typeof h.title === 'string'; }).map(function (h) { return { id: h.id || ('h-' + Math.random().toString(36).slice(2)), title: String(h.title).slice(0, 200), icon: String(h.icon || '🎯').slice(0, 4), marks: Array.isArray(h.marks) ? h.marks.filter(function (m) { return typeof m === 'string'; }) : [], createdAt: h.createdAt || Date.now() }; }); } } catch (e) {}
+    try {
+  const rawTrash = localStorage.getItem(TRASH_KEY);
+  if (rawTrash) {
+    const arr = JSON.parse(rawTrash);
+    if (Array.isArray(arr)) {
+      const cutoff = Date.now() - TRASH_TTL_DAYS * 24 * 60 * 60 * 1000;
+      state.trash = arr.filter(function(t) { return t && t.deletedAt > cutoff; });
+    }
+  }
+} catch (e) {}
+try { const raw = localStorage.getItem('pgt_v25_habits'); if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) state.habits = arr.filter(function (h) { return h && typeof h === 'object' && typeof h.title === 'string'; }).map(function (h) { return { id: h.id || ('h-' + Math.random().toString(36).slice(2)), title: String(h.title).slice(0, 200), icon: String(h.icon || '🎯').slice(0, 4), marks: Array.isArray(h.marks) ? h.marks.filter(function (m) { return typeof m === 'string'; }) : [], createdAt: h.createdAt || Date.now() }; }); } } catch (e) {}
       state.tabs = mergeTabs(state.tabs);
 }
 
@@ -2837,14 +3160,15 @@ tags: normalizeTags(g.tags),
 
   function addGoal(f) { const goal = { id: uid(), title: f.title, description: f.description || '', priority: f.priority, deadline: f.deadline, isInbox: false, archivedAt: null, createdAt: Date.now(), pinned: false, journal: [], tasks: [] }; state.goals.push(goal); saveData(); render(); pushUndo(function () { state.goals = state.goals.filter(function (x) { return x.id !== goal.id; }); saveData(); render(); }, 'создание цели'); }
   function updateGoal(id, f) { const g = findGoal(id); if (!g) return; const prev = { title: g.title, description: g.description, priority: g.priority, deadline: g.deadline }; Object.assign(g, f); saveData(); render(); pushUndo(function () { Object.assign(g, prev); saveData(); render(); }, 'изменение'); }
-    function deleteGoal(id) {
+       function deleteGoal(id) {
     const g = findGoal(id); if (!g) return;
     const snapshot = JSON.parse(JSON.stringify(g));
     const idx = state.goals.indexOf(g);
     state.goals.splice(idx, 1);
     delete state.collapsed[id];
+    const entry = moveToTrash('goal', snapshot);
     saveData(); savePrefs(); render();
-    pushUndo(function () { state.goals.splice(idx, 0, snapshot); saveData(); render(); }, 'удаление цели');
+    showToast('Цель удалена', 'warn', 'Восстановить', function() { restoreFromTrash(entry.id); }, 6000);
   }
         function addTask(goalId, f) {
     const goal = goalId ? (findGoal(goalId) || ensureInboxGoal()) : ensureInboxGoal();
@@ -2915,13 +3239,15 @@ tags: normalizeTags(g.tags),
     copy.createdAt = Date.now();
     return copy;
   }
-  function deleteTask(goalId, taskId) {
+    function deleteTask(goalId, taskId) {
     const g = findGoal(goalId); if (!g) return;
     const t = g.tasks.find(function (x) { return x.id === taskId; }); if (!t) return;
     const snapshot = JSON.parse(JSON.stringify(t));
     const idx = g.tasks.indexOf(t);
-    g.tasks.splice(idx, 1); saveData(); render();
-    pushUndo(function () { g.tasks.splice(idx, 0, snapshot); saveData(); render(); }, 'удаление задачи');
+    g.tasks.splice(idx, 1);
+    const entry = moveToTrash('task', snapshot, { goalId: g.id, goalTitle: g.title });
+    saveData(); render();
+    showToast('Задача удалена', 'warn', 'Восстановить', function() { restoreFromTrash(entry.id); }, 6000);
   }
     function archiveGoal(id) {
     if (archivingGoalId) return;
@@ -3297,8 +3623,15 @@ let _voiceRecognition = null;
       if (vbtn) vbtn.classList.remove('recording');
     }
 
-    // Возвращаем фокус в поле — удобно добавлять задачи одну за другой
+       // Возвращаем фокус в поле — удобно добавлять задачи одну за другой
     input.focus();
+
+    // Принудительно перерисовываем списки, минуя защиту isTypingNow():
+    // пользователь нажал Enter — он уже точно закончил ввод этой задачи
+    // и ждёт, что она появится в списке. Без этого render() видит, что
+    // фокус в поле, и откладывает перерисовку.
+    renderGoals();
+    renderTasks();
 
     if (usedCalDate) showToast('Задача добавлена на ' + formatDate(deadline), 'ok');
     else showToast('Добавлено: ' + parsed.text, 'ok');
@@ -3321,7 +3654,9 @@ async function extractMarkdownHtml(file) {
     const ext = getExt(file.name);
     if (ext === 'txt' || ext === 'md' || ext === 'markdown') return await readAsText(file);
     if (ext === 'docx') return await extractDocxText(file);
-    if (ext === 'pdf') { if (!window.pdfjsLib) return ''; try { const buf = await file.arrayBuffer(); const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise; const parts = []; for (let i = 1; i <= Math.min(pdf.numPages, 200); i++) { const page = await pdf.getPage(i); const tc = await page.getTextContent(); parts.push(tc.items.map(function (it) { return it.str; }).join(' ')); } return parts.join('\n\n'); } catch (e) { return ''; } }
+     if (ext === 'pdf') {
+    try { await ensurePdfJs(); } catch (e) { return ''; }
+    if (!window.pdfjsLib) return ''; try { const buf = await file.arrayBuffer(); const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise; const parts = []; for (let i = 1; i <= Math.min(pdf.numPages, 200); i++) { const page = await pdf.getPage(i); const tc = await page.getTextContent(); parts.push(tc.items.map(function (it) { return it.str; }).join(' ')); } return parts.join('\n\n'); } catch (e) { return ''; } }
     return '';
   }
 
@@ -4525,7 +4860,15 @@ function autoArchiveOldCompletedTasks() {
     showToast('Цитата сохранена', 'ok');
     try { window.getSelection().removeAllRanges(); } catch (e) {}
   }
-  function deleteSnippet(id) { const s = findSnippet(id); if (!s) return; const snapshot = JSON.parse(JSON.stringify(s)); const idx = state.snippets.indexOf(s); state.snippets.splice(idx, 1); saveSnippets(); updateSnippetsBadges(); renderSnippetsList(); pushUndo(function () { state.snippets.splice(idx, 0, snapshot); saveSnippets(); updateSnippetsBadges(); renderSnippetsList(); }, 'удаление цитаты'); }
+    function deleteSnippet(id) {
+    const s = findSnippet(id); if (!s) return;
+    const snapshot = JSON.parse(JSON.stringify(s));
+    const idx = state.snippets.indexOf(s);
+    state.snippets.splice(idx, 1);
+    const entry = moveToTrash('snippet', snapshot);
+    saveSnippets(); updateSnippetsBadges(); renderSnippetsList();
+    showToast('Цитата удалена', 'warn', 'Восстановить', function() { restoreFromTrash(entry.id); }, 6000);
+  }
     function clearAllSnippets() {
     if (!state.snippets.length) return;
     pgtConfirm({
@@ -4589,7 +4932,16 @@ function autoArchiveOldCompletedTasks() {
 
   function addNote(f) { const note = { id: uid(), title: f.title || 'Новая заметка', body: f.body || '', tags: [], goalId: null, createdAt: Date.now(), updatedAt: Date.now() }; state.notes.push(note); saveNotes(); renderNotesList(); state.editingNoteId = note.id; renderNoteEditor(); }
   function updateNote(id, f) { const n = findNote(id); if (!n) return; Object.assign(n, f); n.updatedAt = Date.now(); saveNotes(); }
-  function deleteNote(id) { const n = findNote(id); if (!n) return; const snapshot = JSON.parse(JSON.stringify(n)); const idx = state.notes.indexOf(n); state.notes.splice(idx, 1); if (state.editingNoteId === id) state.editingNoteId = null; saveNotes(); renderNotesList(); renderNoteEditor(); pushUndo(function () { state.notes.splice(idx, 0, snapshot); saveNotes(); renderNotesList(); renderNoteEditor(); }, 'удаление заметки'); }
+   function deleteNote(id) {
+    const n = findNote(id); if (!n) return;
+    const snapshot = JSON.parse(JSON.stringify(n));
+    const idx = state.notes.indexOf(n);
+    state.notes.splice(idx, 1);
+    if (state.editingNoteId === id) state.editingNoteId = null;
+    const entry = moveToTrash('note', snapshot);
+    saveNotes(); renderNotesList(); renderNoteEditor();
+    showToast('Заметка удалена', 'warn', 'Восстановить', function() { restoreFromTrash(entry.id); }, 6000);
+  }
   function getVisibleNotes() { let items = state.notes.slice(); const q = (state.ui.notesSearch || '').trim().toLowerCase(); if (q) items = items.filter(function (n) { return (n.title + ' ' + n.body + ' ' + (n.tags || []).join(' ')).toLowerCase().indexOf(q) !== -1; }); items.sort(function (a, b) { return b.updatedAt - a.updatedAt; }); return items; }
     function renderNotesList() {
     const list = document.getElementById('notesList');
@@ -4692,6 +5044,10 @@ function autoArchiveOldCompletedTasks() {
   function restorePosition(section, name) { const bodyEl = document.getElementById('readerBody_' + section); if (!bodyEl) return; const pos = (state.readingPos[section] || {})[name]; if (typeof pos === 'number' && pos > 0) requestAnimationFrame(function () { bodyEl.scrollTop = pos; }); }
   function cleanupPdf(section) { const rt = runtime[section]; if (rt.pdfObserver) { try { rt.pdfObserver.disconnect(); } catch (e) {} rt.pdfObserver = null; } rt.pdfPages = []; rt.pdfDoc = null; }
   async function renderPdfViewer(section, file, name) {
+    try { await ensurePdfJs(); } catch (e) {
+    document.getElementById('readerBody_' + section).innerHTML = '<div class="reader-msg error">Не удалось загрузить PDF.js. Проверьте интернет.</div>';
+    return;
+  }
     const bodyEl = document.getElementById('readerBody_' + section);
     bodyEl.classList.add('reader-pdf');
     bodyEl.innerHTML = '<div class="pdf-status">Загрузка PDF…</div>';
@@ -7016,8 +7372,23 @@ function toggleCalendar() { state.calendarVisible = !state.calendarVisible; save
 
   // === MARKDOWN + KATEX ===
   function sanitizeHtml(html) {
-    return String(html).replace(/<script[\s\S]*?<\/script>/gi, '').replace(/ on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  const raw = String(html == null ? '' : html);
+  if (!raw.trim()) return '';
+  if (window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
+    return window.DOMPurify.sanitize(raw, {
+      ADD_ATTR: ['target', 'rel'],
+      ADD_TAGS: ['math', 'semantics', 'annotation', 'mrow', 'mi', 'mo', 'mn', 'msup', 'msub', 'mfrac', 'msqrt', 'mroot', 'mtext', 'mspace', 'mover', 'munder', 'mtable', 'mtr', 'mtd', 'mstyle', 'menclose', 'mpadded', 'mphantom', 'merror'],
+      ALLOW_DATA_ATTR: true,
+      ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel|data):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i
+    });
   }
+  // Fallback — если DOMPurify по какой-то причине не загрузился (офлайн)
+  return raw
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/ on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/javascript\s*:/gi, '');
+}
   function renderMdText(text) {
     const t = String(text == null ? '' : text);
     if (!t.trim()) return '';
@@ -9532,6 +9903,39 @@ applyQuickInputVisibility();
  setTimeout(checkNotifications, 30000);
  setTimeout(initDataFolder, 500);
  setTimeout(autoArchiveOldCompletedTasks, 1500);
+  setTimeout(autoCleanTrash, 2000);
+  setTimeout(function () {
+    // Кнопка «Открыть корзину» в настройках
+    const trashBtn = document.getElementById('trashOpenBtn');
+    if (trashBtn) trashBtn.addEventListener('click', function () {
+      const sm = document.getElementById('settingsModal');
+      if (sm) sm.hidden = true;
+      openTrashModal();
+    });
+    // Кнопки в модалке корзины
+    const trashModal = document.getElementById('trashModal');
+    if (trashModal) {
+      trashModal.addEventListener('click', function (e) {
+        if (e.target === trashModal) { closeTrashModal(); return; }
+        const el = e.target.closest('[data-action]');
+        if (!el) return;
+        const action = el.dataset.action;
+        const id = el.dataset.id;
+        if (action === 'close-trash') closeTrashModal();
+        else if (action === 'trash-empty') emptyTrash();
+        else if (action === 'trash-restore') restoreFromTrash(id);
+        else if (action === 'trash-delete') {
+          pgtConfirm({
+            title: 'Удалить навсегда?',
+            message: 'Запись будет удалена безвозвратно.',
+            yesLabel: 'Удалить',
+            onYes: function () { permanentlyDeleteFromTrash(id); }
+          });
+        }
+      });
+    }
+    saveTrash();
+  }, 700);
    setTimeout(checkSmartReminders, 6000);
      setTimeout(maybeAutoShowReport, 4000);
   setTimeout(function () {
@@ -10202,8 +10606,15 @@ function closeGraphModal() {
   if (modal) modal.hidden = true;
 }
 
-function renderGraph() {
-  const container = document.getElementById('graphContainer');
+   async function renderGraph() {
+     const container = document.getElementById('graphContainer');
+     if (!container) return;
+     container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">Загрузка библиотеки графа…</div>';
+     try { await ensureVisNetwork(); } catch (e) {
+       container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--danger);">Не удалось загрузить граф. Проверьте интернет.</div>';
+       return;
+     }
+     container.innerHTML = '';
   if (!container) return;
   if (!window.vis) {
     container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);">Библиотека для графа не загрузилась. Проверьте интернет.</div>';
