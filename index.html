@@ -1039,6 +1039,49 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
     .mobile-fab { display: flex; }
     .kbd-hint-fab { bottom: 88px !important; }
   }
+  /* === КОМПАКТНАЯ ШАПКА НА ТЕЛЕФОНЕ === */
+  @media (max-width: 700px) {
+    /* Меньше вертикальных отступов — больше полезного пространства */
+    body {
+      padding-top: max(6px, env(safe-area-inset-top));
+      padding-left: max(10px, env(safe-area-inset-left));
+      padding-right: max(10px, env(safe-area-inset-right));
+    }
+    .app-header { gap: 4px; margin-bottom: 4px; }
+    .app-header-left { flex: 1 1 auto; min-width: 0; }
+    .app-header-left h1 { font-size: 16px; margin-bottom: 0; line-height: 1.2; }
+    .app-header-left small { display: none; }
+    .app-header-right { gap: 4px; flex: 0 0 auto; }
+
+    /* Прячем всё, что забивает экран на телефоне.
+       Эти функции доступны через нижнюю навигацию или не нужны постоянно. */
+    .app-header-right > .live-clock,
+    .app-header-right > .save-indicator,
+    .app-header-right > .sync-status,
+    .app-header-right > .user-badge,
+    .app-header-right > #todayWidgetBtn,
+    .app-header-right > .sync-dot,
+    .app-header-right > #syncBtn,
+    .app-header-right > #quickLockBtn,
+    .app-header-right > #installPwaBtn,
+    .app-header-right > #calToggle,
+    .app-header-right > #trashHeaderBtn {
+      display: none !important;
+    }
+
+    /* Оставшиеся кнопки — компактные и в один ряд */
+    .app-header-right .header-btn {
+      padding: 5px 8px;
+      font-size: 12px;
+      gap: 4px;
+      border-radius: 7px;
+    }
+    .app-header-right .header-btn .mini-tasks-count {
+      font-size: 9px;
+      padding: 0 5px;
+      min-width: 14px;
+    }
+  }
     /* === НИЖНЯЯ НАВИГАЦИЯ НА ТЕЛЕФОНЕ === */
   @media (max-width: 700px) {
     /* Главный контейнер — одна колонка, отступ снизу под табы */
@@ -6180,7 +6223,7 @@ function autoArchiveOldCompletedTasks() {
     document.getElementById('booksPanel').hidden = state.ui.litTab !== 'books';
     applyActiveTab();
   }
-      function switchTab(tab) {
+        function switchTab(tab) {
     if (!state.scrollPositions) state.scrollPositions = {};
     state.scrollPositions[state.ui.tab] = window.scrollY || window.pageYOffset || 0;
     if (state.ui.tab === 'literature') saveCurrentPosition(state.ui.litTab);
@@ -6193,12 +6236,29 @@ function autoArchiveOldCompletedTasks() {
     if (tab === 'archive') renderArchive();
     if (tab === 'analytics') renderAnalytics();
     if (tab === 'literature') { SECTIONS.forEach(function (s) { renderMeta(s); renderList(s); applyListVisibility(s); }); }
-    var target = state.scrollPositions[tab] || 0;
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () {
-        window.scrollTo(0, target);
-      });
-    });
+
+    var saved = state.scrollPositions[tab] || 0;
+    var isMobile = window.matchMedia('(max-width: 700px)').matches;
+
+    // Небольшая пауза, чтобы DOM вкладки успел перерисоваться
+    setTimeout(function () {
+      if (saved > 0) {
+        // Пользователь уже был на этой вкладке и куда-то прокрутил — вернём туда
+        window.scrollTo(0, saved);
+      } else if (isMobile) {
+        // Первый переход на вкладку на телефоне — сразу к её контенту,
+        // минуя шапку и быстрый ввод. Пользователь сразу видит то, ради чего
+        // нажал на иконку внизу.
+        var main = document.querySelector('.app-main');
+        if (main) {
+          var top = main.getBoundingClientRect().top + window.scrollY;
+          window.scrollTo({ top: Math.max(0, top - 6), behavior: 'auto' });
+        }
+      } else {
+        // На ПК — как было: наверх
+        window.scrollTo(0, 0);
+      }
+    }, 30);
   }
   function switchActiveTab(t) {
     state.ui.activeTab = t;
