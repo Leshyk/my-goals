@@ -5,8 +5,8 @@
 // (pgt-v25-91 → pgt-v25-92). Иначе те, у кого приложение уже установлено,
 // останутся на старой версии.
 
-const CACHE_VERSION = 'pgt-v25-0.99.10'
-const RUNTIME_CACHE = 'pgt-runtime-v25-0.99.10';
+const CACHE_VERSION = 'pgt-v25-0.99.11'
+const RUNTIME_CACHE = 'pgt-runtime-v25-0.99.11';
 
 const PRECACHE = [
   './',
@@ -52,7 +52,13 @@ self.addEventListener('install', function (event) {
           }));
         });
       })
-      .then(function () { return self.skipWaiting(); })
+            // ❗ НЕ вызываем self.skipWaiting() здесь, чтобы новый воркер
+      // оставался в состоянии "waiting". Тогда приложение сможет
+      // показать плашку «Доступно обновление» и переключиться
+      // на новую версию только после клика пользователя.
+      // Команда skipWaiting придёт через message-обработчик ниже.
+  );
+});
   );
 });
 
