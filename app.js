@@ -3701,16 +3701,25 @@ function autoArchiveOldCompletedTasks() {
       const ib = state.tabOrder.indexOf(over.dataset.tab);
       if (ia === -1 || ib === -1 || ia === ib) return;
 
-      const oldRects = captureRects();
+            const oldRects = captureRects();
       const tmp = state.tabOrder[ia]; state.tabOrder[ia] = state.tabOrder[ib]; state.tabOrder[ib] = tmp;
-      renderTabs();
-      playFlip(oldRects);
 
-      const newPlace = document.querySelector('.tab[data-tab="' + CSS.escape(dragId) + '"]');
-      if (newPlace) {
-        newPlace.classList.add('dragging-tab');
-        dragging = newPlace;
+      // НЕ пересоздаём DOM через renderTabs() — Safari рисует ghost-копии.
+      // Вместо этого физически переставляем существующие кнопки в nav.
+      // Так браузер не перерисовывает весь контейнер и ghost-иконки не появляются.
+      const dragBtn = nav.querySelector('.tab[data-tab="' + CSS.escape(dragId) + '"]');
+      const overBtn = nav.querySelector('.tab[data-tab="' + CSS.escape(over.dataset.tab) + '"]');
+      if (dragBtn && overBtn && dragBtn !== overBtn) {
+        const dragRect = dragBtn.getBoundingClientRect();
+        const overRect = overBtn.getBoundingClientRect();
+        // Если drag сейчас левее — вставляем после over. Иначе — перед.
+        if (dragRect.left < overRect.left) {
+          overBtn.parentNode.insertBefore(dragBtn, overBtn.nextSibling);
+        } else {
+          overBtn.parentNode.insertBefore(dragBtn, overBtn);
+        }
       }
+      playFlip(oldRects);
     });
 
     function endDrag(e) {

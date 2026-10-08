@@ -1271,7 +1271,7 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
     }
     .tabs::-webkit-scrollbar { display: none; }
 
-         /* Кнопка вкладки — компактная, без transition (Safari ghost-баг) */
+            /* Кнопка вкладки — компактная, без transition (Safari ghost-баг) */
     .tab {
       flex: 0 0 auto;
       min-width: 40px;
@@ -1291,6 +1291,12 @@ body.pgt-dragging, body.pgt-dragging * { user-select: none !important; -webkit-u
       /* Фиксируем композитинг: один слой на вкладку, без анимаций */
       -webkit-transform: translateZ(0);
       transform: translateZ(0);
+      /* Дополнительная защита от ghost-копий в Safari:
+         - изолируем контекст наложения
+         - запрещаем отрисовку за пределами границ */
+      isolation: isolate;
+      contain: layout paint style;
+      -webkit-backface-visibility: hidden;
     }
     .tab-icon { font-size: 17px; line-height: 1; }
     .tab[aria-selected="true"] {

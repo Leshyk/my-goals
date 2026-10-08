@@ -5,8 +5,8 @@
 // (0.99.10 → 0.99.11). Иначе те, у кого приложение уже установлено,
 // останутся на старой версии.
 
-const CACHE_VERSION = 'pgt-v25-0.99.16'
-const RUNTIME_CACHE = 'pgt-runtime-v25-0.99.16';
+const CACHE_VERSION = 'pgt-v25-0.99.17'
+const RUNTIME_CACHE = 'pgt-runtime-v25-0.99.17';
 
 const PRECACHE = [
   './',
