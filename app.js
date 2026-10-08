@@ -556,12 +556,14 @@ function waitForLib(name, ms) {
   // Если bundle есть — он источник правды, старые ключи игнорируются.
   // Если bundle нет — работаем со старыми ключами (см. loadState ниже).
   function tryLoadBundle() {
-    try {
-      const raw = localStorage.getItem(BUNDLE_KEY);
-      if (!raw) return false;
-      const b = JSON.parse(raw);
-      if (!b || typeof b !== 'object') return false;
+  try {
+    const raw = localStorage.getItem(BUNDLE_KEY);
+    if (!raw) return false;
+    const b = JSON.parse(raw);
+    if (!b || typeof b !== 'object') return false;
 
+    // Запоминаем rev, чтобы знать, какая версия у нас в памяти
+    if (typeof b.rev === 'number') state._rev = b.rev;
       if (Array.isArray(b.goals)) state.goals = b.goals.map(normalizeGoal).filter(Boolean);
       if (b.folders && typeof b.folders === 'object') {
         SECTIONS.forEach(function (s) {
@@ -711,10 +713,15 @@ try { const raw = localStorage.getItem('pgt_v25_habits'); if (raw) { const arr =
   const BUNDLE_KEY = 'pgt_v25_bundle';
 
   function collectBundle() {
-    return {
-            version: 1,
-      savedAt: Date.now(),
-      theme: state.theme,
+  // Увеличиваем rev при каждом сохранении.
+  // Другая вкладка сравнивает свой rev с этим — если чужой больше,
+  // значит данные новее, и надо перечитать.
+  state._rev = (state._rev || 0) + 1;
+  return {
+    version: 1,
+    rev: state._rev,
+    savedAt: Date.now(),
+    theme: state.theme,
       goals: state.goals,
       folders: state.folders,
       prefs: {
@@ -795,45 +802,7 @@ try { const raw = localStorage.getItem('pgt_v25_habits'); if (raw) { const arr =
   function saveHabits() {
     saveBundle();
   }
-   let _lastPrefsHash = '';
-  function savePrefs() {
-    clearTimeout(_savePrefsTimer);
-    _savePrefsTimer = setTimeout(function () {
-      try {
-                const json = JSON.stringify({ collapsed: state.collapsed, colorTotal: state.colorTotal, colorDone: state.colorDone, calendarVisible: state.calendarVisible, notificationsEnabled: state.notificationsEnabled, tasksGrouping: state.tasksGrouping, tagFilter: state.tagFilter, allCollapsedSnapshot: state.allCollapsedSnapshot, notesFilter: state.notesFilter, density: state.density, tabOrder: state.tabOrder, tabs: state.tabs, customTabs: state.customTabs, customArchiveOpen: state.customArchiveOpen || {}, quickInputVisible: state.quickInputVisible,  advancedToolsVisible: state.advancedToolsVisible, sidePanel: state.sidePanel, ui: state.ui, favorites: state.favorites, readingPos: state.readingPos, pdfPage: state.pdfPage, pdfZoom: state.pdfZoom, pdfInvert: state.pdfInvert, litSort: state.litSort, litFavFilter: state.litFavFilter, listHidden: state.listHidden });
-        if (json === _lastPrefsHash) return;
-        _lastPrefsHash = json;
-        localStorage.setItem(PREFS_KEY, json);
-      } catch (e) {}
-      if (typeof bcBroadcast === 'function') bcBroadcast('prefs-changed', {});
-	  scheduleAutoSync();
-  scheduleDiskWrite();
-    }, 250);
-  }
-    function saveSnippets() {
-    clearTimeout(_saveSnippetsTimer);
-    _saveSnippetsTimer = setTimeout(function () {
-      try { localStorage.setItem(SNIPPETS_KEY, JSON.stringify(state.snippets)); flashSaved(); } catch (e) { showToast('Переполнено хранилище', 'error'); }
-      if (typeof bcBroadcast === 'function') bcBroadcast('data-changed', {});
-      _searchIndexDirty = true;
-	  scheduleAutoSync();
-    }, 250);
-  }
-    function saveNotes() {
-    clearTimeout(_saveNotesTimer);
-    _saveNotesTimer = setTimeout(function () {
-      try { localStorage.setItem(NOTES_KEY, JSON.stringify(state.notes)); flashSaved(); } catch (e) { showToast('Переполнено хранилище', 'error'); }
-      if (typeof bcBroadcast === 'function') bcBroadcast('data-changed', {});
-      _searchIndexDirty = true;
-	  scheduleAutoSync();
- scheduleDiskWrite();
-    }, 250);
-  }
-
-  function saveHabits() {
-    try { localStorage.setItem('pgt_v25_habits', JSON.stringify(state.habits)); flashSaved(); } catch (e) { showToast('Переполнено хранилище', 'error'); }
- scheduleDiskWrite();
-  }
+  
 
   function normalizeGoal(g) {
     if (!g || typeof g !== 'object') return null;
@@ -843,6 +812,8 @@ try { const raw = localStorage.getItem('pgt_v25_habits'); if (raw) { const arr =
       description: String(g.description || ''),
       priority: VALID_PRIORITIES.indexOf(g.priority) !== -1 ? g.priority : 'medium',
       deadline: typeof g.deadline === 'string' ? g.deadline : '',
+	        parentId: typeof g.parentId === 'string' && g.parentId ? g.parentId : null,
+	parentId: typeof g.parentId === 'string' && g.parentId ? g.parentId : null,
       isInbox: !!g.isInbox,
       archivedAt: typeof g.archivedAt === 'number' ? g.archivedAt : null,
       createdAt: typeof g.createdAt === 'number' ? g.createdAt : Date.now(),
@@ -945,7 +916,26 @@ tags: normalizeTags(g.tags),
     setTimeout(function () { t.classList.remove('show'); setTimeout(function () { t.remove(); }, 300); }, timeoutMs || (actionLabel ? 5000 : 2400));
   }
 
-  function addGoal(f) { const goal = { id: uid(), title: f.title, description: f.description || '', priority: f.priority, deadline: f.deadline, isInbox: false, archivedAt: null, createdAt: Date.now(), pinned: false, journal: [], tasks: [] }; state.goals.push(goal); saveData(); render(); pushUndo(function () { state.goals = state.goals.filter(function (x) { return x.id !== goal.id; }); saveData(); render(); }, 'создание цели'); }
+  function addGoal(f) {
+    const goal = {
+      id: uid(),
+      title: f.title,
+      description: f.description || '',
+      priority: f.priority,
+      deadline: f.deadline,
+      parentId: (typeof f.parentId === 'string' && f.parentId) ? f.parentId : null,
+      isInbox: false,
+      archivedAt: null,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      pinned: false,
+      journal: [],
+      tasks: []
+    };
+    state.goals.push(goal);
+    saveData(); render();
+    pushUndo(function () { state.goals = state.goals.filter(function (x) { return x.id !== goal.id; }); saveData(); render(); }, 'создание цели');
+  }
   function updateGoal(id, f) { const g = findGoal(id); if (!g) return; const prev = { title: g.title, description: g.description, priority: g.priority, deadline: g.deadline }; Object.assign(g, f); saveData(); render(); pushUndo(function () { Object.assign(g, prev); saveData(); render(); }, 'изменение'); }
        function deleteGoal(id) {
     const g = findGoal(id); if (!g) return;
@@ -1161,13 +1151,29 @@ tags: normalizeTags(g.tags),
   }
 
   // === МОДАЛ РЕДАКТИРОВАНИЯ ЦЕЛИ ===
-  function openEditGoal(id) {
+    function openEditGoal(id) {
     const g = findGoal(id); if (!g) return;
     state.editingGoalId = id;
     document.getElementById('editGoalTitle').value = g.title || '';
     document.getElementById('editGoalDesc').value = g.description || '';
     document.getElementById('editGoalPriority').value = g.priority || 'medium';
     document.getElementById('editGoalDeadline').value = g.deadline || '';
+
+    // Заполняем селект «Родительская цель» — исключая саму цель и её потомков
+    try {
+      const selParent = document.getElementById('editGoalParent');
+      if (selParent) {
+        const parents = state.goals.filter(function (x) { return !x.isInbox && !x.archivedAt && x.id !== id; });
+        const excluded = collectDescendantIds(id);
+        const available = parents.filter(function (x) { return !excluded[x.id]; });
+        selParent.innerHTML = '<option value="">— Верхний уровень —</option>' + available.map(function (x) {
+          return '<option value="' + escapeHtml(x.id) + '">' + escapeHtml(x.title) + '</option>';
+        }).join('');
+        selParent.value = g.parentId || '';
+        if (selParent.value !== (g.parentId || '')) selParent.value = '';
+      }
+    } catch (e) {}
+
     renderEditGoalJournal(g);
     document.getElementById('editGoalModal').hidden = false;
     setTimeout(function () { document.getElementById('editGoalTitle').focus(); }, 50);
@@ -1201,7 +1207,7 @@ tags: normalizeTags(g.tags),
     if (realIdx !== -1) g.journal.splice(realIdx, 1);
     saveData(); renderEditGoalJournal(g); renderGoals();
   }
-  function saveEditGoal() {
+    function saveEditGoal() {
     const id = state.editingGoalId; if (!id) return;
     const g = findGoal(id); if (!g) { closeEditGoal(); return; }
     const titleEl = document.getElementById('editGoalTitle');
@@ -1211,6 +1217,25 @@ tags: normalizeTags(g.tags),
     g.description = document.getElementById('editGoalDesc').value.trim();
     g.priority = document.getElementById('editGoalPriority').value;
     g.deadline = document.getElementById('editGoalDeadline').value || '';
+
+    // Сохраняем родителя (с защитой от цикла)
+    const selParent = document.getElementById('editGoalParent');
+    if (selParent) {
+      const newParent = selParent.value || '';
+      if (newParent) {
+        // Проверяем: не является ли новая родительская цель потомком текущей
+        const excluded = collectDescendantIds(id);
+        if (newParent === id || excluded[newParent]) {
+          showToast('Нельзя: цель окажется внутри себя', 'warn');
+          // откатываем селект
+          selParent.value = g.parentId || '';
+          return;
+        }
+      }
+      g.parentId = newParent || null;
+    }
+
+    g.updatedAt = Date.now();
     saveData(); render(); closeEditGoal();
     showToast('Цель обновлена', 'ok');
   }
@@ -4109,6 +4134,62 @@ function autoArchiveOldCompletedTasks() {
     const st = col ? col.scrollTop : 0;
     let goals = visibleGoals();
     goals.sort(function (a, b) { if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1; return (b.createdAt || 0) - (a.createdAt || 0); });
+	
+    // === ДЕРЕВО ЦЕЛЕЙ ===
+    // Пересобираем плоский список в иерархию: сначала корневые цели, потом их дети.
+    // Цели сортируются по pinned и createdAt — сохраняем этот порядок на каждом уровне.
+    // Циклы (parentId ссылается на себя или потомка) обрезаются автоматически.
+    const goalsMap = {};
+    goals.forEach(function (g) { goalsMap[g.id] = g; });
+
+    // Найти корень: если у цели parentId ссылается на цель, которой нет в списке (удалена или архивирована),
+    // такая цель становится корневой. Так мы не теряем сирот.
+    goals.forEach(function (g) {
+      if (g.parentId && !goalsMap[g.parentId]) g._effectiveParentId = null;
+      else g._effectiveParentId = g.parentId || null;
+    });
+
+    // Защита от циклов: если у цели родитель — она сама или её потомок, обнуляем.
+    // Также вычисляем уровень вложенности (depth).
+    function computeDepth(g, seen) {
+      if (!g._effectiveParentId) return 0;
+      if (seen[g.id]) { g._effectiveParentId = null; return 0; } // цикл
+      seen[g.id] = true;
+      const parent = goalsMap[g._effectiveParentId];
+      if (!parent) { g._effectiveParentId = null; return 0; }
+      return 1 + computeDepth(parent, seen);
+    }
+    goals.forEach(function (g) { g._depth = computeDepth(g, {}); });
+
+    // Группируем детей по родителю (с учётом исправленного parentId)
+    const childrenByParent = {};
+    const roots = [];
+    goals.forEach(function (g) {
+      const pid = g._effectiveParentId;
+      if (!pid) { roots.push(g); return; }
+      if (!childrenByParent[pid]) childrenByParent[pid] = [];
+      childrenByParent[pid].push(g);
+    });
+
+    // Рекурсивный обход: строим плоский массив в порядке «родитель → его дети → следующий родитель»
+    const ordered = [];
+    function walkNode(g) {
+      ordered.push(g);
+      const children = childrenByParent[g.id];
+      if (children && children.length) {
+        // сортируем детей так же: pinned вперёд, потом по createdAt убыванию
+        children.sort(function (a, b) { if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1; return (b.createdAt || 0) - (a.createdAt || 0); });
+        children.forEach(walkNode);
+      }
+    }
+    roots.forEach(walkNode);
+    goals = ordered;
+
+    // Считаем, у какой цели есть дети — чтобы показать стрелку/плюс
+    const hasChildren = {};
+    goals.forEach(function (g) {
+      if (g._effectiveParentId) hasChildren[g._effectiveParentId] = true;
+    });
     if (!goals.length) { list.innerHTML = '<div class="empty">Пока нет активных целей.</div>'; return; }
     let html = goals.map(function (g) {
       const isCollapsed = !!state.collapsed[g.id];
@@ -4147,9 +4228,18 @@ function autoArchiveOldCompletedTasks() {
         '</div>';
             const goalTagsHtml = (g.tags && g.tags.length) ? '<div class="goal-tags">' + g.tags.map(function (tg) { return '<span class="goal-tag" data-action="filter-goal-tag" data-tag="' + escapeHtml(tg) + '">#' + escapeHtml(tg) + '</span>'; }).join('') + '</div>' : '';
       const bodyHtml = isCollapsed ? '' : '<div class="goal-body">' + (g.description ? '<div class="goal-desc">' + escapeHtml(g.description) + '</div>' : '') + goalTagsHtml + (allDone ? '<div class="goal-hint">Все задачи выполнены — можно завершить ✓</div>' : (total === 0 ? '<div class="goal-hint">Нет задач — можно завершить сразу</div>' : '')) + '<div class="goal-progress"><div class="bar-container"><div class="bar" style="width:' + prog + '%"></div></div><span>' + done + '/' + total + '</span></div>' + quotesHtml + notesHtml + journalHtml + '<div class="goal-tasks">' + (tasksHtml || '<div class="goal-empty">Нет задач.</div>') + '</div><form class="inline-task-form" data-goal-id="' + escapeHtml(g.id) + '"><input type="text" placeholder="Новая задача..." /><input type="date" /><button type="submit" class="secondary">+</button></form></div>';
-      const goalCls = 'goal' + (allDone ? ' all-done' : '') + (hasOverdue && !allDone ? ' has-overdue' : '') + (g.pinned ? ' pinned' : '') + (selected ? ' selected' : '');
+            const depth = g._depth || 0;
+      const hasKids = !!hasChildren[g.id];
+      const goalCls = 'goal'
+        + (allDone ? ' all-done' : '')
+        + (hasOverdue && !allDone ? ' has-overdue' : '')
+        + (g.pinned ? ' pinned' : '')
+        + (selected ? ' selected' : '')
+        + (depth > 0 ? ' goal-child' : '')
+        + (hasKids ? ' goal-has-children' : '');
+      const indentStyle = depth > 0 ? ' style="margin-left:' + (depth * 22) + 'px;"' : '';
       const massCheckbox = state.massModeGoals ? '<label class="goal-mass-check-wrap"><input type="checkbox" class="goal-mass-check" data-action="mass-check-goal" data-goal-id="' + escapeHtml(g.id) + '" ' + (selected ? 'checked' : '') + ' /></label>' : '';
-           return '<article class="' + goalCls + '" data-goal-id="' + escapeHtml(g.id) + '"><div class="goal-head">' + massCheckbox + '<button type="button" class="goal-toggle" data-action="toggle-goal" data-goal-id="' + escapeHtml(g.id) + '" aria-expanded="' + (!isCollapsed) + '"><span class="chev">▶</span><span class="goal-toggle-text"><span class="goal-name">' + escapeHtml(g.title) + '</span><span class="goal-meta">' + metaParts.join(' • ') + '</span></span></button><div class="goal-actions"><button type="button" class="icon-btn' + (g.pinned ? ' pinned' : '') + '" data-action="pin-goal" data-goal-id="' + escapeHtml(g.id) + '" title="Закрепить">📌</button><button type="button" class="icon-btn' + (allDone ? ' success done-hint' : '') + (total === 0 ? ' success' : '') + '" data-action="archive-goal" data-goal-id="' + escapeHtml(g.id) + '" title="Завершить">✓</button><button type="button" class="icon-btn" data-action="duplicate-goal" data-goal-id="' + escapeHtml(g.id) + '" title="Дублировать">📋</button><button type="button" class="icon-btn" data-action="edit-goal" data-goal-id="' + escapeHtml(g.id) + '" title="Редактировать">✎</button><button type="button" class="icon-btn" data-action="delete-goal" data-goal-id="' + escapeHtml(g.id) + '" title="Удалить">✕</button></div></div>' + bodyHtml + '</article>';
+           return '<article class="' + goalCls + '" data-goal-id="' + escapeHtml(g.id) + '"' + indentStyle + '><div class="goal-head">' + massCheckbox + '<button type="button" class="goal-toggle" data-action="toggle-goal" data-goal-id="' + escapeHtml(g.id) + '" aria-expanded="' + (!isCollapsed) + '"><span class="chev">' + (hasKids ? '⤵' : '▶') + '</span><span class="goal-toggle-text"><span class="goal-name">' + escapeHtml(g.title) + '</span><span class="goal-meta">' + metaParts.join(' • ') + '</span></span></button><div class="goal-actions"><button type="button" class="icon-btn' + (g.pinned ? ' pinned' : '') + '" data-action="pin-goal" data-goal-id="' + escapeHtml(g.id) + '" title="Закрепить">📌</button><button type="button" class="icon-btn' + (allDone ? ' success done-hint' : '') + (total === 0 ? ' success' : '') + '" data-action="archive-goal" data-goal-id="' + escapeHtml(g.id) + '" title="Завершить">✓</button><button type="button" class="icon-btn" data-action="duplicate-goal" data-goal-id="' + escapeHtml(g.id) + '" title="Дублировать">📋</button><button type="button" class="icon-btn" data-action="edit-goal" data-goal-id="' + escapeHtml(g.id) + '" title="Редактировать">✎</button><button type="button" class="icon-btn" data-action="delete-goal" data-goal-id="' + escapeHtml(g.id) + '" title="Удалить">✕</button></div></div>' + bodyHtml + '</article>';
     }).join('');
     const massCount = Object.keys(state.massSelectedGoals).length;
     if (state.massModeGoals && massCount > 0) {
@@ -4632,7 +4722,7 @@ function renderKanbanHtml(items) {
     setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
     showToast('Экспортировано: ' + ids.length, 'ok');
   }
-  function renderDashboard() {
+    function renderDashboard() {
     const helloEl = document.getElementById('dashHello');
     const dateEl = document.getElementById('dashDate');
     const contentEl = document.getElementById('dashContent');
@@ -4653,6 +4743,87 @@ function renderKanbanHtml(items) {
         all.push({ goal: g, task: t });
       });
     });
+
+    // === ИТОГ ДНЯ (сводка за сегодня) ===
+    const dayStart = todayStart().getTime();
+    const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+
+    // Задачи, выполненные сегодня
+    let doneTodayTasks = 0;
+    all.forEach(function (it) {
+      if (it.task.done && it.task.doneAt && it.task.doneAt >= dayStart && it.task.doneAt < dayEnd) {
+        doneTodayTasks++;
+      }
+    });
+
+    // Цели, завершённые сегодня
+    let doneTodayGoals = 0;
+    state.goals.forEach(function (g) {
+      if (g.archivedAt && g.archivedAt >= dayStart && g.archivedAt < dayEnd && !g.isInbox) {
+        doneTodayGoals++;
+      }
+    });
+
+    // Привычки, отмеченные сегодня
+    let doneTodayHabits = 0;
+    state.habits.forEach(function (hh) {
+      if ((hh.marks || []).indexOf(todayISO) !== -1) doneTodayHabits++;
+    });
+
+    // Дневник за сегодня
+    const diaryTitle = 'Дневник ' + formatDate(todayISO);
+    const hasDiary = state.notes.some(function (n) { return n.title === diaryTitle; });
+
+    // Серия продуктивных дней
+    const byDay = {};
+    all.forEach(function (it) {
+      if (it.task.done && it.task.doneAt) {
+        const iso = dateToISO(new Date(it.task.doneAt));
+        byDay[iso] = (byDay[iso] || 0) + 1;
+      }
+    });
+    state.goals.forEach(function (g) {
+      if (g.archivedAt && !g.isInbox) {
+        const iso = dateToISO(new Date(g.archivedAt));
+        byDay[iso] = (byDay[iso] || 0) + 1;
+      }
+    });
+    let streak = 0;
+    const probe = new Date(todayStart());
+    if (!byDay[todayISO]) probe.setDate(probe.getDate() - 1);
+    let safety = 0;
+    while (safety++ < 3650) {
+      const iso = dateToISO(probe);
+      if (byDay[iso] > 0) { streak++; probe.setDate(probe.getDate() - 1); }
+      else break;
+    }
+
+    // Просроченные
+    const overdueCount = all.filter(function (it) { return isOverdue(it.task); }).length;
+
+    const totalDone = doneTodayTasks + doneTodayGoals + doneTodayHabits + (hasDiary ? 1 : 0);
+    const totalIcon = totalDone === 0 ? '🌱' : (totalDone < 3 ? '🙂' : (totalDone < 6 ? '💪' : '🚀'));
+    const totalText = totalDone === 0
+      ? 'Денёк только начинается. Сделай первое дело!'
+      : 'Ты закрыл ' + totalDone + ' ' + pluralize(totalDone, ['дело', 'дела', 'дел']) + ' сегодня';
+
+    let summaryHtml = '<div class="dash-summary">';
+    summaryHtml += '<div class="dash-summary-head">';
+    summaryHtml += '<span class="dash-summary-icon">' + totalIcon + '</span>';
+    summaryHtml += '<span class="dash-summary-text">' + escapeHtml(totalText) + '</span>';
+    summaryHtml += '<button type="button" class="secondary dash-summary-btn" data-action="dash-open-report">📄 Полный отчёт</button>';
+    summaryHtml += '</div>';
+    summaryHtml += '<div class="dash-summary-grid">';
+    summaryHtml += '<div class="dash-summary-item' + (doneTodayTasks > 0 ? ' has-value' : '') + '"><span class="num">' + doneTodayTasks + '</span><span class="lbl">✅ задач</span></div>';
+    summaryHtml += '<div class="dash-summary-item' + (doneTodayHabits > 0 ? ' has-value' : '') + '"><span class="num">' + doneTodayHabits + '</span><span class="lbl">📆 привычек</span></div>';
+    summaryHtml += '<div class="dash-summary-item' + (doneTodayGoals > 0 ? ' has-value' : '') + '"><span class="num">' + doneTodayGoals + '</span><span class="lbl">🎯 целей</span></div>';
+    summaryHtml += '<div class="dash-summary-item' + (hasDiary ? ' has-value' : '') + '"><span class="num">' + (hasDiary ? '✓' : '—') + '</span><span class="lbl">📝 дневник</span></div>';
+    summaryHtml += '<div class="dash-summary-item' + (streak > 0 ? ' has-value' : '') + '"><span class="num">🔥 ' + streak + '</span><span class="lbl">серия</span></div>';
+    if (overdueCount > 0) {
+      summaryHtml += '<div class="dash-summary-item has-warn"><span class="num">⚠ ' + overdueCount + '</span><span class="lbl">просрочено</span></div>';
+    }
+    summaryHtml += '</div>';
+    summaryHtml += '</div>';
 
     const overdue = all.filter(function (it) { return isOverdue(it.task); });
     const today = all.filter(function (it) { return !it.task.done && it.task.deadline === todayISO; });
@@ -4692,7 +4863,7 @@ function renderKanbanHtml(items) {
       '</div>';
     }
 
-    let html = '';
+    let html = summaryHtml; // ← Итог дня первым блоком
 
     // Просроченные
     if (overdue.length) {
@@ -4715,7 +4886,6 @@ function renderKanbanHtml(items) {
       if (doing.length > 5) html += '<div class="dash-empty">…и ещё ' + (doing.length - 5) + '</div>';
       html += '</div>';
     }
-
 
     // Карточки на сегодня
     if (cardsToday.length) {
@@ -4754,46 +4924,16 @@ function renderKanbanHtml(items) {
 
     contentEl.innerHTML = html;
   }
-  function renderAnalytics() {
-    const streakEl = document.getElementById('analyticsStreak');
-    const chartEl = document.getElementById('analyticsChart');
-    const topEl = document.getElementById('analyticsTopGoals');
-    const tagsEl = document.getElementById('analyticsTags');
-    if (!streakEl) return;
 
-    // Собираем выполненные задачи и завершённые цели
-    const completed = [];
-    state.goals.forEach(function (g) {
-      if (g.isInbox) return;
-      g.tasks.forEach(function (t) {
-        if (t.done && t.doneAt) completed.push({ task: t, goal: g });
-      });
-    });
-    const archivedGoals = state.goals.filter(function (g) { return g.archivedAt && !g.isInbox; });
-
-    // Считаем по дням
-    const byDay = {};
-    completed.forEach(function (it) {
-      const iso = dateToISO(new Date(it.task.doneAt));
-      byDay[iso] = (byDay[iso] || 0) + 1;
-    });
-    archivedGoals.forEach(function (g) {
-      const iso = dateToISO(new Date(g.archivedAt));
-      byDay[iso] = (byDay[iso] || 0) + 1;
-    });
-
-    // === СЕРИЯ ===
-    const today = todayStart();
-    const todayISO = dateToISO(today);
-    let streak = 0;
-    const probe = new Date(today);
-    if (!byDay[todayISO]) probe.setDate(probe.getDate() - 1);
-    let safety = 0;
-    while (safety++ < 3650) {
-      const iso = dateToISO(probe);
-      if (byDay[iso] > 0) { streak++; probe.setDate(probe.getDate() - 1); }
-      else break;
-    }
+  // Утилита: склонение русских слов
+  function pluralize(n, forms) {
+    const a = Math.abs(n) % 100;
+    const b = a % 10;
+    if (a > 10 && a < 20) return forms[2];
+    if (b > 1 && b < 5) return forms[1];
+    if (b === 1) return forms[0];
+    return forms[2];
+  }
 
     const sortedDays = Object.keys(byDay).sort();
     let bestStreak = 0, curStreak = 0, prevDate = null;
@@ -4931,12 +5071,63 @@ meta.push(PRIORITY_LABEL[t.priority] || '—'); return '<article class="archive-
         const _ac = document.getElementById('archiveCount'); if (_ac) _ac.textContent = ag.length + at.length;
   }
 
-     function renderGoalSelect() {
+          function renderGoalSelect() {
     const sel = document.getElementById('taskGoal');
     const prev = sel.value;
     const goals = state.goals.filter(function (g) { return !g.isInbox && !g.archivedAt; });
     sel.innerHTML = '<option value="">— Без цели —</option>' + goals.map(function (g) { return '<option value="' + escapeHtml(g.id) + '">' + escapeHtml(g.title) + '</option>'; }).join('');
     if (prev) { const found = Array.prototype.some.call(sel.options, function (o) { return o.value === prev; }); if (found) sel.value = prev; }
+
+    // Заполняем селекты «Родительская цель» — в форме и в модале
+    fillGoalParentSelects();
+  }
+
+  // Заполнить оба селекта «Родительская цель»: в форме создания и в модале редактирования
+  function fillGoalParentSelects() {
+    const parents = state.goals.filter(function (g) { return !g.isInbox && !g.archivedAt; });
+
+    const selNew = document.getElementById('goalParent');
+    if (selNew) {
+      const prevNew = selNew.value;
+      selNew.innerHTML = '<option value="">— Верхний уровень —</option>' + parents.map(function (g) {
+        return '<option value="' + escapeHtml(g.id) + '">' + escapeHtml(g.title) + '</option>';
+      }).join('');
+      if (prevNew && parents.some(function (g) { return g.id === prevNew; })) selNew.value = prevNew;
+      else selNew.value = '';
+    }
+
+    const selEdit = document.getElementById('editGoalParent');
+    if (selEdit) {
+      // В модале редактирования нельзя выбрать саму цель или её потомков —
+      // иначе получится цикл (цель окажется внутри самой себя).
+      const editingId = state.editingGoalId;
+      const excluded = collectDescendantIds(editingId);
+      const editParents = parents.filter(function (g) {
+        return g.id !== editingId && !excluded[g.id];
+      });
+      const prevEdit = selEdit.value;
+      selEdit.innerHTML = '<option value="">— Верхний уровень —</option>' + editParents.map(function (g) {
+        return '<option value="' + escapeHtml(g.id) + '">' + escapeHtml(g.title) + '</option>';
+      }).join('');
+      if (prevEdit && editParents.some(function (g) { return g.id === prevEdit; })) selEdit.value = prevEdit;
+      else selEdit.value = '';
+    }
+  }
+
+  // Собрать id всех потомков цели (защита от циклов при выборе родителя)
+  function collectDescendantIds(goalId) {
+    const result = {};
+    if (!goalId) return result;
+    function walk(id) {
+      state.goals.forEach(function (g) {
+        if (g.parentId === id && !result[g.id]) {
+          result[g.id] = true;
+          walk(g.id);
+        }
+      });
+    }
+    walk(goalId);
+    return result;
   }
     function renderToggleAllButton() {
     const btn = document.getElementById('toggleAllBtn'); if (!btn) return;
@@ -7146,7 +7337,7 @@ function tickLiveClock() {
     });
 
     // Форма цели
-    const _gf = document.getElementById('goalForm');
+        const _gf = document.getElementById('goalForm');
     if (_gf) _gf.addEventListener('submit', function (e) {
       e.preventDefault();
       const titleEl = document.getElementById('goalTitle');
@@ -7154,11 +7345,13 @@ function tickLiveClock() {
       if (!title) { markInvalid(titleEl); showToast('Введите название цели', 'warn'); return; }
       let deadline = document.getElementById('goalDeadline').value || '';
       if (!deadline && state.calSelectedDate) deadline = state.calSelectedDate;
+      const parentId = document.getElementById('goalParent').value || '';
       addGoal({
         title: title,
         description: document.getElementById('goalDesc').value.trim(),
         priority: document.getElementById('goalPriority').value,
-        deadline: deadline
+        deadline: deadline,
+        parentId: parentId
       });
       resetGoalForm();
       showToast('Цель добавлена', 'ok');
@@ -7845,6 +8038,7 @@ function tickLiveClock() {
         const gid = el.dataset.goalId; const tid = el.dataset.taskId;
         const tabId = el.dataset.tabId; const cardId = el.dataset.cardId;
         if (action === 'dash-open-task' && gid && tid) openEditTask(gid, tid);
+		 else if (action === 'dash-open-report') openDailyReport();
         else if (action === 'dash-open-goal' && gid) openEditGoal(gid);
         else if (action === 'dash-open-card' && tabId && cardId) {
           switchTab(tabId);
@@ -8082,26 +8276,55 @@ function tickLiveClock() {
     // недописанный текст в открытом редакторе. Теперь при активном вводе
     // показываем предупреждение с кнопкой «Обновить» и ждём решения человека.
     window.addEventListener('storage', function (e) {
-      if (!e.key) return;
-      const bases = [DATA_KEY, PREFS_KEY, SNIPPETS_KEY, NOTES_KEY, TEMPLATES_KEY];
-      const hit = bases.some(function (b) { return e.key === b || e.key.indexOf(b + '_') === 0; });
-      if (!hit) return;
-      if (isTypingNow()) {
-        if (!document._pgtRemoteChangeNotified) {
-          document._pgtRemoteChangeNotified = true;
-          showToast('Данные изменились в другой вкладке', 'warn', 'Обновить', function () {
-            document._pgtRemoteChangeNotified = false;
-            loadState(); _searchIndexDirty = true;
-            applyTheme(); applyColors(); syncToolbarInputs(); applyCalendarVisibility();
-            render();
-          }, 12000);
+  if (!e.key) return;
+  // Слушаем не только старые ключи, но и bundle
+  const bases = [DATA_KEY, PREFS_KEY, SNIPPETS_KEY, NOTES_KEY, TEMPLATES_KEY, BUNDLE_KEY];
+  const hit = bases.some(function (b) { return e.key === b || e.key.indexOf(b + '_') === 0; });
+  if (!hit) return;
+
+  // Проверяем: не новее ли данные в другой вкладке?
+  try {
+    const raw = localStorage.getItem(BUNDLE_KEY);
+    if (raw) {
+      const b = JSON.parse(raw);
+      if (b && typeof b.rev === 'number' && b.rev > (state._rev || 0)) {
+        // Данные новее — обновляемся
+        if (isTypingNow()) {
+          if (!document._pgtRemoteChangeNotified) {
+            document._pgtRemoteChangeNotified = true;
+            showToast('Данные изменились в другой вкладке', 'warn', 'Обновить', function () {
+              document._pgtRemoteChangeNotified = false;
+              loadState(); _searchIndexDirty = true;
+              applyTheme(); applyColors(); syncToolbarInputs(); applyCalendarVisibility();
+              render();
+            }, 12000);
+          }
+          return;
         }
+        loadState(); _searchIndexDirty = true;
+        applyTheme(); applyColors(); syncToolbarInputs(); applyCalendarVisibility(); render();
         return;
       }
-      document._pgtRemoteChangeNotified = false;
-      loadState(); _searchIndexDirty = true;
-      applyTheme(); applyColors(); syncToolbarInputs(); applyCalendarVisibility(); render();
-    });
+    }
+  } catch (err) { /* ignore */ }
+
+  // Старые ключи — просто перечитываем
+  if (isTypingNow()) {
+    if (!document._pgtRemoteChangeNotified) {
+      document._pgtRemoteChangeNotified = true;
+      showToast('Данные изменились в другой вкладке', 'warn', 'Обновить', function () {
+        document._pgtRemoteChangeNotified = false;
+        loadState(); _searchIndexDirty = true;
+        applyTheme(); applyColors(); syncToolbarInputs(); applyCalendarVisibility();
+        render();
+      }, 12000);
+    }
+    return;
+  }
+  document._pgtRemoteChangeNotified = false;
+  loadState(); _searchIndexDirty = true;
+  applyTheme(); applyColors(); syncToolbarInputs(); applyCalendarVisibility(); render();
+});
   } 
 
 initLoginGate();
@@ -8309,28 +8532,34 @@ applyQuickInputVisibility();
     if (!('serviceWorker' in navigator)) return;
 
     // Показываем плашку «Доступно обновление» с кнопкой «Обновить»
-    function showUpdateToast(worker) {
-      showToast('🎉 Доступно обновление', 'ok', 'Обновить', function () {
-        try { worker.postMessage({ type: 'SKIP_WAITING' }); } catch (e) {}
-        setTimeout(function () { window.location.reload(); }, 400);
-      }, 60000);
-    }
+    // === БЕСШОВНОЕ ОБНОВЛЕНИЕ ===
+// Новый Service Worker устанавливается «в фоне» и активируется
+// при следующем открытии приложения. Пользователь ничего не видит.
+// Если пользователь прямо сейчас в приложении — обновление
+// применится при следующем запуске, без потери данных.
+function installSilently(worker) {
+  // Отправляем команду «активируйся» — воркер станет активным.
+  // Страница НЕ перезагрузится сама.
+  try { worker.postMessage({ type: 'SKIP_WAITING' }); } catch (e) {}
+}
+
+// Заменяем все вызовы showUpdateToast на installSilently
 
     window.addEventListener('load', function () {
      navigator.serviceWorker.register('./sw-v2.js').then(function (reg) {
-        // Если новый воркер уже ждёт — сразу предложим
-        if (reg.waiting) showUpdateToast(reg.waiting);
+        // Если новый воркер уже ждёт — активируем молча
+if (reg.waiting) installSilently(reg.waiting);
 
-        // Ловим появление нового воркера
-        reg.addEventListener('updatefound', function () {
-          const newWorker = reg.installing;
-          if (!newWorker) return;
-          newWorker.addEventListener('statechange', function () {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              showUpdateToast(newWorker);
-            }
-          });
-        });
+reg.addEventListener('updatefound', function () {
+  const newWorker = reg.installing;
+  if (!newWorker) return;
+  newWorker.addEventListener('statechange', function () {
+    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+      // Новый воркер установился — активируем без уведомления
+      installSilently(newWorker);
+    }
+  });
+});
 
         // Раз в час проверяем обновления
         setInterval(function () { reg.update().catch(function () {}); }, 60 * 60 * 1000);
@@ -8338,12 +8567,13 @@ applyQuickInputVisibility();
         console.warn('[PWA] Ошибка SW:', err.message);
       });
 
-      // Когда новый воркер стал контроллером — перезагружаем
+            // Когда новый воркер стал контроллером — НЕ перезагружаем принудительно.
+      // Обновление применится при следующем открытии приложения.
       let refreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', function () {
         if (refreshing) return;
         refreshing = true;
-        window.location.reload();
+        // Не делаем location.reload() — ждём следующего запуска.
       });
     });
   })();
@@ -8751,8 +8981,49 @@ applyQuickInputVisibility();
     closeCommandPalette();
     try { c.run(); } catch (e) { showToast('Ошибка: ' + e.message, 'error'); }
   }
-  function getCommands() {
+   function getCommands() {
     const cmds = [
+      // === РАСШИРЕННЫЕ КОМАНДЫ ===
+
+      // Быстрые фильтры
+      { icon: '⚠️', label: 'Показать просроченные', keywords: 'просрочено overdue фильтр',
+        run: function(){ switchTab('active'); switchActiveTab('tasks'); state.ui.filter = 'overdue'; savePrefs(); syncToolbarInputs(); renderTasks(); showToast('Фильтр: просроченные', 'ok'); } },
+      { icon: '📋', label: 'Показать все задачи', keywords: 'все задачи фильтр сброс',
+        run: function(){ switchTab('active'); switchActiveTab('tasks'); state.ui.filter = 'all'; state.tagFilter = ''; savePrefs(); syncToolbarInputs(); renderTasks(); showToast('Фильтр сброшен', 'ok'); } },
+
+      // Переходы по вкладкам
+      { icon: '📌', label: 'Открыть: Сегодня', keywords: 'сегодня today дашборд',
+        run: function(){ switchTab('today'); } },
+      { icon: '📊', label: 'Открыть: Аналитика', keywords: 'аналитика analytics статистика',
+        run: function(){ switchTab('analytics'); } },
+      { icon: '📦', label: 'Открыть: Архив', keywords: 'архив archive завершённые',
+        run: function(){ switchTab('archive'); } },
+      { icon: '📝', label: 'Открыть: Заметки', keywords: 'заметки notes',
+        run: function(){ switchTab('notes'); } },
+      { icon: '📆', label: 'Открыть: Привычки', keywords: 'привычки habits',
+        run: function(){ switchTab('habits'); } },
+      { icon: '☁️', label: 'Открыть: Хранилище', keywords: 'хранилище файлы статьи книги literature',
+        run: function(){ switchTab('literature'); } },
+
+      // Инструменты
+      { icon: '🗑', label: 'Открыть: Корзина', keywords: 'корзина trash удалённые',
+        run: function(){ openTrashModal(); } },
+      { icon: '🌙', label: 'Сменить тему (тёмная/светлая)', keywords: 'тема theme тёмная светлая',
+        run: function(){ setTheme(state.theme === 'dark' ? 'light' : 'dark'); showToast('Тема: ' + (state.theme === 'dark' ? 'тёмная' : 'светлая'), 'ok'); } },
+      { icon: '📦', label: 'Экспорт JSON', keywords: 'экспорт export json сохранить',
+        run: function(){ exportData(); } },
+      { icon: '📄', label: 'Экспорт Markdown-отчёт', keywords: 'экспорт export markdown отчёт',
+        run: function(){ exportMarkdownReport(); } },
+      { icon: '📊', label: 'Экспорт CSV (задачи)', keywords: 'экспорт export csv таблица',
+        run: function(){ exportTasksCsv(); } },
+      { icon: '📅', label: 'Экспорт .ics (календарь)', keywords: 'экспорт export ics календарь',
+        run: function(){ exportIcs(); } },
+      { icon: '➕', label: 'Создать свою вкладку', keywords: 'вкладка tab своя',
+        run: function(){ openCustomTabModal(null); } },
+      { icon: '⚙️', label: 'Управление вкладками', keywords: 'вкладки tabs управление',
+        run: function(){ openTabsManageModal(); } },
+
+      // === ОРИГИНАЛЬНЫЕ КОМАНДЫ ===
       { icon: '✓', label: 'Новая задача', hint: 'N', keywords: 'задача task', run: function(){ switchTab('active'); switchActiveTab('tasks'); setTimeout(function(){ document.getElementById('taskText').focus(); }, 100); } },
       { icon: '🎯', label: 'Новая цель', hint: 'G', keywords: 'цель goal', run: function(){ switchTab('active'); switchActiveTab('goals'); setTimeout(function(){ document.getElementById('goalTitle').focus(); }, 100); } },
       { icon: '📝', label: 'Новая заметка', keywords: 'заметка note', run: function(){ switchTab('notes'); addNote({ title: 'Новая заметка', body: '' }); } },
@@ -8761,18 +9032,46 @@ applyQuickInputVisibility();
       { icon: '📅', label: 'Переключить календарь', hint: 'Ctrl+Shift+K', keywords: 'календарь calendar', run: toggleCalendar },
       { icon: '⚙', label: 'Настройки', keywords: 'настройки settings', run: function(){ document.getElementById('settingsModal').hidden = false; syncToolbarInputs(); renderBackupList(); renderCacheStats(); refreshDriveSettingsUI(); } },
       { icon: '⌨', label: 'Горячие клавиши', hint: '?', keywords: 'клавиши hotkeys', run: openKbdHelp },
-      { icon: '🔒', label: 'Заблокировать', keywords: 'lock блок', run: function(){ if (hasPin()) lockNow(); else showToast('PIN не установлен', 'warn'); } }
+      { icon: '🔒', label: 'Заблокировать', keywords: 'lock блок', run: function(){ if (hasPin()) lockNow(); else showToast('PIN не установлен', 'warn'); } },
     ];
+
+    // === ТЕГИ (до 10 штук) ===
+    try {
+      const tags = getAllTags().slice(0, 10);
+      tags.forEach(function(tag) {
+        cmds.push({
+          icon: '🏷',
+          label: 'Задачи с #' + tag,
+          keywords: 'тег tag ' + tag,
+          run: function(){
+            switchTab('active');
+            switchActiveTab('tasks');
+            state.tagFilter = tag;
+            savePrefs();
+            syncToolbarInputs();
+            renderTasks();
+            showToast('Фильтр: #' + tag, 'ok');
+          }
+        });
+      });
+    } catch (e) {}
+
+    // === ВКЛАДКИ ПОЛЬЗОВАТЕЛЯ (стандартные) ===
     state.tabs.forEach(function (t) {
       if (!t.visible) return;
       cmds.push({ icon: t.icon, label: 'Открыть: ' + t.label, keywords: 'вкладка tab ' + t.label, run: function(){ switchTab(t.id); } });
     });
+
+    // === ВКЛАДКИ ПОЛЬЗОВАТЕЛЯ (свои) ===
     state.customTabs.forEach(function (t) {
       cmds.push({ icon: t.icon || '⭐', label: 'Открыть: ' + t.label, keywords: 'вкладка tab ' + t.label, run: function(){ switchTab(t.id); } });
     });
+
+    // === ЦЕЛИ (до 40 штук) ===
     visibleGoals().slice(0, 40).forEach(function (g) {
       cmds.push({ icon: '🎯', label: g.title, hint: 'цель', keywords: 'цель goal ' + g.title, run: function(){ switchTab('active'); switchActiveTab('goals'); state.collapsed[g.id] = false; savePrefs(); renderGoals(); setTimeout(function(){ const el = document.querySelector('.goal[data-goal-id="' + CSS.escape(g.id) + '"]'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100); } });
     });
+
     return cmds;
   }
   function renderCommandPalette(query) {

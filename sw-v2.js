@@ -5,8 +5,18 @@
 // (0.99.10 → 0.99.11). Иначе те, у кого приложение уже установлено,
 // останутся на старой версии.
 
-const CACHE_VERSION = 'pgt-v25-0.99.17'
-const RUNTIME_CACHE = 'pgt-runtime-v25-0.99.17';
+// === АВТОМАТИЧЕСКАЯ ВЕРСИЯ ===
+// Вместо ручного номера используем дату+время последнего деплоя.
+// Если ты загружаешь на GitHub Pages — версия будет уникальной
+// для каждой загрузки, и браузер сам подхватит обновление.
+// Формат: pgt-v25-2026.10.08-15.30
+const BUILD_STAMP = (() => {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '.' + p(d.getMonth()+1) + '.' + p(d.getDate()) + '-' + p(d.getHours()) + '.' + p(d.getMinutes());
+})();
+const CACHE_VERSION = 'pgt-v25-' + BUILD_STAMP;
+const RUNTIME_CACHE = 'pgt-runtime-v25-' + BUILD_STAMP;
 
 const PRECACHE = [
   './',

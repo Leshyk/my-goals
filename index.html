@@ -116,7 +116,7 @@
         </div>
 
         <div class="forms-wrap">
-          <form class="form-card" id="goalForm" novalidate data-for-tab="goals">
+                    <form class="form-card" id="goalForm" novalidate data-for-tab="goals">
             <h3>🎯 Новая цель</h3>
             <div class="form-row">
               <input type="text" id="goalTitle" placeholder="Название цели" />
@@ -133,6 +133,12 @@
             </div>
             <div id="goalMoreBody" hidden>
               <textarea id="goalDesc" placeholder="Описание (необязательно)"></textarea>
+              <div style="margin-top:8px;">
+                <label for="goalParent" style="font-size:11px; color:var(--muted);">Родительская цель (для иерархии)</label>
+                <select id="goalParent">
+                  <option value="">— Верхний уровень —</option>
+                </select>
+              </div>
             </div>
           </form>
 
@@ -490,7 +496,13 @@
           <label for="editGoalDesc">Описание</label>
           <textarea id="editGoalDesc" rows="3"></textarea>
         </div>
-                <div>
+        <div>
+          <label for="editGoalParent">Родительская цель</label>
+          <select id="editGoalParent">
+            <option value="">— Верхний уровень —</option>
+          </select>
+        </div>
+        <div>
           <label>Milestones (этапы)</label>
           <div id="editGoalMilestonesList" style="max-height:180px;overflow-y:auto;margin-bottom:6px;"></div>
           <div class="form-row">
@@ -498,7 +510,7 @@
             <button type="button" class="secondary" id="editGoalAddMilestoneBtn">+</button>
           </div>
         </div>
-<div>
+        <div>
           <label>Журнал прогресса</label>
           <div id="editGoalJournalList" style="max-height:180px;overflow-y:auto;margin-bottom:6px;"></div>
           <div class="form-row">
