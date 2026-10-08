@@ -4933,7 +4933,33 @@ function renderKanbanHtml(items) {
     if (b === 1) return forms[0];
     return forms[2];
   }
+  function renderAnalytics() {
+    const streakEl = document.getElementById('analyticsStreak');
+    const chartEl = document.getElementById('analyticsChart');
+    const topEl = document.getElementById('analyticsTop');
+    const tagsEl = document.getElementById('analyticsTags');
+    if (!streakEl) return;
 
+    const today = new Date(); today.setHours(0,0,0,0);
+    const todayISO = dateToISO(today);
+    const completed = [];
+    state.goals.forEach(function (g) {
+      g.tasks.forEach(function (t) {
+        if (t.done && t.doneAt) completed.push({ goal: g, task: t });
+      });
+    });
+
+    const byDay = {};
+    completed.forEach(function (it) {
+      const iso = dateToISO(new Date(it.task.doneAt));
+      byDay[iso] = (byDay[iso] || 0) + 1;
+    });
+    state.goals.forEach(function (g) {
+      if (g.archivedAt && !g.isInbox) {
+        const iso = dateToISO(new Date(g.archivedAt));
+        byDay[iso] = (byDay[iso] || 0) + 1;
+      }
+    });
     const sortedDays = Object.keys(byDay).sort();
     let bestStreak = 0, curStreak = 0, prevDate = null;
     sortedDays.forEach(function (iso) {
