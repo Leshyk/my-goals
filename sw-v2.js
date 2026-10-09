@@ -15,8 +15,8 @@ const BUILD_STAMP = (() => {
   const p = n => String(n).padStart(2, '0');
   return d.getFullYear() + '.' + p(d.getMonth()+1) + '.' + p(d.getDate()) + '-' + p(d.getHours()) + '.' + p(d.getMinutes());
 })();
-const CACHE_VERSION = 'pgt-v25-cache-v43';
-const RUNTIME_CACHE = 'pgt-runtime-v25-cache-v43';
+const CACHE_VERSION = 'pgt-v25-cache-v45';
+const RUNTIME_CACHE = 'pgt-runtime-v25-cache-v45';
 
 const PRECACHE = [
   './',
